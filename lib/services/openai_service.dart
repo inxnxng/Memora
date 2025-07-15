@@ -1,32 +1,18 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:memora/services/local_storage_service.dart';
 
 class OpenAIService {
-  static const String _apiKeyPrefKey = 'openai_api_key';
-  static const String _apiKeyTimestampPrefKey = 'openai_api_key_timestamp';
+  final LocalStorageService _localStorageService = LocalStorageService();
 
   Future<String?> getApiKey() async {
-    final prefs = await SharedPreferences.getInstance();
-    String? apiKey = prefs.getString(_apiKeyPrefKey);
-    return apiKey;
-  }
-
-  Future<Map<String, String?>> getApiKeyWithTimestamp() async {
-    final prefs = await SharedPreferences.getInstance();
-    final apiKey = prefs.getString(_apiKeyPrefKey);
-    final timestamp = prefs.getString(_apiKeyTimestampPrefKey);
-    return {'apiKey': apiKey, 'timestamp': timestamp};
+    final keyData = await _localStorageService.getApiKeyWithTimestamp();
+    return keyData['value'];
   }
 
   Future<void> saveApiKey(String apiKey) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_apiKeyPrefKey, apiKey);
-    await prefs.setString(
-      _apiKeyTimestampPrefKey,
-      DateTime.now().toIso8601String(),
-    );
+    await _localStorageService.saveApiKeyWithTimestamp(apiKey);
   }
 
   Future<bool> isApiKeyAvailable() async {
@@ -36,9 +22,9 @@ class OpenAIService {
 
   Future<String> generateTrainingContent(String userPrompt) async {
     final apiKey = await getApiKey();
-    if (apiKey == null) {
+    if (apiKey == null || apiKey.isEmpty) {
       throw Exception(
-        'OpenAI API key not found. Please set it in the settings.',
+        'OpenAI API key not found. Please set it in the .env file.',
       );
     }
 
@@ -49,7 +35,7 @@ class OpenAIService {
         'Authorization': 'Bearer $apiKey',
       },
       body: jsonEncode({
-        'model': 'gpt-3.5-turbo', // Or gpt-4o if available and desired
+        'model': 'gpt-4o-mini', // Or gpt-4o if available and desired
         'messages': [
           {
             'role': 'system',
@@ -76,9 +62,9 @@ class OpenAIService {
 
   Future<Map<String, dynamic>> createQuizFromText(String text) async {
     final apiKey = await getApiKey();
-    if (apiKey == null) {
+    if (apiKey == null || apiKey.isEmpty) {
       throw Exception(
-        'OpenAI API key not found. Please set it in the settings.',
+        'OpenAI API key not found. Please set it in the .env file.',
       );
     }
 

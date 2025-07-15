@@ -5,12 +5,12 @@ import 'package:memora/constants/task_list.dart';
 import 'package:memora/models/task_model.dart';
 import 'package:memora/models/user_model.dart';
 import 'package:memora/providers/notion_provider.dart';
-import 'package:memora/services/firebase_service.dart';
+/*import 'package:memora/services/firebase_service.dart';*/
 import 'package:memora/services/local_storage_service.dart'; // New import
 import 'package:shared_preferences/shared_preferences.dart';
 
 class TaskProvider with ChangeNotifier {
-  final FirebaseService _firebaseService;
+  /*final FirebaseService _firebaseService;*/
   final NotionProvider _notionProvider;
   final LocalStorageService _localStorageService; // New field
   List<Task> _tasks = [];
@@ -20,7 +20,7 @@ class TaskProvider with ChangeNotifier {
   DateTime? _roadmapStartDate;
 
   TaskProvider(
-    this._firebaseService,
+    /*this._firebaseService,*/
     this._notionProvider,
     this._localStorageService,
   ) {
@@ -43,7 +43,7 @@ class TaskProvider with ChangeNotifier {
   }
 
   Future<void> _initialize() async {
-    await _firebaseService.signInAnonymously();
+    /*await _firebaseService.signInAnonymously();*/
     await _fetchUser();
     await _loadRoadmapStartDate();
     await _fetchTasks();
@@ -54,7 +54,7 @@ class TaskProvider with ChangeNotifier {
   }
 
   Future<void> _fetchUser() async {
-    _user = await _firebaseService.getCurrentUser();
+    /*_user = await _firebaseService.getCurrentUser();*/
   }
 
   Future<void> _loadRoadmapStartDate() async {
@@ -65,31 +65,44 @@ class TaskProvider with ChangeNotifier {
     }
   }
 
-  Future<void> _saveRoadmapStartDate(DateTime date) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('roadmap_start_date', date.millisecondsSinceEpoch);
-    _roadmapStartDate = date;
-  }
-
   Future<void> _fetchTasks() async {
+    List<Task> fetchedTasks = [];
     if (_notionProvider.isConnected) {
       try {
-        _tasks = await _notionProvider.fetchRoadmapTasks();
-        if (_tasks.isNotEmpty) {
-          // Optionally, save Notion tasks to Firebase for offline access/consistency
-          await _firebaseService.saveTasks(_tasks);
-        }
+        fetchedTasks = await _notionProvider.fetchRoadmapTasks();
       } catch (e) {
         debugPrint('Failed to fetch tasks from Notion: $e');
-        // Fallback to local generation if Notion fails
-        await _generateAndSaveDailyTasks();
+        // If Notion fails, fetchedTasks remains empty, triggering local generation
       }
     }
 
-    if (_tasks.isEmpty) {
-      // If Notion is not connected or returned no tasks, generate locally
-      await _generateAndSaveDailyTasks();
+    if (fetchedTasks.isEmpty || fetchedTasks.length < totalDays) {
+      // If Notion didn't provide enough tasks, generate/fill locally
+      final Map<int, Task> existingTasks = {
+        for (var task in fetchedTasks) task.day: task,
+      };
+      _tasks = List.generate(totalDays, (index) {
+        final dayNumber = index + 1;
+        if (existingTasks.containsKey(dayNumber)) {
+          return existingTasks[dayNumber]!;
+        } else {
+          final taskDetail = dailyTasks[Random().nextInt(dailyTasks.length)];
+          return Task(
+            id: 'day$dayNumber',
+            title: 'Day $dayNumber: ${taskDetail['title']}',
+            description: taskDetail['description'] ?? '',
+            day: dayNumber,
+            isCompleted: false,
+            lastTrainedDate: null,
+          );
+        }
+      });
+    } else {
+      _tasks = fetchedTasks;
     }
+
+    // Ensure tasks are sorted by day
+    _tasks.sort((a, b) => a.day.compareTo(b.day));
 
     // Load lastTrainedDate for each task
     for (var task in _tasks) {
@@ -100,32 +113,14 @@ class TaskProvider with ChangeNotifier {
     await _updateUserProgress();
   }
 
-  Future<void> _generateAndSaveDailyTasks() async {
-    if (_roadmapStartDate == null) {
-      await _saveRoadmapStartDate(DateTime.now());
-    }
-    final random = Random();
-    _tasks = List.generate(totalDays, (index) {
-      final taskDetail = dailyTasks[random.nextInt(dailyTasks.length)];
-      return Task(
-        id: 'day${index + 1}',
-        title: 'Day ${index + 1}: ${taskDetail['title']}',
-        description: taskDetail['description'] ?? '',
-        day: index + 1,
-        lastTrainedDate: null, // Initialize as null for new tasks
-      );
-    });
-    await _firebaseService.saveTasks(_tasks);
-  }
-
   Future<void> toggleTaskCompletion(String taskId) async {
     final taskIndex = _tasks.indexWhere((task) => task.id == taskId);
     if (taskIndex != -1) {
       _tasks[taskIndex].isCompleted = !_tasks[taskIndex].isCompleted;
-      await _firebaseService.updateTaskCompletion(
+      /*await _firebaseService.updateTaskCompletion(
         taskId,
         _tasks[taskIndex].isCompleted,
-      );
+      );*/
       await _updateUserProgress();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         notifyListeners();
@@ -135,12 +130,12 @@ class TaskProvider with ChangeNotifier {
 
   Future<void> _updateUserProgress() async {
     if (_user != null) {
-      await _firebaseService.updateUserProfile(_user!.displayName, progress);
+      /*await _firebaseService.updateUserProfile(_user!.displayName, progress);*/
     }
   }
 
   Future<void> updateUserName(String name) async {
-    await _firebaseService.updateUserProfile(name, progress);
+    /*await _firebaseService.updateUserProfile(name, progress);*/
     await _fetchUser();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       notifyListeners();

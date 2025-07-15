@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; // New import for DateFormat
+import 'package:memora/models/task_model.dart';
 import 'package:memora/providers/task_provider.dart';
 import 'package:memora/screens/profile_screen.dart';
 import 'package:memora/screens/ranking_screen.dart';
@@ -39,6 +40,14 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
     return '';
   }
 
+  Task? _findTaskForDay(List<Task> tasks, int dayNumber) {
+    try {
+      return tasks.firstWhere((t) => t.day == dayNumber);
+    } catch (e) {
+      return null;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -58,6 +67,13 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
   Widget build(BuildContext context) {
     final taskProvider = Provider.of<TaskProvider>(context);
     final int totalDays = 30; // Total days in the roadmap
+
+    if (taskProvider.isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('기억력 훈련 로드맵')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -116,33 +132,41 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
               ).format(task!.lastTrainedDate!); // Format date
             }
 
-            final isFuture = dayNumber > taskProvider.currentRoadmapDay;
+            final bool isLocked =
+                dayNumber > 1 &&
+                (taskProvider.tasks.length < index ||
+                    !taskProvider.tasks[index - 1].isCompleted);
 
             return SizedBox(
               width: itemWidth,
               child: InkWell(
-                onTap: isFuture
-                    ? null // Disable tap for future dates
+                onTap: isLocked
+                    ? null // Disable tap for locked dates
                     : () {
-                        if (task != null) {
+                        final taskForDay = _findTaskForDay(
+                          taskProvider.tasks,
+                          dayNumber,
+                        );
+                        if (taskForDay != null) {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => TaskScreen(task: task),
+                              builder: (context) =>
+                                  TaskScreen(task: taskForDay),
                             ),
                           );
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                'Day $dayNumber is not yet available.',
+                                'Task for Day $dayNumber is not available yet.',
                               ),
                             ),
                           );
                         }
                       },
                 child: Opacity(
-                  opacity: isFuture ? 0.5 : 1.0, // Dim future dates
+                  opacity: isLocked ? 0.5 : 1.0, // Dim locked dates
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

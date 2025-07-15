@@ -1,7 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:memora/models/chat_message.dart';
 import 'package:memora/services/openai_service.dart';
+import 'package:memora/services/local_storage_service.dart';
+import 'package:memora/services/chat_service.dart';
+import 'package:memora/widgets/chat_input_field.dart';
+import 'package:memora/widgets/chat_messages_list.dart';
 
 class NotionQuizChatScreen extends StatefulWidget {
   final String pageTitle;
@@ -19,8 +24,10 @@ class NotionQuizChatScreen extends StatefulWidget {
 
 class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
   final OpenAIService _openAIService = OpenAIService();
+  final LocalStorageService _localStorageService = LocalStorageService();
+  late final ChatService _chatService;
   final TextEditingController _textController = TextEditingController();
-  final List<Map<String, String>> _messages = [];
+  final List<ChatMessage> _messages = [];
   bool _isLoading = true;
 
   int _questionCount = 0;
@@ -30,6 +37,7 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
   @override
   void initState() {
     super.initState();
+    _chatService = ChatService(_localStorageService);
     _startQuizSession();
   }
 
@@ -56,12 +64,25 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
 
   void _addMessage(String text, {bool isUser = true}) {
     setState(() {
-      _messages.insert(0, {'role': isUser ? 'user' : 'ai', 'content': text});
+      _messages.insert(
+          0,
+          ChatMessage(
+            content: text,
+            sender: isUser ? MessageSender.user : MessageSender.ai,
+            timestamp: DateTime.now(),
+          ));
     });
   }
 
   void _sendMessage(String text) async {
-    if (text.isEmpty || _quizFinished) return;
+    if (text.isEmpty) return;
+
+    if (text == '/reset') {
+      _textController.clear();
+      return;
+    }
+
+    if (_quizFinished) return;
 
     _addMessage(text, isUser: true);
     _textController.clear();
@@ -87,6 +108,8 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
           _quizFinished = true;
         });
       }
+      // Save chat history after each message exchange
+      await _chatService.saveChatHistory(widget.pageTitle, _messages);
     } catch (e) {
       _addMessage("Error: ${e.toString()}", isUser: false);
     } finally {
@@ -132,69 +155,20 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
           Expanded(
             child: _isLoading && _messages.isEmpty
                 ? const Center(child: CircularProgressIndicator())
-                : ListView.builder(
-                    reverse: true,
-                    padding: const EdgeInsets.all(8.0),
-                    itemCount: _messages.length,
-                    itemBuilder: (context, index) {
-                      final message = _messages[index];
-                      final isUser = message['role'] == 'user';
-                      return Align(
-                        alignment: isUser
-                            ? Alignment.centerRight
-                            : Alignment.centerLeft,
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(vertical: 4.0),
-                          padding: const EdgeInsets.all(12.0),
-                          decoration: BoxDecoration(
-                            color: isUser ? Colors.blue[100] : Colors.grey[300],
-                            borderRadius: BorderRadius.circular(12.0),
-                          ),
-                          child: Text(
-                            message['content']!,
-                            style: const TextStyle(color: Colors.black),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                : ChatMessagesList(messages: _messages),
           ),
           if (_isLoading)
             const Padding(
               padding: EdgeInsets.all(8.0),
               child: LinearProgressIndicator(),
             ),
-          _buildMessageInput(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMessageInput() {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _textController,
-              decoration: InputDecoration(
-                hintText: _quizFinished ? '퀴즈가 종료되었습니다.' : '답변을 입력하세요...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20.0),
-                ),
-              ),
-              onSubmitted: (_isLoading || _quizFinished)
-                  ? null
-                  : (text) => _sendMessage(text),
-              enabled: !_quizFinished,
-            ),
-          ),
-          const SizedBox(width: 8.0),
-          IconButton(
-            icon: const Icon(Icons.send),
-            onPressed: (_isLoading || _quizFinished)
-                ? null
+          ChatInputField(
+            controller: _textController,
+            onSubmitted: (_isLoading || _quizFinished)
+                ? (_) {}
+                : (text) => _sendMessage(text),
+            onSendPressed: (_isLoading || _quizFinished)
+                ? () {}
                 : () => _sendMessage(_textController.text),
           ),
         ],

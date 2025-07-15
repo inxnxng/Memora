@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:memora/models/task_model.dart';
 import 'package:memora/providers/task_provider.dart';
-import 'package:memora/screens/openai_api_key_input_screen.dart';
+
 import 'package:memora/screens/training_chat_screen.dart';
 import 'package:memora/services/openai_service.dart';
 import 'package:provider/provider.dart';
@@ -56,13 +56,6 @@ class TaskScreen extends StatelessWidget {
                   if (!context.mounted) return; // Add this line
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('OpenAI API Key가 필요합니다.')),
-                  );
-                  if (!context.mounted) return; // Add this line
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const OpenAIApiKeyInputScreen(),
-                    ),
                   );
                 }
               },

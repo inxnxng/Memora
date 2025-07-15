@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/widgets.dart';
@@ -112,30 +113,37 @@ class NotionProvider with ChangeNotifier {
     _databaseTitle = notionInfo['databaseTitle'];
     _database = notionInfo['database'];
 
-    // If apiToken and databaseId are present but databaseTitle is not, try to fetch it.
-    if (_apiToken != null &&
-        _databaseId != null &&
-        (_databaseTitle == null || _databaseTitle!.isEmpty)) {
-      try {
-        final dbInfo = await _notionService.getDatabaseInfo(
-          _apiToken!,
-          _databaseId!,
-        );
-        debugPrint('Notion DB Info (from _loadNotionInfo): $dbInfo');
-        final fetchedDbTitle = dbInfo['title']?[0]?['plain_text'] ?? 'Untitled';
-        debugPrint('Fetched DB Title (from _loadNotionInfo): $fetchedDbTitle');
-        if (fetchedDbTitle.isNotEmpty) {
-          _databaseTitle = fetchedDbTitle;
-          // Save the fetched title back to NotionService (which saves to SharedPreferences)
-          await _notionService.saveDatabaseTitle(_databaseTitle!);
+    // If apiToken and databaseId are present, ensure connection status is updated.
+    if (_apiToken != null && _databaseId != null) {
+      // If title is missing, try fetching it again.
+      if (_databaseTitle == null || _databaseTitle!.isEmpty) {
+        try {
+          final dbInfo = await _notionService.getDatabaseInfo(
+            _apiToken!,
+            _databaseId!,
+          );
+          final fetchedDbTitle =
+              dbInfo['title']?[0]?['plain_text'] ?? 'Untitled';
+          if (fetchedDbTitle.isNotEmpty) {
+            _databaseTitle = fetchedDbTitle;
+            await _notionService.saveDatabaseTitle(_databaseTitle!);
+          }
+        } catch (e) {
+          debugPrint('Error fetching database title on load: $e');
+          _notionConnectionError = '저장된 데이터베이스를 불러오는 데 실패했습니다. 다시 연결해주세요.';
+          // Clear invalid info
+          await clearNotionInfo();
         }
-        _notionConnectionError = null; // Clear error on success
-      } catch (e) {
-        debugPrint('Error fetching database title on load: $e');
-        _notionConnectionError =
-            'Notion 연결 오류: ${e.toString().contains('unauthorized') ? 'API 토큰이 유효하지 않습니다.' : '다시 시도해주세요.'}';
       }
+    } else {
+      // If essential info is missing, ensure we are not considered connected.
+      _apiToken = null;
+      _databaseId = null;
+      _databaseTitle = null;
+      _database = null;
     }
+
+    notifyListeners();
   }
 
   Future<void> saveDatabase(String database) async {
@@ -166,6 +174,10 @@ class NotionProvider with ChangeNotifier {
       _databaseId = databaseId;
       _databaseTitle = databaseTitle;
       _notionConnectionError = null; // Clear error on success
+
+      // Also update the general 'database' field for consistency
+      final dbValue = json.encode({'id': databaseId, 'title': databaseTitle});
+      await saveDatabase(dbValue);
     } catch (e) {
       debugPrint('Error connecting Notion database: $e');
       // Don't update to the new ID if it fails. Keep the old one.

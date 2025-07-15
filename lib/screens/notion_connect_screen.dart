@@ -47,13 +47,21 @@ class _NotionConnectScreenState extends State<NotionConnectScreen> {
                 controller: _tokenController,
                 decoration: const InputDecoration(
                   labelText: 'Notion API Token',
+                  hintText: 'Enter your Notion API token here',
                 ),
-                onChanged: (value) {
-                  // Automatically save the token as the user types
-                  if (value.isNotEmpty) {
-                    notionProvider.setApiToken(value);
+                obscureText: true,
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: () {
+                  final token = _tokenController.text.trim();
+                  if (token.isNotEmpty) {
+                    context.read<NotionProvider>().setApiToken(token);
+                    // Hide keyboard
+                    FocusScope.of(context).unfocus();
                   }
                 },
+                child: const Text('API 토큰 저장 및 확인'),
               ),
               const SizedBox(height: 20),
               if (notionProvider.apiToken != null &&
@@ -138,10 +146,34 @@ class _NotionConnectScreenState extends State<NotionConnectScreen> {
           return Card(
             child: ListTile(
               title: Text(title),
-              onTap: () {
-                notionProvider.connectNotionDatabase(dbId, title);
+              onTap: () async {
+                // Show loading indicator
+                showDialog(
+                  context: context,
+                  barrierDismissible: false,
+                  builder: (context) =>
+                      const Center(child: CircularProgressIndicator()),
+                );
+
+                await notionProvider.connectNotionDatabase(dbId, title);
+
+                if (!mounted) return;
+                // Dismiss loading indicator
+                Navigator.pop(context);
+
+                // Show snackbar based on result
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('$title 데이터베이스가 연결되었습니다.')),
+                  SnackBar(
+                    content: Text(
+                      notionProvider.notionConnectionError == null
+                          ? '$title 데이터베이스가 연결되었습니다.'
+                          : notionProvider.notionConnectionError!,
+                    ),
+                    backgroundColor:
+                        notionProvider.notionConnectionError == null
+                        ? Colors.green
+                        : Colors.red,
+                  ),
                 );
               },
             ),

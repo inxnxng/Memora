@@ -1,18 +1,18 @@
-import 'package:firebase_core/firebase_core.dart';
+/*import 'package:firebase_core/firebase_core.dart';*/
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:memora/providers/notion_provider.dart';
 import 'package:memora/providers/task_provider.dart';
 import 'package:memora/screens/home_screen.dart';
-import 'package:memora/services/firebase_service.dart';
+/*import 'package:memora/services/firebase_service.dart';*/
 import 'package:memora/services/local_storage_service.dart';
 import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
-  await Firebase.initializeApp();
+  /*await Firebase.initializeApp();*/
 
   final notionProvider = NotionProvider();
 
@@ -22,7 +22,7 @@ void main() async {
         ChangeNotifierProvider.value(value: notionProvider),
         ChangeNotifierProvider(
           create: (context) => TaskProvider(
-            FirebaseService(),
+            /*FirebaseService(),*/
             notionProvider,
             LocalStorageService(),
           ),

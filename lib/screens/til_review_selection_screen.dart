@@ -299,7 +299,7 @@ class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
                   if (!mounted) return; // Add this line
                   Navigator.pop(context); // Dismiss loading indicator
 
-                  if (!mounted) return;
+                  if (!mounted) return; // Add this line
                   Navigator.push(
                     context,
                     MaterialPageRoute(

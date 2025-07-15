@@ -1,11 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:memora/models/chat_message.dart';
 import 'package:memora/providers/task_provider.dart';
-import 'package:memora/screens/openai_api_key_input_screen.dart';
+
+import 'package:memora/services/chat_service.dart';
 import 'package:memora/services/local_storage_service.dart';
 import 'package:memora/services/openai_service.dart';
+import 'package:memora/widgets/chat_input_field.dart';
+import 'package:memora/widgets/chat_messages_list.dart';
 
 class TrainingChatScreen extends StatefulWidget {
   final String taskTitle;
@@ -28,14 +31,16 @@ class TrainingChatScreen extends StatefulWidget {
 class _TrainingChatScreenState extends State<TrainingChatScreen> {
   final OpenAIService _openAIService = OpenAIService();
   final LocalStorageService _localStorageService = LocalStorageService();
+  late final ChatService _chatService;
   final TextEditingController _textController = TextEditingController();
-  final List<Map<String, String>> _messages = [];
+  final List<ChatMessage> _messages = [];
   bool _isCompleteButtonEnabled = false; // State for the button
   Timer? _timer; // Timer for enabling the button
 
   @override
   void initState() {
     super.initState();
+    _chatService = ChatService(_localStorageService);
     _loadChatHistoryAndStartSession();
     _startCompletionTimer(); // Start the timer
   }
@@ -50,14 +55,42 @@ class _TrainingChatScreenState extends State<TrainingChatScreen> {
   }
 
   Future<void> _loadChatHistoryAndStartSession() async {
-    final loadedHistory = await _localStorageService.loadChatHistory(
-      widget.taskId,
-    );
+    final loadedHistory = await _chatService.loadChatHistory(widget.taskId);
     setState(() {
       _messages.addAll(loadedHistory);
     });
 
     if (_messages.isEmpty) {
+      // Start with a greeting from the app, not the AI
+      _addMessageToChat(
+        '안녕하세요! ${widget.taskTitle} 주제로 훈련을 시작할거에요! 준비되셨나요?',
+        isUser: false,
+      );
+    }
+  }
+
+  Future<void> _resetChat() async {
+    setState(() {
+      _messages.clear();
+    });
+    await _chatService.clearChatHistory(widget.taskId);
+    await _loadChatHistoryAndStartSession(); // Restart with the welcome message
+  }
+
+  void _sendMessage(String text) async {
+    final trimmedText = text.trim();
+    if (trimmedText.isEmpty) return;
+
+    if (trimmedText == '/reset') {
+      await _resetChat();
+      return;
+    }
+
+    _addMessageToChat(trimmedText, isUser: true);
+    _textController.clear();
+
+    // If this is the first user message, construct the initial prompt for the AI
+    if (_messages.length == 2 && _messages[0].sender == MessageSender.ai) {
       final lastResult = await _localStorageService.loadLastTrainingResult();
       String initialPrompt =
           "Let's start memory training for: ${widget.taskTitle}. ${widget.taskDescription}.";
@@ -65,46 +98,58 @@ class _TrainingChatScreenState extends State<TrainingChatScreen> {
         initialPrompt +=
             " Based on your last training result: $lastResult, let's adjust the difficulty.";
       }
-      initialPrompt += " Please guide me through an exercise.";
-      // AI initiates the session, not a simulated user message
-      _sendMessage(initialPrompt, isUser: false);
+      initialPrompt +=
+          " Please guide me through an exercise. My first response to you is: $trimmedText";
+
+      // Now, send this combined prompt to the AI
+      try {
+        final aiResponse = await _openAIService.generateTrainingContent(
+          initialPrompt,
+        );
+        _addMessageToChat(aiResponse, isUser: false);
+      } catch (e) {
+        _handleError(e);
+      }
+    } else {
+      // For subsequent messages, just send the user's text
+      try {
+        final aiResponse = await _openAIService.generateTrainingContent(
+          trimmedText,
+        );
+        _addMessageToChat(aiResponse, isUser: false);
+      } catch (e) {
+        _handleError(e);
+      }
     }
+
+    await _chatService.saveChatHistory(widget.taskId, _messages);
   }
 
-  void _sendMessage(String text, {bool isUser = true}) async {
+  void _addMessageToChat(String text, {bool isUser = true}) {
     setState(() {
-      _messages.add({'role': isUser ? 'user' : 'ai', 'content': text});
+      _messages.add(ChatMessage(
+        content: text,
+        sender: isUser ? MessageSender.user : MessageSender.ai,
+        timestamp: DateTime.now(),
+      ));
     });
-    await _localStorageService.saveChatHistory(widget.taskId, _messages);
+  }
 
-    if (isUser) {
-      _textController.clear();
-      try {
-        final aiResponse = await _openAIService.generateTrainingContent(text);
-        _sendMessage(aiResponse, isUser: false);
-      } catch (e) {
-        if (e.toString().contains('API key not found') ||
-            e.toString().contains('invalid') ||
-            e.toString().contains('unauthorized')) {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'OpenAI API Key is invalid or missing. Please update it.',
-              ),
-            ),
-          );
-          if (!mounted) return; // Add this line
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const OpenAIApiKeyInputScreen(),
-            ),
-          );
-        } else {
-          _sendMessage("Error: ${e.toString()}", isUser: false);
-        }
-      }
+  void _handleError(Object e) {
+    if (e.toString().contains('API key not found') ||
+        e.toString().contains('invalid') ||
+        e.toString().contains('unauthorized')) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'OpenAI API Key is invalid or missing. Please update it.',
+          ),
+        ),
+      );
+      Navigator.pop(context); // Go back to the previous screen
+    } else {
+      _addMessageToChat("Error: ${e.toString()}", isUser: false);
     }
   }
 
@@ -141,85 +186,12 @@ class _TrainingChatScreenState extends State<TrainingChatScreen> {
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(8.0),
-              reverse: true,
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final message = _messages[_messages.length - 1 - index];
-                return Align(
-                  alignment: message['role'] == 'user'
-                      ? Alignment.centerRight
-                      : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4.0),
-                    padding: const EdgeInsets.all(10.0),
-                    decoration: BoxDecoration(
-                      color: message['role'] == 'user'
-                          ? Colors.blue[100]
-                          : Colors.grey[300],
-                      borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(12.0),
-                        topRight: const Radius.circular(12.0),
-                        bottomLeft: Radius.circular(
-                          message['role'] == 'user' ? 12.0 : 0,
-                        ),
-                        bottomRight: Radius.circular(
-                          message['role'] == 'user' ? 0 : 12.0,
-                        ),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          message['content']!,
-                          style: const TextStyle(color: Colors.black),
-                        ),
-                        if (message.containsKey('timestamp') &&
-                            message['timestamp'] != null &&
-                            message['timestamp']!.isNotEmpty) ...[
-                          const SizedBox(height: 4.0),
-                          Text(
-                            DateFormat(
-                              'HH:mm:ss',
-                            ).format(DateTime.parse(message['timestamp']!)),
-                            style: const TextStyle(
-                              color: Colors.black54,
-                              fontSize: 10.0,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
+            child: ChatMessagesList(messages: _messages),
           ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _textController,
-                    decoration: InputDecoration(
-                      hintText: '메시지를 입력하세요...',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20.0),
-                      ),
-                    ),
-                    onSubmitted: (text) => _sendMessage(text),
-                  ),
-                ),
-                const SizedBox(width: 8.0),
-                FloatingActionButton(
-                  onPressed: () => _sendMessage(_textController.text),
-                  child: const Icon(Icons.send),
-                ),
-              ],
-            ),
+          ChatInputField(
+            controller: _textController,
+            onSubmitted: _sendMessage,
+            onSendPressed: () => _sendMessage(_textController.text),
           ),
         ],
       ),

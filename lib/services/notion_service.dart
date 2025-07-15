@@ -231,7 +231,7 @@ class NotionService {
       },
       body: jsonEncode({
         'sorts': [
-          {'property': 'Day', 'direction': 'ascending'},
+          {'timestamp': 'created_time', 'direction': 'ascending'},
         ],
       }),
     );

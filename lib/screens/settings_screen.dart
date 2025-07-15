@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:memora/providers/notion_provider.dart';
+import 'package:memora/services/local_storage_service.dart';
 import 'package:memora/services/notion_service.dart';
-import 'package:memora/services/openai_service.dart';
 import 'package:provider/provider.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -13,8 +13,8 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  final OpenAIService _openAIService = OpenAIService();
   final NotionService _notionService = NotionService();
+  final LocalStorageService _localStorageService = LocalStorageService();
 
   Map<String, String?> _openAIApiKey = {'value': null, 'timestamp': null};
   Map<String, String?> _notionApiToken = {'value': null, 'timestamp': null};
@@ -37,7 +37,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _isLoading = true;
     });
-    _openAIApiKey = await _openAIService.getApiKeyWithTimestamp();
+    _openAIApiKey = await _localStorageService.getApiKeyWithTimestamp();
     _notionApiToken = await _notionService.getApiTokenWithTimestamp();
 
     // Do not pre-fill controllers with actual values for security and UX.
@@ -62,8 +62,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _isLoading = true;
     });
     try {
-      await _openAIService.saveApiKey(_openAIApiKeyController.text);
+      await _localStorageService.saveApiKeyWithTimestamp(
+        _openAIApiKeyController.text,
+      );
       await _loadKeys(); // Reload to update timestamp
+      if (!mounted) return;
       if (mounted) {
         ScaffoldMessenger.of(
           context,
