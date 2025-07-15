@@ -15,6 +15,7 @@ void main() async {
   /*await Firebase.initializeApp();*/
 
   final notionProvider = NotionProvider();
+  await notionProvider.initialize(); // Initialize NotionProvider here
 
   runApp(
     MultiProvider(

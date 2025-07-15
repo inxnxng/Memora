@@ -147,6 +147,7 @@ class _TrainingChatScreenState extends State<TrainingChatScreen> {
           ),
         ),
       );
+      if (!mounted) return;
       Navigator.pop(context); // Go back to the previous screen
     } else {
       _addMessageToChat("Error: ${e.toString()}", isUser: false);

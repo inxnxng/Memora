@@ -67,11 +67,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
       await _loadKeys(); // Reload to update timestamp
       if (!mounted) return;
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('OpenAI API Key 저장 완료!')));
-      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('OpenAI API Key 저장 완료!')));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
