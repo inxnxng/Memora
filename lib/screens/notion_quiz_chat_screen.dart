@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:memora/services/openai_service.dart';
 
@@ -40,8 +41,9 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
     try {
       final initialPrompt =
           "Based on the following content from my Notion page '${widget.pageTitle}', please quiz me to help me remember it. Ask me one question at a time. After I answer, please tell me if I am correct or incorrect by starting your response with 'Correct.' or 'Incorrect.'. Then, ask the next question. Ask a total of 3 questions.";
-      final aiResponse =
-          await _openAIService.generateTrainingContent(initialPrompt);
+      final aiResponse = await _openAIService.generateTrainingContent(
+        initialPrompt,
+      );
       _addMessage(aiResponse, isUser: false);
     } catch (e) {
       _addMessage("Error starting quiz: ${e.toString()}", isUser: false);
@@ -108,7 +110,9 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
                   _quizResults[index] == true
                       ? Icons.circle
                       : Icons.circle_outlined,
-                  color: _quizResults[index] == true ? Colors.green : Colors.grey,
+                  color: _quizResults[index] == true
+                      ? Colors.green
+                      : Colors.grey,
                   size: 16,
                 ),
               );
@@ -136,14 +140,14 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
                       final message = _messages[index];
                       final isUser = message['role'] == 'user';
                       return Align(
-                        alignment:
-                            isUser ? Alignment.centerRight : Alignment.centerLeft,
+                        alignment: isUser
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
                         child: Container(
                           margin: const EdgeInsets.symmetric(vertical: 4.0),
                           padding: const EdgeInsets.all(12.0),
                           decoration: BoxDecoration(
-                            color:
-                                isUser ? Colors.blue[100] : Colors.grey[300],
+                            color: isUser ? Colors.blue[100] : Colors.grey[300],
                             borderRadius: BorderRadius.circular(12.0),
                           ),
                           child: Text(
