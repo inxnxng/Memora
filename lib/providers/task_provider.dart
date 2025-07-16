@@ -1,30 +1,28 @@
-import 'dart:math';
-
 import 'package:flutter/widgets.dart';
-import 'package:memora/constants/task_list.dart';
+import 'package:memora/domain/usecases/fetch_tasks.dart';
+import 'package:memora/domain/usecases/load_last_trained_date.dart';
+import 'package:memora/domain/usecases/toggle_task_completion.dart';
 import 'package:memora/models/task_model.dart';
 import 'package:memora/models/user_model.dart';
-import 'package:memora/providers/notion_provider.dart';
-/*import 'package:memora/services/firebase_service.dart';*/
-import 'package:memora/services/local_storage_service.dart'; // New import
 import 'package:shared_preferences/shared_preferences.dart';
 
 class TaskProvider with ChangeNotifier {
-  /*final FirebaseService _firebaseService;*/
-  final NotionProvider _notionProvider;
-  final LocalStorageService _localStorageService; // New field
+  final FetchTasks _fetchTasksUseCase;
+  final ToggleTaskCompletion _toggleTaskCompletionUseCase;
+  final LoadLastTrainedDate _loadLastTrainedDateUseCase;
+
   List<Task> _tasks = [];
   AppUser? _user;
   bool _isLoading = true;
-  final int totalDays = 30;
   DateTime? _roadmapStartDate;
 
-  TaskProvider(
-    /*this._firebaseService,*/
-    this._notionProvider,
-    this._localStorageService,
-  ) {
-    // Updated constructor
+  TaskProvider({
+    required FetchTasks fetchTasksUseCase,
+    required ToggleTaskCompletion toggleTaskCompletionUseCase,
+    required LoadLastTrainedDate loadLastTrainedDateUseCase,
+  }) : _fetchTasksUseCase = fetchTasksUseCase,
+       _toggleTaskCompletionUseCase = toggleTaskCompletionUseCase,
+       _loadLastTrainedDateUseCase = loadLastTrainedDateUseCase {
     _initialize();
   }
 
@@ -46,10 +44,12 @@ class TaskProvider with ChangeNotifier {
     /*await _firebaseService.signInAnonymously();*/
     await _fetchUser();
     await _loadRoadmapStartDate();
-    await _fetchTasks();
+    await _fetchAndLoadTasks();
     _isLoading = false;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifyListeners();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
     });
   }
 
@@ -65,50 +65,12 @@ class TaskProvider with ChangeNotifier {
     }
   }
 
-  Future<void> _fetchTasks() async {
-    List<Task> fetchedTasks = [];
-    if (_notionProvider.isConnected) {
-      try {
-        fetchedTasks = await _notionProvider.fetchRoadmapTasks();
-      } catch (e) {
-        debugPrint('Failed to fetch tasks from Notion: $e');
-        // If Notion fails, fetchedTasks remains empty, triggering local generation
-      }
-    }
-
-    if (fetchedTasks.isEmpty || fetchedTasks.length < totalDays) {
-      // If Notion didn't provide enough tasks, generate/fill locally
-      final Map<int, Task> existingTasks = {
-        for (var task in fetchedTasks) task.day: task,
-      };
-      _tasks = List.generate(totalDays, (index) {
-        final dayNumber = index + 1;
-        if (existingTasks.containsKey(dayNumber)) {
-          return existingTasks[dayNumber]!;
-        } else {
-          final taskDetail = dailyTasks[Random().nextInt(dailyTasks.length)];
-          return Task(
-            id: 'day$dayNumber',
-            title: 'Day $dayNumber: ${taskDetail['title']}',
-            description: taskDetail['description'] ?? '',
-            day: dayNumber,
-            isCompleted: false,
-            lastTrainedDate: null,
-          );
-        }
-      });
-    } else {
-      _tasks = fetchedTasks;
-    }
-
-    // Ensure tasks are sorted by day
-    _tasks.sort((a, b) => a.day.compareTo(b.day));
+  Future<void> _fetchAndLoadTasks() async {
+    _tasks = await _fetchTasksUseCase.call();
 
     // Load lastTrainedDate for each task
     for (var task in _tasks) {
-      task.lastTrainedDate = await _localStorageService.loadLastTrainedDate(
-        task.id,
-      );
+      task.lastTrainedDate = await _loadLastTrainedDateUseCase.call(task.id);
     }
     await _updateUserProgress();
   }
@@ -117,13 +79,15 @@ class TaskProvider with ChangeNotifier {
     final taskIndex = _tasks.indexWhere((task) => task.id == taskId);
     if (taskIndex != -1) {
       _tasks[taskIndex].isCompleted = !_tasks[taskIndex].isCompleted;
-      /*await _firebaseService.updateTaskCompletion(
+      await _toggleTaskCompletionUseCase.call(
         taskId,
         _tasks[taskIndex].isCompleted,
-      );*/
+      );
       await _updateUserProgress();
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        notifyListeners();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          notifyListeners();
+        });
       });
     }
   }
@@ -138,7 +102,9 @@ class TaskProvider with ChangeNotifier {
     /*await _firebaseService.updateUserProfile(name, progress);*/
     await _fetchUser();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifyListeners();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
     });
   }
 }

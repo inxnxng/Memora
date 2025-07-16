@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // New import for DateFormat
+import 'package:intl/intl.dart';
 import 'package:memora/models/task_model.dart';
 import 'package:memora/providers/task_provider.dart';
 import 'package:memora/screens/profile_screen.dart';
@@ -19,6 +19,7 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
   final ItemScrollController _itemScrollController = ItemScrollController();
   final ItemPositionsListener _itemPositionsListener =
       ItemPositionsListener.create();
+  bool _initialScrollScheduled = false;
 
   // Define milestones for the roadmap
   static const List<Map<String, dynamic>> _milestones = [
@@ -51,16 +52,6 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
   @override
   void initState() {
     super.initState();
-    // Scroll to the current day after the first frame is rendered
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final taskProvider = Provider.of<TaskProvider>(context, listen: false);
-      _itemScrollController.scrollTo(
-        index: taskProvider.currentRoadmapDay - 1, // 0-indexed
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeOutCubic,
-        alignment: 0.5, // Center the item
-      );
-    });
   }
 
   @override
@@ -73,6 +64,20 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
         appBar: AppBar(title: const Text('기억력 훈련 로드맵')),
         body: const Center(child: CircularProgressIndicator()),
       );
+    }
+
+    if (!_initialScrollScheduled) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _itemScrollController.scrollTo(
+            index: taskProvider.currentRoadmapDay - 1, // 0-indexed
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeOutCubic,
+            alignment: 0.5, // Center the item
+          );
+        }
+      });
+      _initialScrollScheduled = true;
     }
 
     return Scaffold(
@@ -132,10 +137,20 @@ class _RoadmapScreenState extends State<RoadmapScreen> {
               ).format(task!.lastTrainedDate!); // Format date
             }
 
-            final bool isLocked =
-                dayNumber > 1 &&
-                (taskProvider.tasks.length < index ||
-                    !taskProvider.tasks[index - 1].isCompleted);
+            final bool isLocked;
+            if (dayNumber > 1) {
+              // Find the task for the previous day
+              final previousDayTask = _findTaskForDay(
+                taskProvider.tasks,
+                dayNumber - 1,
+              );
+              // Lock if the previous day's task doesn't exist or isn't completed
+              isLocked =
+                  previousDayTask == null || !previousDayTask.isCompleted;
+            } else {
+              // Day 1 is never locked
+              isLocked = false;
+            }
 
             return SizedBox(
               width: itemWidth,

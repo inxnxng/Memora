@@ -1,14 +1,14 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:memora/domain/usecases/generate_training_content.dart';
+import 'package:memora/domain/usecases/save_last_trained_date.dart';
+import 'package:memora/domain/usecases/load_last_trained_date.dart';
 import 'package:memora/models/chat_message.dart';
 import 'package:memora/providers/task_provider.dart';
-
-import 'package:memora/services/chat_service.dart';
-import 'package:memora/services/local_storage_service.dart';
-import 'package:memora/services/openai_service.dart';
 import 'package:memora/widgets/chat_input_field.dart';
 import 'package:memora/widgets/chat_messages_list.dart';
+import 'package:provider/provider.dart';
+import 'dart:async'; // Import for Timer
+import 'package:memora/services/chat_service.dart'; // Import for ChatService
 
 class TrainingChatScreen extends StatefulWidget {
   final String taskTitle;
@@ -29,8 +29,9 @@ class TrainingChatScreen extends StatefulWidget {
 }
 
 class _TrainingChatScreenState extends State<TrainingChatScreen> {
-  final OpenAIService _openAIService = OpenAIService();
-  final LocalStorageService _localStorageService = LocalStorageService();
+  late final GenerateTrainingContent _generateTrainingContent;
+  late final SaveLastTrainedDate _saveLastTrainedDate;
+  late final LoadLastTrainedDate _loadLastTrainedDate;
   late final ChatService _chatService;
   final TextEditingController _textController = TextEditingController();
   final List<ChatMessage> _messages = [];
@@ -40,7 +41,19 @@ class _TrainingChatScreenState extends State<TrainingChatScreen> {
   @override
   void initState() {
     super.initState();
-    _chatService = ChatService(_localStorageService);
+    _generateTrainingContent = Provider.of<GenerateTrainingContent>(
+      context,
+      listen: false,
+    );
+    _saveLastTrainedDate = Provider.of<SaveLastTrainedDate>(
+      context,
+      listen: false,
+    );
+    _loadLastTrainedDate = Provider.of<LoadLastTrainedDate>(
+      context,
+      listen: false,
+    );
+    _chatService = Provider.of<ChatService>(context, listen: false);
     _loadChatHistoryAndStartSession();
     _startCompletionTimer(); // Start the timer
   }
@@ -91,21 +104,19 @@ class _TrainingChatScreenState extends State<TrainingChatScreen> {
 
     // If this is the first user message, construct the initial prompt for the AI
     if (_messages.length == 2 && _messages[0].sender == MessageSender.ai) {
-      final lastResult = await _localStorageService.loadLastTrainingResult();
+      final lastTrained = await _loadLastTrainedDate.call(widget.taskId);
       String initialPrompt =
           "Let's start memory training for: ${widget.taskTitle}. ${widget.taskDescription}.";
-      if (lastResult != null && lastResult.isNotEmpty) {
+      if (lastTrained != null) {
         initialPrompt +=
-            " Based on your last training result: $lastResult, let's adjust the difficulty.";
+            " Based on your last training on $lastTrained, let's adjust the difficulty.";
       }
       initialPrompt +=
           " Please guide me through an exercise. My first response to you is: $trimmedText";
 
       // Now, send this combined prompt to the AI
       try {
-        final aiResponse = await _openAIService.generateTrainingContent(
-          initialPrompt,
-        );
+        final aiResponse = await _generateTrainingContent.call(initialPrompt);
         _addMessageToChat(aiResponse, isUser: false);
       } catch (e) {
         _handleError(e);
@@ -113,9 +124,7 @@ class _TrainingChatScreenState extends State<TrainingChatScreen> {
     } else {
       // For subsequent messages, just send the user's text
       try {
-        final aiResponse = await _openAIService.generateTrainingContent(
-          trimmedText,
-        );
+        final aiResponse = await _generateTrainingContent.call(trimmedText);
         _addMessageToChat(aiResponse, isUser: false);
       } catch (e) {
         _handleError(e);
@@ -127,11 +136,13 @@ class _TrainingChatScreenState extends State<TrainingChatScreen> {
 
   void _addMessageToChat(String text, {bool isUser = true}) {
     setState(() {
-      _messages.add(ChatMessage(
-        content: text,
-        sender: isUser ? MessageSender.user : MessageSender.ai,
-        timestamp: DateTime.now(),
-      ));
+      _messages.add(
+        ChatMessage(
+          content: text,
+          sender: isUser ? MessageSender.user : MessageSender.ai,
+          timestamp: DateTime.now(),
+        ),
+      );
     });
   }
 
@@ -155,12 +166,7 @@ class _TrainingChatScreenState extends State<TrainingChatScreen> {
   }
 
   void _endTrainingSession() async {
-    // For now, a simple dummy result. This should be replaced with actual logic
-    // to determine difficulty/result based on the chat interaction.
-    final result =
-        "Completed training for ${widget.taskTitle} on ${DateTime.now().toIso8601String().split('T')[0]}";
-    await _localStorageService.saveLastTrainingResult(result);
-    await _localStorageService.saveLastTrainedDate(
+    await _saveLastTrainedDate.call(
       widget.taskId,
       DateTime.now(),
     ); // Save the training date
@@ -186,9 +192,7 @@ class _TrainingChatScreenState extends State<TrainingChatScreen> {
       ),
       body: Column(
         children: [
-          Expanded(
-            child: ChatMessagesList(messages: _messages),
-          ),
+          Expanded(child: ChatMessagesList(messages: _messages)),
           ChatInputField(
             controller: _textController,
             onSubmitted: _sendMessage,

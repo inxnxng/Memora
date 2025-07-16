@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:memora/domain/usecases/get_openai_api_key.dart';
+import 'package:memora/domain/usecases/save_openai_api_key.dart';
 import 'package:memora/providers/notion_provider.dart';
-import 'package:memora/services/local_storage_service.dart';
-import 'package:memora/services/notion_service.dart';
 import 'package:provider/provider.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -13,8 +13,7 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  final NotionService _notionService = NotionService();
-  final LocalStorageService _localStorageService = LocalStorageService();
+  late final NotionProvider _notionProvider;
 
   Map<String, String?> _openAIApiKey = {'value': null, 'timestamp': null};
   Map<String, String?> _notionApiToken = {'value': null, 'timestamp': null};
@@ -30,6 +29,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    _notionProvider = Provider.of<NotionProvider>(context, listen: false);
     _loadKeys();
   }
 
@@ -37,8 +37,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _isLoading = true;
     });
-    _openAIApiKey = await _localStorageService.getApiKeyWithTimestamp();
-    _notionApiToken = await _notionService.getApiTokenWithTimestamp();
+    final getOpenAIApiKey = Provider.of<GetOpenAIApiKey>(
+      context,
+      listen: false,
+    );
+    _openAIApiKey = await getOpenAIApiKey.call();
+    _notionApiToken = {'value': _notionProvider.apiToken, 'timestamp': null};
 
     // Do not pre-fill controllers with actual values for security and UX.
     // The masked value is shown separately.
@@ -62,9 +66,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _isLoading = true;
     });
     try {
-      await _localStorageService.saveApiKeyWithTimestamp(
-        _openAIApiKeyController.text,
+      final saveOpenAIApiKey = Provider.of<SaveOpenAIApiKey>(
+        context,
+        listen: false,
       );
+      await saveOpenAIApiKey.call(_openAIApiKeyController.text);
       await _loadKeys(); // Reload to update timestamp
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -88,10 +94,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _isLoading = true;
     });
     try {
-      await Provider.of<NotionProvider>(
-        context,
-        listen: false,
-      ).setApiToken(_notionApiTokenController.text);
+      await _notionProvider.setApiToken(_notionApiTokenController.text);
       await _loadKeys(); // Reload to update timestamp
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -153,20 +156,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       suffixIcon: IconButton(
                         icon: const Icon(Icons.search),
                         onPressed: () {
-                          Provider.of<NotionProvider>(
-                            context,
-                            listen: false,
-                          ).searchNotionDatabases(
+                          _notionProvider.searchNotionDatabases(
                             query: _notionDatabaseSearchController.text,
                           );
                         },
                       ),
                     ),
                     onSubmitted: (query) {
-                      Provider.of<NotionProvider>(
-                        context,
-                        listen: false,
-                      ).searchNotionDatabases(query: query);
+                      _notionProvider.searchNotionDatabases(query: query);
                     },
                   ),
                   Consumer<NotionProvider>(

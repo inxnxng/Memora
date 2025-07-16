@@ -2,13 +2,64 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/widgets.dart';
+import 'package:memora/domain/usecases/clear_notion_api_token.dart';
+import 'package:memora/domain/usecases/clear_notion_database_info.dart';
+import 'package:memora/domain/usecases/create_quiz_from_text.dart';
+import 'package:memora/domain/usecases/get_database_info.dart';
+import 'package:memora/domain/usecases/get_notion_info.dart';
+import 'package:memora/domain/usecases/get_page_content.dart';
+import 'package:memora/domain/usecases/get_pages_from_db.dart';
+import 'package:memora/domain/usecases/get_roadmap_tasks_from_db.dart';
+import 'package:memora/domain/usecases/save_notion_api_token.dart';
+import 'package:memora/domain/usecases/save_notion_database.dart';
+import 'package:memora/domain/usecases/save_notion_database_id.dart';
+import 'package:memora/domain/usecases/save_notion_database_title.dart';
+import 'package:memora/domain/usecases/search_notion_databases.dart';
 import 'package:memora/models/task_model.dart';
-import 'package:memora/services/notion_service.dart';
-import 'package:memora/services/openai_service.dart';
 
 class NotionProvider with ChangeNotifier {
-  final NotionService _notionService = NotionService();
-  final OpenAIService _openAIService = OpenAIService();
+  final SaveNotionApiToken _saveNotionApiToken;
+  final ClearNotionApiToken _clearNotionApiToken;
+  final SaveNotionDatabaseId _saveNotionDatabaseId;
+  final SaveNotionDatabaseTitle _saveNotionDatabaseTitle;
+  final SaveNotionDatabase _saveNotionDatabase;
+  final ClearNotionDatabaseInfo _clearNotionDatabaseInfo;
+  final GetNotionInfo _getNotionInfo;
+  final GetPagesFromDB _getPagesFromDB;
+  final GetDatabaseInfo _getDatabaseInfo;
+  final GetPageContent _getPageContent;
+  final SearchNotionDatabases _searchNotionDatabases;
+  final GetRoadmapTasksFromDB _getRoadmapTasksFromDB;
+  final CreateQuizFromText _createQuizFromText;
+
+  NotionProvider({
+    required SaveNotionApiToken saveNotionApiToken,
+    required ClearNotionApiToken clearNotionApiToken,
+    required SaveNotionDatabaseId saveNotionDatabaseId,
+    required SaveNotionDatabaseTitle saveNotionDatabaseTitle,
+    required SaveNotionDatabase saveNotionDatabase,
+    required ClearNotionDatabaseInfo clearNotionDatabaseInfo,
+    required GetNotionInfo getNotionInfo,
+    required GetPagesFromDB getPagesFromDB,
+    required GetDatabaseInfo getDatabaseInfo,
+    required GetPageContent getPageContent,
+    required SearchNotionDatabases searchNotionDatabases,
+    required GetRoadmapTasksFromDB getRoadmapTasksFromDB,
+    required CreateQuizFromText createQuizFromText,
+  }) : _saveNotionApiToken = saveNotionApiToken,
+       _clearNotionApiToken = clearNotionApiToken,
+       _saveNotionDatabaseId = saveNotionDatabaseId,
+       _saveNotionDatabaseTitle = saveNotionDatabaseTitle,
+       _saveNotionDatabase = saveNotionDatabase,
+       _clearNotionDatabaseInfo = clearNotionDatabaseInfo,
+       _getNotionInfo = getNotionInfo,
+       _getPagesFromDB = getPagesFromDB,
+       _getDatabaseInfo = getDatabaseInfo,
+       _getPageContent = getPageContent,
+       _searchNotionDatabases = searchNotionDatabases,
+       _getRoadmapTasksFromDB = getRoadmapTasksFromDB,
+       _createQuizFromText = createQuizFromText;
+
   String? _apiToken;
   String? _databaseId;
   String? _databaseTitle;
@@ -34,12 +85,7 @@ class NotionProvider with ChangeNotifier {
   bool get isQuizLoading => _isQuizLoading;
   List<dynamic> get availableDatabases => _availableDatabases;
   bool get isSearchingDatabases => _isSearchingDatabases;
-  List<dynamic> get pages => _pages; // Add this line
-
-  NotionProvider() {
-    // Removed _loadNotionInfo() from constructor to prevent setState during build errors.
-    // It will be called explicitly after provider creation in main.dart.
-  }
+  List<dynamic> get pages => _pages;
 
   Future<void> initialize() async {
     await _loadNotionInfo();
@@ -56,7 +102,7 @@ class NotionProvider with ChangeNotifier {
     });
 
     try {
-      _pages = await _notionService.getPagesFromDB(_apiToken!, _databaseId!);
+      _pages = await _getPagesFromDB.call(_databaseId!);
       _notionConnectionError = null; // Clear error on success
     } catch (e) {
       debugPrint('Error fetching pages from Notion: $e');
@@ -87,10 +133,7 @@ class NotionProvider with ChangeNotifier {
     });
 
     try {
-      _availableDatabases = await _notionService.searchDatabases(
-        _apiToken!,
-        query: query,
-      );
+      _availableDatabases = await _searchNotionDatabases.call(query: query);
       _notionConnectionError = null; // Clear error on success
     } catch (e) {
       debugPrint('Error searching databases: $e');
@@ -107,7 +150,7 @@ class NotionProvider with ChangeNotifier {
 
   Future<void> _loadNotionInfo() async {
     _notionConnectionError = null; // Clear previous error
-    final notionInfo = await _notionService.getNotionInfo();
+    final notionInfo = await _getNotionInfo.call();
     _apiToken = notionInfo['apiToken'];
     _databaseId = notionInfo['databaseId'];
     _databaseTitle = notionInfo['databaseTitle'];
@@ -118,15 +161,12 @@ class NotionProvider with ChangeNotifier {
       // If title is missing, try fetching it again.
       if (_databaseTitle == null || _databaseTitle!.isEmpty) {
         try {
-          final dbInfo = await _notionService.getDatabaseInfo(
-            _apiToken!,
-            _databaseId!,
-          );
+          final dbInfo = await _getDatabaseInfo.call(_databaseId!);
           final fetchedDbTitle =
               dbInfo['title']?[0]?['plain_text'] ?? 'Untitled';
           if (fetchedDbTitle.isNotEmpty) {
             _databaseTitle = fetchedDbTitle;
-            await _notionService.saveDatabaseTitle(_databaseTitle!);
+            await _saveNotionDatabaseTitle.call(_databaseTitle!);
           }
         } catch (e) {
           debugPrint('Error fetching database title on load: $e');
@@ -143,11 +183,13 @@ class NotionProvider with ChangeNotifier {
       _database = null;
     }
 
-    notifyListeners();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
   }
 
   Future<void> saveDatabase(String database) async {
-    await _notionService.saveDatabase(database);
+    await _saveNotionDatabase.call(database);
     _database = database;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       notifyListeners();
@@ -161,16 +203,18 @@ class NotionProvider with ChangeNotifier {
     _notionConnectionError = null; // Clear previous error
     if (_apiToken == null) {
       _notionConnectionError = 'Notion API 토큰이 설정되지 않았습니다.';
-      notifyListeners();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
       return;
     }
     try {
       // Verify the database by fetching its info. This confirms the token has access.
-      await _notionService.getDatabaseInfo(_apiToken!, databaseId);
+      await _getDatabaseInfo.call(databaseId);
 
       // If verification is successful, save the new database info.
-      await _notionService.saveDatabaseId(databaseId);
-      await _notionService.saveDatabaseTitle(databaseTitle);
+      await _saveNotionDatabaseId.call(databaseId);
+      await _saveNotionDatabaseTitle.call(databaseTitle);
       _databaseId = databaseId;
       _databaseTitle = databaseTitle;
       _notionConnectionError = null; // Clear error on success
@@ -184,11 +228,13 @@ class NotionProvider with ChangeNotifier {
       _notionConnectionError =
           '데이터베이스 연결에 실패했습니다. API 토큰이 해당 데이터베이스에 대한 접근 권한을 가지고 있는지 확인해주세요.';
     }
-    notifyListeners();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
   }
 
   Future<void> setApiToken(String apiToken) async {
-    await _notionService.saveApiToken(apiToken);
+    await _saveNotionApiToken.call(apiToken);
     _apiToken = apiToken;
     // After setting a new token, we should clear old database info
     // and errors as they might be invalid.
@@ -197,12 +243,15 @@ class NotionProvider with ChangeNotifier {
     _database = null;
     _pages = [];
     _notionConnectionError = null;
-    await _notionService.clearDatabaseInfo(); // Also clear from storage
-    notifyListeners();
+    await _clearNotionDatabaseInfo.call(); // Also clear from storage
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
   }
 
   Future<void> clearNotionInfo() async {
-    await _notionService.clearNotionInfo();
+    await _clearNotionApiToken.call();
+    await _clearNotionDatabaseInfo.call();
     _apiToken = null;
     _databaseId = null;
     _databaseTitle = null;
@@ -216,17 +265,14 @@ class NotionProvider with ChangeNotifier {
 
   Future<String> getPageContent(String pageId) async {
     if (!isConnected) throw Exception('Notion is not connected.');
-    return await _notionService.getPageContent(pageId, _apiToken!);
+    return await _getPageContent.call(pageId);
   }
 
   Future<List<Task>> fetchRoadmapTasks() async {
     if (!isConnected) return [];
 
     try {
-      final notionPages = await _notionService.getRoadmapTasksFromDB(
-        _apiToken!,
-        _databaseId!,
-      );
+      final notionPages = await _getRoadmapTasksFromDB.call(_databaseId!);
       return notionPages.map((json) => Task.fromNotion(json)).toList();
     } catch (e) {
       debugPrint('Error fetching roadmap tasks from Notion: $e');
@@ -250,10 +296,10 @@ class NotionProvider with ChangeNotifier {
       if (_pages.isNotEmpty) {
         final randomPage = _pages[Random().nextInt(_pages.length)];
         final pageId = randomPage['id'];
-        final content = await _notionService.getPageContent(pageId, _apiToken!);
+        final content = await _getPageContent.call(pageId);
 
         if (content.trim().isNotEmpty) {
-          _currentQuiz = await _openAIService.createQuizFromText(content);
+          _currentQuiz = await _createQuizFromText.call(content);
         } else {
           // Handle empty content, maybe fetch another page
           fetchNewQuiz();

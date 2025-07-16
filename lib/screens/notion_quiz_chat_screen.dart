@@ -1,12 +1,10 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:memora/models/chat_message.dart';
 import 'package:memora/services/openai_service.dart';
-import 'package:memora/services/local_storage_service.dart';
 import 'package:memora/services/chat_service.dart';
 import 'package:memora/widgets/chat_input_field.dart';
 import 'package:memora/widgets/chat_messages_list.dart';
+import 'package:provider/provider.dart';
 
 class NotionQuizChatScreen extends StatefulWidget {
   final String pageTitle;
@@ -23,8 +21,7 @@ class NotionQuizChatScreen extends StatefulWidget {
 }
 
 class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
-  final OpenAIService _openAIService = OpenAIService();
-  final LocalStorageService _localStorageService = LocalStorageService();
+  late final OpenAIService _openAIService;
   late final ChatService _chatService;
   final TextEditingController _textController = TextEditingController();
   final List<ChatMessage> _messages = [];
@@ -37,7 +34,8 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
   @override
   void initState() {
     super.initState();
-    _chatService = ChatService(_localStorageService);
+    _openAIService = Provider.of<OpenAIService>(context, listen: false);
+    _chatService = Provider.of<ChatService>(context, listen: false);
     _startQuizSession();
   }
 
@@ -65,12 +63,13 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
   void _addMessage(String text, {bool isUser = true}) {
     setState(() {
       _messages.insert(
-          0,
-          ChatMessage(
-            content: text,
-            sender: isUser ? MessageSender.user : MessageSender.ai,
-            timestamp: DateTime.now(),
-          ));
+        0,
+        ChatMessage(
+          content: text,
+          sender: isUser ? MessageSender.user : MessageSender.ai,
+          timestamp: DateTime.now(),
+        ),
+      );
     });
   }
 

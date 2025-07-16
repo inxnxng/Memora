@@ -29,7 +29,8 @@ class LocalStorageService {
         return {
           'role': parts[0],
           'content': parts.sublist(1).join('|'),
-          'timestamp': DateTime.now().toIso8601String(), // Assign current timestamp for old data
+          'timestamp': DateTime.now()
+              .toIso8601String(), // Assign current timestamp for old data
         };
       }).toList();
       // Migrate the data to the new List<String> format
@@ -43,11 +44,7 @@ class LocalStorageService {
     if (encodedHistoryList != null && encodedHistoryList.isNotEmpty) {
       return encodedHistoryList.map((line) {
         final parts = line.split('|');
-        return {
-          'role': parts[0],
-          'content': parts[1],
-          'timestamp': parts[2],
-        };
+        return {'role': parts[0], 'content': parts[1], 'timestamp': parts[2]};
       }).toList();
     }
 
@@ -67,7 +64,10 @@ class LocalStorageService {
   Future<void> saveApiKeyWithTimestamp(String apiKey) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_openAIApiKeyKey, apiKey);
-    await prefs.setString(_openAIApiKeyTimestampKey, DateTime.now().toIso8601String());
+    await prefs.setString(
+      _openAIApiKeyTimestampKey,
+      DateTime.now().toIso8601String(),
+    );
   }
 
   Future<Map<String, String?>> getApiKeyWithTimestamp() async {
