@@ -1,305 +1,62 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:memora/domain/usecases/get_openai_api_key.dart';
-import 'package:memora/domain/usecases/save_openai_api_key.dart';
-import 'package:memora/providers/notion_provider.dart';
-import 'package:provider/provider.dart';
+import 'package:memora/screens/settings/notion_settings_screen.dart';
+import 'package:memora/screens/settings/openai_settings_screen.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
-
-  @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
-}
-
-class _SettingsScreenState extends State<SettingsScreen> {
-  late final NotionProvider _notionProvider;
-
-  Map<String, String?> _openAIApiKey = {'value': null, 'timestamp': null};
-  Map<String, String?> _notionApiToken = {'value': null, 'timestamp': null};
-
-  final TextEditingController _openAIApiKeyController = TextEditingController();
-  final TextEditingController _notionApiTokenController =
-      TextEditingController();
-  final TextEditingController _notionDatabaseSearchController =
-      TextEditingController();
-
-  bool _isLoading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _notionProvider = Provider.of<NotionProvider>(context, listen: false);
-    _loadKeys();
-  }
-
-  Future<void> _loadKeys() async {
-    setState(() {
-      _isLoading = true;
-    });
-    final getOpenAIApiKey = Provider.of<GetOpenAIApiKey>(
-      context,
-      listen: false,
-    );
-    _openAIApiKey = await getOpenAIApiKey.call();
-    _notionApiToken = {'value': _notionProvider.apiToken, 'timestamp': null};
-
-    // Do not pre-fill controllers with actual values for security and UX.
-    // The masked value is shown separately.
-    _openAIApiKeyController.text = '';
-    _notionApiTokenController.text = '';
-    _notionDatabaseSearchController.text = ''; // Clear search controller
-
-    setState(() {
-      _isLoading = false;
-    });
-  }
-
-  String _formatTimestamp(String? timestamp) {
-    if (timestamp == null) return '미입력';
-    final dateTime = DateTime.parse(timestamp);
-    return DateFormat('yy.MM.dd HH:mm').format(dateTime);
-  }
-
-  Future<void> _saveOpenAIApiKey() async {
-    setState(() {
-      _isLoading = true;
-    });
-    try {
-      final saveOpenAIApiKey = Provider.of<SaveOpenAIApiKey>(
-        context,
-        listen: false,
-      );
-      await saveOpenAIApiKey.call(_openAIApiKeyController.text);
-      await _loadKeys(); // Reload to update timestamp
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('OpenAI API Key 저장 완료!')));
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('OpenAI API Key 저장 실패: ${e.toString()}')),
-        );
-      }
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _saveNotionApiToken() async {
-    setState(() {
-      _isLoading = true;
-    });
-    try {
-      await _notionProvider.setApiToken(_notionApiTokenController.text);
-      await _loadKeys(); // Reload to update timestamp
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Notion API Token 저장 완료!'),
-          ), // Removed one of the snackbars
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Notion API Token 저장 실패: ${e.toString()}')),
-        );
-      }
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('설정')),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionTitle('OpenAI 설정'),
-                  _buildKeyInput(
-                    controller: _openAIApiKeyController,
-                    label: 'OpenAI API Key',
-                    timestamp: _openAIApiKey['timestamp'],
-                    onSave: _saveOpenAIApiKey,
-                    currentValue: _openAIApiKey['value'],
-                  ),
-                  const SizedBox(height: 30),
-                  _buildSectionTitle('Notion 설정'),
-                  _buildKeyInput(
-                    controller: _notionApiTokenController,
-                    label: 'Notion API Token',
-                    timestamp: _notionApiToken['timestamp'],
-                    onSave:
-                        _saveNotionApiToken, // This will save both Notion fields
-                    currentValue: _notionApiToken['value'],
-                  ),
-
-                  const SizedBox(height: 30),
-                  _buildSectionTitle('Notion 데이터베이스 검색'),
-                  TextField(
-                    controller: _notionDatabaseSearchController,
-                    decoration: InputDecoration(
-                      hintText: '데이터베이스 이름으로 검색',
-                      border: const OutlineInputBorder(),
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.search),
-                        onPressed: () {
-                          _notionProvider.searchNotionDatabases(
-                            query: _notionDatabaseSearchController.text,
-                          );
-                        },
-                      ),
-                    ),
-                    onSubmitted: (query) {
-                      _notionProvider.searchNotionDatabases(query: query);
-                    },
-                  ),
-                  Consumer<NotionProvider>(
-                    builder: (context, notionProvider, child) {
-                      if (notionProvider.isSearchingDatabases) {
-                        return const Center(child: CircularProgressIndicator());
-                      } else if (notionProvider.notionConnectionError != null) {
-                        return Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(
-                            notionProvider.notionConnectionError!,
-                            style: const TextStyle(color: Colors.red),
-                          ),
-                        );
-                      } else if (notionProvider.availableDatabases.isEmpty) {
-                        return const Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: Text('검색 결과가 없습니다.'),
-                        );
-                      } else {
-                        return ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: notionProvider.availableDatabases.length,
-                          itemBuilder: (context, index) {
-                            final db = notionProvider.availableDatabases[index];
-                            final dbTitle =
-                                db['title']?[0]?['plain_text'] ?? '제목 없음';
-                            final dbId = db['id'];
-                            return ListTile(
-                              title: Text(dbTitle),
-                              subtitle: Text(dbId),
-                              trailing: notionProvider.databaseId == dbId
-                                  ? const Icon(
-                                      Icons.check_circle,
-                                      color: Colors.green,
-                                    )
-                                  : null,
-                              onTap: () async {
-                                await notionProvider.connectNotionDatabase(
-                                  dbId,
-                                  dbTitle,
-                                );
-                                if (!mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Notion 데이터베이스 연결 완료: $dbTitle',
-                                    ),
-                                  ),
-                                );
-                                _loadKeys(); // Reload to update UI
-                              },
-                            );
-                          },
-                        );
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
+      appBar: AppBar(
+        title: const Text('설정'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        children: [
+          _buildSettingsItem(
+            context,
+            icon: Icons.cloud_queue,
+            title: 'Notion 연동 관리',
+            subtitle: 'API 키 및 데이터베이스를 설정합니다.',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const NotionSettingsScreen()),
+              );
+            },
+          ),
+          _buildSettingsItem(
+            context,
+            icon: Icons.lightbulb_outline,
+            title: 'OpenAI API 키 설정',
+            subtitle: '퀴즈 생성에 사용될 API 키를 관리합니다.',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const OpenAISettingsScreen()),
+              );
+            },
+          ),
+          // Add other settings later if needed
+        ],
+      ),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10.0),
-      child: Text(title, style: Theme.of(context).textTheme.headlineSmall),
-    );
-  }
-
-  Widget _buildKeyInput({
-    required TextEditingController controller,
-    required String label,
-    required String? timestamp,
-    required VoidCallback onSave,
-    String? currentValue, // New parameter to pass the actual stored value
+  Widget _buildSettingsItem(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
   }) {
-    String maskedValue = '';
-    if (currentValue != null && currentValue.isNotEmpty) {
-      maskedValue = currentValue.length > 5
-          ? '${currentValue.substring(0, 5)}*****'
-          : '*****';
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        if (maskedValue.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Text(
-              '현재 값: $maskedValue',
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-          ),
-        TextField(
-          controller: controller,
-          obscureText: true,
-          onSubmitted: (_) => onSave(),
-          decoration: InputDecoration(
-            hintText: 'Enter your $label',
-            border: const OutlineInputBorder(),
-            suffixIcon: _isLoading
-                ? const Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : IconButton(
-                    icon: const Icon(Icons.refresh), // Refresh icon for apply
-                    onPressed: onSave,
-                    tooltip: '적용',
-                  ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          '마지막 업데이트: ${_formatTimestamp(timestamp)}',
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
-        ),
-        const SizedBox(height: 10),
-      ],
+    return ListTile(
+      leading: Icon(icon, size: 28, color: Theme.of(context).primaryColor),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+      subtitle: Text(subtitle, style: const TextStyle(color: Colors.grey)),
+      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+      onTap: onTap,
     );
-  }
-
-  @override
-  void dispose() {
-    _openAIApiKeyController.dispose();
-    _notionApiTokenController.dispose();
-    _notionDatabaseSearchController.dispose();
-    super.dispose();
   }
 }
