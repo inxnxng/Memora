@@ -1,29 +1,29 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:memora/main.dart';
+import 'package:memora/screens/home_screen.dart';
+import 'package:memora/screens/onboarding_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'test_helpers.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+  // Set up a mock for SharedPreferences before running tests
+  setUpAll(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
+  testWidgets('App smoke test: Navigates to OnboardingScreen for new users',
+      (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+    await tester.pumpWidget(createTestableWidget(child: const MyApp()));
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Wait for the splash screen animations and navigation to complete.
+    // Using pumpAndSettle will wait for all animations to finish.
+    await tester.pumpAndSettle();
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verify that for a new user (no level set), we land on the OnboardingScreen.
+    expect(find.byType(OnboardingScreen), findsOneWidget);
+    // Also, verify that the HomeScreen is not present.
+    expect(find.byType(HomeScreen), findsNothing);
   });
 }
