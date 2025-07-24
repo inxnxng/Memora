@@ -1,17 +1,15 @@
-import 'package:memora/domain/usecases/create_quiz_from_text.dart';
-import 'package:memora/domain/usecases/generate_training_content.dart';
+import 'package:memora/domain/usecases/openai_usecases.dart';
 
 class OpenAIService {
-  final GenerateTrainingContent _generateTrainingContent;
-  final CreateQuizFromText _createQuizFromText;
+  final OpenAIUsecases _openAIUsecases;
 
-  OpenAIService(this._generateTrainingContent, this._createQuizFromText);
+  OpenAIService(this._openAIUsecases);
 
   Future<String> generateTrainingContent(String userPrompt) async {
-    return await _generateTrainingContent.call(userPrompt);
+    return await _openAIUsecases.generateTrainingContent(userPrompt);
   }
 
   Future<Map<String, dynamic>> createQuizFromText(String text) async {
-    return await _createQuizFromText.call(text);
+    return await _openAIUsecases.createQuizFromText(text);
   }
 }

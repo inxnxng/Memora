@@ -1,19 +1,17 @@
 import 'dart:math';
 
 import 'package:memora/constants/task_list.dart';
-import 'package:memora/domain/repositories/notion_repository.dart';
-import 'package:memora/domain/repositories/task_repository.dart';
 import 'package:memora/models/task_model.dart';
+import 'package:memora/repositories/notion_repository.dart';
 import 'package:memora/services/local_storage_service.dart';
 
-class TaskRepositoryImpl implements TaskRepository {
+class TaskRepository {
   final NotionRepository _notionRepository;
   final LocalStorageService _localStorageService;
   final int totalDays = 30;
 
-  TaskRepositoryImpl(this._notionRepository, this._localStorageService);
+  TaskRepository(this._notionRepository, this._localStorageService);
 
-  @override
   Future<List<Task>> fetchTasks() async {
     List<Task> fetchedTasks = [];
     // Assuming NotionRepository has a way to check connection or handles it internally
@@ -64,18 +62,15 @@ class TaskRepositoryImpl implements TaskRepository {
     return fetchedTasks;
   }
 
-  @override
   Future<void> toggleTaskCompletion(String taskId, bool isCompleted) async {
     // In a real app, you might update Notion here as well
     // For now, only local state is managed by TaskProvider
   }
 
-  @override
   Future<void> saveLastTrainedDate(String taskId, DateTime date) async {
     await _localStorageService.saveLastTrainedDate(taskId, date);
   }
 
-  @override
   Future<DateTime?> loadLastTrainedDate(String taskId) async {
     return _localStorageService.loadLastTrainedDate(taskId);
   }

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:memora/domain/usecases/openai_usecases.dart';
 import 'package:memora/models/task_model.dart';
 import 'package:memora/providers/task_provider.dart';
 import 'package:memora/screens/training_chat_screen.dart';
 import 'package:provider/provider.dart';
-import 'package:memora/domain/usecases/check_openai_api_key_availability.dart';
 
 class TaskScreen extends StatelessWidget {
   final Task task;
@@ -12,8 +12,7 @@ class TaskScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
-    final checkOpenAIApiKeyAvailability =
-        Provider.of<CheckOpenAIApiKeyAvailability>(context, listen: false);
+    final openAIUsecases = Provider.of<OpenAIUsecases>(context, listen: false);
 
     return Scaffold(
       appBar: AppBar(title: Text(task.title)),
@@ -39,7 +38,7 @@ class TaskScreen extends StatelessWidget {
             const Spacer(),
             ElevatedButton(
               onPressed: () async {
-                if (await checkOpenAIApiKeyAvailability.call()) {
+                if (await openAIUsecases.checkApiKeyAvailability()) {
                   if (!context.mounted) return; // Add this line
                   Navigator.push(
                     context,

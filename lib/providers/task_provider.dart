@@ -1,28 +1,19 @@
 import 'package:flutter/widgets.dart';
-import 'package:memora/domain/usecases/fetch_tasks.dart';
-import 'package:memora/domain/usecases/load_last_trained_date.dart';
-import 'package:memora/domain/usecases/toggle_task_completion.dart';
+import 'package:memora/domain/usecases/task_usecases.dart';
 import 'package:memora/models/task_model.dart';
 import 'package:memora/models/user_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class TaskProvider with ChangeNotifier {
-  final FetchTasks _fetchTasksUseCase;
-  final ToggleTaskCompletion _toggleTaskCompletionUseCase;
-  final LoadLastTrainedDate _loadLastTrainedDateUseCase;
+  final TaskUsecases _taskUsecases;
 
   List<Task> _tasks = [];
   AppUser? _user;
   bool _isLoading = true;
   DateTime? _roadmapStartDate;
 
-  TaskProvider({
-    required FetchTasks fetchTasksUseCase,
-    required ToggleTaskCompletion toggleTaskCompletionUseCase,
-    required LoadLastTrainedDate loadLastTrainedDateUseCase,
-  }) : _fetchTasksUseCase = fetchTasksUseCase,
-       _toggleTaskCompletionUseCase = toggleTaskCompletionUseCase,
-       _loadLastTrainedDateUseCase = loadLastTrainedDateUseCase {
+  TaskProvider({required TaskUsecases taskUsecases})
+    : _taskUsecases = taskUsecases {
     _initialize();
   }
 
@@ -48,7 +39,7 @@ class TaskProvider with ChangeNotifier {
     _isLoading = false;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        notifyListeners();
+        Future.microtask(() => notifyListeners());
       });
     });
   }
@@ -66,11 +57,11 @@ class TaskProvider with ChangeNotifier {
   }
 
   Future<void> _fetchAndLoadTasks() async {
-    _tasks = await _fetchTasksUseCase.call();
+    _tasks = await _taskUsecases.fetchTasks();
 
     // Load lastTrainedDate for each task
     for (var task in _tasks) {
-      task.lastTrainedDate = await _loadLastTrainedDateUseCase.call(task.id);
+      task.lastTrainedDate = await _taskUsecases.loadLastTrainedDate(task.id);
     }
     await _updateUserProgress();
   }
@@ -79,14 +70,14 @@ class TaskProvider with ChangeNotifier {
     final taskIndex = _tasks.indexWhere((task) => task.id == taskId);
     if (taskIndex != -1) {
       _tasks[taskIndex].isCompleted = !_tasks[taskIndex].isCompleted;
-      await _toggleTaskCompletionUseCase.call(
+      await _taskUsecases.toggleTaskCompletion(
         taskId,
         _tasks[taskIndex].isCompleted,
       );
       await _updateUserProgress();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          notifyListeners();
+          Future.microtask(() => notifyListeners());
         });
       });
     }
@@ -103,7 +94,7 @@ class TaskProvider with ChangeNotifier {
     await _fetchUser();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        notifyListeners();
+        Future.microtask(() => notifyListeners());
       });
     });
   }

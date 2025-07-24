@@ -1,14 +1,14 @@
+import 'dart:async'; // Import for Timer
+
 import 'package:flutter/material.dart';
-import 'package:memora/domain/usecases/generate_training_content.dart';
-import 'package:memora/domain/usecases/save_last_trained_date.dart';
-import 'package:memora/domain/usecases/load_last_trained_date.dart';
+import 'package:memora/domain/usecases/openai_usecases.dart';
+import 'package:memora/domain/usecases/task_usecases.dart';
 import 'package:memora/models/chat_message.dart';
 import 'package:memora/providers/task_provider.dart';
+import 'package:memora/services/chat_service.dart'; // Import for ChatService
 import 'package:memora/widgets/chat_input_field.dart';
 import 'package:memora/widgets/chat_messages_list.dart';
 import 'package:provider/provider.dart';
-import 'dart:async'; // Import for Timer
-import 'package:memora/services/chat_service.dart'; // Import for ChatService
 
 class TrainingChatScreen extends StatefulWidget {
   final String taskTitle;
@@ -29,9 +29,8 @@ class TrainingChatScreen extends StatefulWidget {
 }
 
 class _TrainingChatScreenState extends State<TrainingChatScreen> {
-  late final GenerateTrainingContent _generateTrainingContent;
-  late final SaveLastTrainedDate _saveLastTrainedDate;
-  late final LoadLastTrainedDate _loadLastTrainedDate;
+  late final OpenAIUsecases _openAIUsecases;
+  late final TaskUsecases _taskUsecases;
   late final ChatService _chatService;
   final TextEditingController _textController = TextEditingController();
   final List<ChatMessage> _messages = [];
@@ -41,18 +40,8 @@ class _TrainingChatScreenState extends State<TrainingChatScreen> {
   @override
   void initState() {
     super.initState();
-    _generateTrainingContent = Provider.of<GenerateTrainingContent>(
-      context,
-      listen: false,
-    );
-    _saveLastTrainedDate = Provider.of<SaveLastTrainedDate>(
-      context,
-      listen: false,
-    );
-    _loadLastTrainedDate = Provider.of<LoadLastTrainedDate>(
-      context,
-      listen: false,
-    );
+    _openAIUsecases = Provider.of<OpenAIUsecases>(context, listen: false);
+    _taskUsecases = Provider.of<TaskUsecases>(context, listen: false);
     _chatService = Provider.of<ChatService>(context, listen: false);
     _loadChatHistoryAndStartSession();
     _startCompletionTimer(); // Start the timer
@@ -104,7 +93,9 @@ class _TrainingChatScreenState extends State<TrainingChatScreen> {
 
     // If this is the first user message, construct the initial prompt for the AI
     if (_messages.length == 2 && _messages[0].sender == MessageSender.ai) {
-      final lastTrained = await _loadLastTrainedDate.call(widget.taskId);
+      final lastTrained = await _taskUsecases.loadLastTrainedDate(
+        widget.taskId,
+      );
       String initialPrompt =
           "Let's start memory training for: ${widget.taskTitle}. ${widget.taskDescription}.";
       if (lastTrained != null) {
@@ -116,7 +107,9 @@ class _TrainingChatScreenState extends State<TrainingChatScreen> {
 
       // Now, send this combined prompt to the AI
       try {
-        final aiResponse = await _generateTrainingContent.call(initialPrompt);
+        final aiResponse = await _openAIUsecases.generateTrainingContent(
+          initialPrompt,
+        );
         _addMessageToChat(aiResponse, isUser: false);
       } catch (e) {
         _handleError(e);
@@ -124,7 +117,9 @@ class _TrainingChatScreenState extends State<TrainingChatScreen> {
     } else {
       // For subsequent messages, just send the user's text
       try {
-        final aiResponse = await _generateTrainingContent.call(trimmedText);
+        final aiResponse = await _openAIUsecases.generateTrainingContent(
+          trimmedText,
+        );
         _addMessageToChat(aiResponse, isUser: false);
       } catch (e) {
         _handleError(e);
@@ -166,7 +161,7 @@ class _TrainingChatScreenState extends State<TrainingChatScreen> {
   }
 
   void _endTrainingSession() async {
-    await _saveLastTrainedDate.call(
+    await _taskUsecases.saveLastTrainedDate(
       widget.taskId,
       DateTime.now(),
     ); // Save the training date

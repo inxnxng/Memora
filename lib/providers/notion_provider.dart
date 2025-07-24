@@ -2,63 +2,19 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/widgets.dart';
-import 'package:memora/domain/usecases/clear_notion_api_token.dart';
-import 'package:memora/domain/usecases/clear_notion_database_info.dart';
-import 'package:memora/domain/usecases/create_quiz_from_text.dart';
-import 'package:memora/domain/usecases/get_database_info.dart';
-import 'package:memora/domain/usecases/get_notion_info.dart';
-import 'package:memora/domain/usecases/get_page_content.dart';
-import 'package:memora/domain/usecases/get_pages_from_db.dart';
-import 'package:memora/domain/usecases/get_roadmap_tasks_from_db.dart';
-import 'package:memora/domain/usecases/save_notion_api_token.dart';
-import 'package:memora/domain/usecases/save_notion_database.dart';
-import 'package:memora/domain/usecases/save_notion_database_id.dart';
-import 'package:memora/domain/usecases/save_notion_database_title.dart';
-import 'package:memora/domain/usecases/search_notion_databases.dart';
+import 'package:memora/domain/usecases/notion_usecases.dart';
+import 'package:memora/domain/usecases/openai_usecases.dart';
 import 'package:memora/models/task_model.dart';
 
 class NotionProvider with ChangeNotifier {
-  final SaveNotionApiToken _saveNotionApiToken;
-  final ClearNotionApiToken _clearNotionApiToken;
-  final SaveNotionDatabaseId _saveNotionDatabaseId;
-  final SaveNotionDatabaseTitle _saveNotionDatabaseTitle;
-  final SaveNotionDatabase _saveNotionDatabase;
-  final ClearNotionDatabaseInfo _clearNotionDatabaseInfo;
-  final GetNotionInfo _getNotionInfo;
-  final GetPagesFromDB _getPagesFromDB;
-  final GetDatabaseInfo _getDatabaseInfo;
-  final GetPageContent _getPageContent;
-  final SearchNotionDatabases _searchNotionDatabases;
-  final GetRoadmapTasksFromDB _getRoadmapTasksFromDB;
-  final CreateQuizFromText _createQuizFromText;
+  final NotionUsecases _notionUsecases;
+  final OpenAIUsecases _openAIUsecases;
 
   NotionProvider({
-    required SaveNotionApiToken saveNotionApiToken,
-    required ClearNotionApiToken clearNotionApiToken,
-    required SaveNotionDatabaseId saveNotionDatabaseId,
-    required SaveNotionDatabaseTitle saveNotionDatabaseTitle,
-    required SaveNotionDatabase saveNotionDatabase,
-    required ClearNotionDatabaseInfo clearNotionDatabaseInfo,
-    required GetNotionInfo getNotionInfo,
-    required GetPagesFromDB getPagesFromDB,
-    required GetDatabaseInfo getDatabaseInfo,
-    required GetPageContent getPageContent,
-    required SearchNotionDatabases searchNotionDatabases,
-    required GetRoadmapTasksFromDB getRoadmapTasksFromDB,
-    required CreateQuizFromText createQuizFromText,
-  }) : _saveNotionApiToken = saveNotionApiToken,
-       _clearNotionApiToken = clearNotionApiToken,
-       _saveNotionDatabaseId = saveNotionDatabaseId,
-       _saveNotionDatabaseTitle = saveNotionDatabaseTitle,
-       _saveNotionDatabase = saveNotionDatabase,
-       _clearNotionDatabaseInfo = clearNotionDatabaseInfo,
-       _getNotionInfo = getNotionInfo,
-       _getPagesFromDB = getPagesFromDB,
-       _getDatabaseInfo = getDatabaseInfo,
-       _getPageContent = getPageContent,
-       _searchNotionDatabases = searchNotionDatabases,
-       _getRoadmapTasksFromDB = getRoadmapTasksFromDB,
-       _createQuizFromText = createQuizFromText;
+    required NotionUsecases notionUsecases,
+    required OpenAIUsecases openAIUsecases,
+  }) : _notionUsecases = notionUsecases,
+       _openAIUsecases = openAIUsecases;
 
   String? _apiToken;
   String? _databaseId;
@@ -98,11 +54,11 @@ class NotionProvider with ChangeNotifier {
     if (!isConnected) return;
     _arePagesLoading = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifyListeners();
+      Future.microtask(() => notifyListeners());
     });
 
     try {
-      _pages = await _getPagesFromDB.call(_databaseId!);
+      _pages = await _notionUsecases.getPagesFromDB(_databaseId!);
       _notionConnectionError = null; // Clear error on success
     } catch (e) {
       debugPrint('Error fetching pages from Notion: $e');
@@ -113,7 +69,7 @@ class NotionProvider with ChangeNotifier {
 
     _arePagesLoading = false;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifyListeners();
+      Future.microtask(() => notifyListeners());
     });
   }
 
@@ -121,7 +77,7 @@ class NotionProvider with ChangeNotifier {
     if (_apiToken == null) {
       _notionConnectionError = 'Notion API 토큰이 설정되지 않았습니다.';
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        notifyListeners();
+        Future.microtask(() => notifyListeners());
       });
       return;
     }
@@ -129,11 +85,11 @@ class NotionProvider with ChangeNotifier {
     _isSearchingDatabases = true;
     _availableDatabases = []; // Clear previous results
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifyListeners();
+      Future.microtask(() => notifyListeners());
     });
 
     try {
-      _availableDatabases = await _searchNotionDatabases.call(query: query);
+      _availableDatabases = await _notionUsecases.searchDatabases(query: query);
       _notionConnectionError = null; // Clear error on success
     } catch (e) {
       debugPrint('Error searching databases: $e');
@@ -144,13 +100,13 @@ class NotionProvider with ChangeNotifier {
 
     _isSearchingDatabases = false;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifyListeners();
+      Future.microtask(() => notifyListeners());
     });
   }
 
   Future<void> _loadNotionInfo() async {
     _notionConnectionError = null; // Clear previous error
-    final notionInfo = await _getNotionInfo.call();
+    final notionInfo = await _notionUsecases.getNotionInfo();
     _apiToken = notionInfo['apiToken'];
     _databaseId = notionInfo['databaseId'];
     _databaseTitle = notionInfo['databaseTitle'];
@@ -161,12 +117,12 @@ class NotionProvider with ChangeNotifier {
       // If title is missing, try fetching it again.
       if (_databaseTitle == null || _databaseTitle!.isEmpty) {
         try {
-          final dbInfo = await _getDatabaseInfo.call(_databaseId!);
+          final dbInfo = await _notionUsecases.getDatabaseInfo(_databaseId!);
           final fetchedDbTitle =
               dbInfo['title']?[0]?['plain_text'] ?? 'Untitled';
           if (fetchedDbTitle.isNotEmpty) {
             _databaseTitle = fetchedDbTitle;
-            await _saveNotionDatabaseTitle.call(_databaseTitle!);
+            await _notionUsecases.saveDatabaseTitle(_databaseTitle!);
           }
         } catch (e) {
           debugPrint('Error fetching database title on load: $e');
@@ -184,15 +140,15 @@ class NotionProvider with ChangeNotifier {
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifyListeners();
+      Future.microtask(() => notifyListeners());
     });
   }
 
   Future<void> saveDatabase(String database) async {
-    await _saveNotionDatabase.call(database);
+    await _notionUsecases.saveDatabase(database);
     _database = database;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifyListeners();
+      Future.microtask(() => notifyListeners());
     });
   }
 
@@ -204,17 +160,17 @@ class NotionProvider with ChangeNotifier {
     if (_apiToken == null) {
       _notionConnectionError = 'Notion API 토큰이 설정되지 않았습니다.';
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        notifyListeners();
+        Future.microtask(() => notifyListeners());
       });
       return;
     }
     try {
       // Verify the database by fetching its info. This confirms the token has access.
-      await _getDatabaseInfo.call(databaseId);
+      await _notionUsecases.getDatabaseInfo(databaseId);
 
       // If verification is successful, save the new database info.
-      await _saveNotionDatabaseId.call(databaseId);
-      await _saveNotionDatabaseTitle.call(databaseTitle);
+      await _notionUsecases.saveDatabaseId(databaseId);
+      await _notionUsecases.saveDatabaseTitle(databaseTitle);
       _databaseId = databaseId;
       _databaseTitle = databaseTitle;
       _notionConnectionError = null; // Clear error on success
@@ -229,12 +185,12 @@ class NotionProvider with ChangeNotifier {
           '데이터베이스 연결에 실패했습니다. API 토큰이 해당 데이터베이스에 대한 접근 권한을 가지고 있는지 확인해주세요.';
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifyListeners();
+      Future.microtask(() => notifyListeners());
     });
   }
 
   Future<void> setApiToken(String apiToken) async {
-    await _saveNotionApiToken.call(apiToken);
+    await _notionUsecases.saveApiToken(apiToken);
     _apiToken = apiToken;
     // After setting a new token, we should clear old database info
     // and errors as they might be invalid.
@@ -243,15 +199,15 @@ class NotionProvider with ChangeNotifier {
     _database = null;
     _pages = [];
     _notionConnectionError = null;
-    await _clearNotionDatabaseInfo.call(); // Also clear from storage
+    await _notionUsecases.clearDatabaseInfo(); // Also clear from storage
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifyListeners();
+      Future.microtask(() => notifyListeners());
     });
   }
 
   Future<void> clearNotionInfo() async {
-    await _clearNotionApiToken.call();
-    await _clearNotionDatabaseInfo.call();
+    await _notionUsecases.clearApiToken();
+    await _notionUsecases.clearDatabaseInfo();
     _apiToken = null;
     _databaseId = null;
     _databaseTitle = null;
@@ -259,20 +215,22 @@ class NotionProvider with ChangeNotifier {
     _pages = [];
     _currentQuiz = null;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifyListeners();
+      Future.microtask(() => notifyListeners());
     });
   }
 
   Future<String> getPageContent(String pageId) async {
     if (!isConnected) throw Exception('Notion is not connected.');
-    return await _getPageContent.call(pageId);
+    return await _notionUsecases.getPageContent(pageId);
   }
 
   Future<List<Task>> fetchRoadmapTasks() async {
     if (!isConnected) return [];
 
     try {
-      final notionPages = await _getRoadmapTasksFromDB.call(_databaseId!);
+      final notionPages = await _notionUsecases.getRoadmapTasksFromDB(
+        _databaseId!,
+      );
       return notionPages.map((json) => Task.fromNotion(json)).toList();
     } catch (e) {
       debugPrint('Error fetching roadmap tasks from Notion: $e');
@@ -285,7 +243,7 @@ class NotionProvider with ChangeNotifier {
     _isQuizLoading = true;
     _currentQuiz = null;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifyListeners();
+      Future.microtask(() => notifyListeners());
     });
 
     try {
@@ -296,10 +254,10 @@ class NotionProvider with ChangeNotifier {
       if (_pages.isNotEmpty) {
         final randomPage = _pages[Random().nextInt(_pages.length)];
         final pageId = randomPage['id'];
-        final content = await _getPageContent.call(pageId);
+        final content = await _notionUsecases.getPageContent(pageId);
 
         if (content.trim().isNotEmpty) {
-          _currentQuiz = await _createQuizFromText.call(content);
+          _currentQuiz = await _openAIUsecases.createQuizFromText(content);
         } else {
           // Handle empty content, maybe fetch another page
           fetchNewQuiz();
@@ -312,7 +270,12 @@ class NotionProvider with ChangeNotifier {
 
     _isQuizLoading = false;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifyListeners();
+      Future.microtask(() => notifyListeners());
     });
+  }
+
+  Future<String> renderNotionDbAsMarkdown(String pageId) async {
+    if (!isConnected) throw Exception('Notion is not connected.');
+    return await _notionUsecases.renderNotionDbAsMarkdown(pageId);
   }
 }

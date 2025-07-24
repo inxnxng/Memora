@@ -1,31 +1,23 @@
+import 'package:memora/domain/usecases/chat_usecases.dart';
 import 'package:memora/models/chat_message.dart';
-import 'package:memora/domain/usecases/load_chat_history.dart';
-import 'package:memora/domain/usecases/save_chat_history.dart';
-import 'package:memora/domain/usecases/clear_chat_history.dart';
 
 class ChatService {
-  final LoadChatHistory _loadChatHistory;
-  final SaveChatHistory _saveChatHistory;
-  final ClearChatHistory _clearChatHistory;
+  final ChatUsecases _chatUsecases;
 
-  ChatService(
-    this._loadChatHistory,
-    this._saveChatHistory,
-    this._clearChatHistory,
-  );
+  ChatService(this._chatUsecases);
 
   Future<List<ChatMessage>> loadChatHistory(String taskId) async {
-    return await _loadChatHistory.call(taskId);
+    return await _chatUsecases.loadChatHistory(taskId);
   }
 
   Future<void> saveChatHistory(
     String taskId,
     List<ChatMessage> messages,
   ) async {
-    await _saveChatHistory.call(taskId, messages);
+    await _chatUsecases.saveChatHistory(taskId, messages);
   }
 
   Future<void> clearChatHistory(String taskId) async {
-    await _clearChatHistory.call(taskId);
+    await _chatUsecases.clearChatHistory(taskId);
   }
 }

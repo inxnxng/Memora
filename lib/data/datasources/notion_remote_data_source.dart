@@ -166,4 +166,23 @@ class NotionRemoteDataSource {
       throw Exception('Failed to load quiz data from Notion: ${response.body}');
     }
   }
+
+  Future<List<dynamic>> fetchPageBlocks(String pageId) async {
+    final url = Uri.parse(
+      'https://api.notion.com/v1/blocks/$pageId/children?page_size=100',
+    );
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $apiToken',
+        'Notion-Version': _notionApiVersion,
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return json.decode(utf8.decode(response.bodyBytes))['results'];
+    } else {
+      throw Exception('Failed to fetch page blocks: ${response.body}');
+    }
+  }
 }
