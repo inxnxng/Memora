@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:memora/providers/notion_provider.dart';
+import 'package:memora/screens/heatmap_screen.dart';
 import 'package:memora/screens/notion_connect_screen.dart';
-import 'package:memora/screens/roadmap_screen.dart';
 import 'package:memora/screens/settings_screen.dart';
 import 'package:memora/screens/til_review_selection_screen.dart';
 import 'package:provider/provider.dart';
@@ -38,13 +38,13 @@ class HomeScreen extends StatelessWidget {
                 Expanded(
                   child: _buildMenuButton(
                     context,
-                    icon: Icons.psychology,
-                    label: '기억력 향상',
+                    icon: Icons.calendar_today,
+                    label: '학습 현황',
                     onPressed: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const RoadmapScreen(),
+                          builder: (context) => const HeatmapScreen(),
                         ),
                       );
                     },
