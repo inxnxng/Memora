@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:memora/constants/heatmap_colors.dart';
+import 'package:memora/constants/storage_keys.dart';
 import 'package:memora/services/local_storage_service.dart';
 
 class HeatmapColorSettingsScreen extends StatefulWidget {
@@ -13,7 +14,7 @@ class HeatmapColorSettingsScreen extends StatefulWidget {
 class _HeatmapColorSettingsScreenState
     extends State<HeatmapColorSettingsScreen> {
   final LocalStorageService _localStorageService = LocalStorageService();
-  String _selectedColorName = kDefaultHeatmapColor;
+  String _selectedColorName = StorageKeys.defaultHeatmapColor;
 
   @override
   void initState() {
@@ -24,8 +25,8 @@ class _HeatmapColorSettingsScreenState
   Future<void> _loadSelectedColor() async {
     // getValue is not defined in LocalStorageService, so I will add it.
     final colorName =
-        await _localStorageService.getValue(kHeatmapColorKey) ??
-        kDefaultHeatmapColor;
+        await _localStorageService.getValue(StorageKeys.heatmapColorKey) ??
+            StorageKeys.defaultHeatmapColor;
     if (mounted) {
       setState(() {
         _selectedColorName = colorName;
@@ -35,7 +36,7 @@ class _HeatmapColorSettingsScreenState
 
   Future<void> _setSelectedColor(String colorName) async {
     // saveValue is not defined in LocalStorageService, so I will add it.
-    await _localStorageService.saveValue(kHeatmapColorKey, colorName);
+    await _localStorageService.saveValue(StorageKeys.heatmapColorKey, colorName);
     if (mounted) {
       setState(() {
         _selectedColorName = colorName;

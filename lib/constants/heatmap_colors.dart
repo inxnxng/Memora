@@ -13,6 +13,3 @@ const List<HeatmapColor> heatmapColorOptions = [
   HeatmapColor(name: 'Burgundy', color: Color(0xFF800020)),
   HeatmapColor(name: 'Future Dusk', color: Color(0xFF272838)),
 ];
-
-const String kDefaultHeatmapColor = 'GitHub Green';
-const String kHeatmapColorKey = 'heatmap_color';

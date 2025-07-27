@@ -1,4 +1,4 @@
-import 'package:memora/constants/heatmap_colors.dart';
+import 'package:memora/constants/storage_keys.dart';
 import 'package:memora/services/local_storage_service.dart';
 
 class SettingsService {
@@ -8,11 +8,11 @@ class SettingsService {
 
   // Heatmap Color
   Future<String> getHeatmapColorName() async {
-    return await _localStorageService.getValue(kHeatmapColorKey) ??
-        kDefaultHeatmapColor;
+    return await _localStorageService.getValue(StorageKeys.heatmapColorKey) ??
+        StorageKeys.defaultHeatmapColor;
   }
 
   Future<void> setHeatmapColorName(String colorName) async {
-    await _localStorageService.saveValue(kHeatmapColorKey, colorName);
+    await _localStorageService.saveValue(StorageKeys.heatmapColorKey, colorName);
   }
 }

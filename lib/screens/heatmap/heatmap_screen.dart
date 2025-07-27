@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_heatmap_calendar/flutter_heatmap_calendar.dart';
 import 'package:memora/constants/heatmap_colors.dart';
+import 'package:memora/constants/storage_keys.dart';
 import 'package:memora/providers/user_provider.dart';
 import 'package:memora/services/local_storage_service.dart';
 import 'package:provider/provider.dart';
@@ -15,7 +16,7 @@ class HeatmapScreen extends StatefulWidget {
 class _HeatmapScreenState extends State<HeatmapScreen> {
   final LocalStorageService _localStorageService = LocalStorageService();
   Color _heatmapColor = heatmapColorOptions
-      .firstWhere((c) => c.name == kDefaultHeatmapColor)
+      .firstWhere((c) => c.name == StorageKeys.defaultHeatmapColor)
       .color;
 
   @override
@@ -26,13 +27,13 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
 
   Future<void> _loadHeatmapColor() async {
     final colorName =
-        await _localStorageService.getValue(kHeatmapColorKey) ??
-        kDefaultHeatmapColor;
+        await _localStorageService.getValue(StorageKeys.heatmapColorKey) ??
+            StorageKeys.defaultHeatmapColor;
     final selectedColor = heatmapColorOptions
         .firstWhere(
           (c) => c.name == colorName,
           orElse: () => heatmapColorOptions.firstWhere(
-            (c) => c.name == kDefaultHeatmapColor,
+            (c) => c.name == StorageKeys.defaultHeatmapColor,
           ),
         )
         .color;

@@ -1,42 +1,26 @@
 import 'dart:convert';
 
+import 'package:memora/constants/storage_keys.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 class LocalStorageService {
-  static const String _chatHistoryKey = 'chat_history_'; // Suffix with task ID
-  static const String _lastTrainingResultKey = 'last_training_result';
-  static const String _openAIApiKeyKey = 'openai_api_key';
-  static const String _openAIApiKeyTimestampKey = 'openai_api_key_timestamp';
-  static const String _notionApiKeyKey = 'notion_api_key';
-  static const String _notionApiKeyTimestampKey = 'notion_api_key_timestamp';
-  static const String _lastTrainedDateKey =
-      'last_trained_date_'; // Suffix with task ID
-  static const String _userLevelKey = 'user_level_'; // Suffix with user ID
-  static const String _userLevelTimestampKey =
-      'user_level_timestamp_'; // Suffix with user ID
-  static const String _streakCountKey = 'streak_count_'; // Suffix with user ID
-  static const String _streakDateKey = 'streak_date_'; // Suffix with user ID
-  static const String _sessionMapKey = 'session_map_'; // Suffix with user ID
-  static const String _userIdKey = 'memora_user_id';
-  static const String _userNameKey = 'user_name_'; // Suffix with user ID
-
   Future<void> saveUserName(String userId, String name) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('$_userNameKey$userId', name);
+    await prefs.setString('${StorageKeys.userNameKey}$userId', name);
   }
 
   Future<String?> loadUserName(String userId) async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('$_userNameKey$userId');
+    return prefs.getString('${StorageKeys.userNameKey}$userId');
   }
 
   Future<String> getOrCreateUserId() async {
     final prefs = await SharedPreferences.getInstance();
-    String? userId = prefs.getString(_userIdKey);
+    String? userId = prefs.getString(StorageKeys.userIdKey);
     if (userId == null) {
       userId = const Uuid().v4();
-      await prefs.setString(_userIdKey, userId);
+      await prefs.setString(StorageKeys.userIdKey, userId);
     }
     return userId;
   }
@@ -49,12 +33,12 @@ class LocalStorageService {
     final List<String> encodedHistory = history
         .map((msg) => '${msg['role']}|${msg['content']}|${msg['timestamp']}')
         .toList();
-    await prefs.setStringList('$_chatHistoryKey$taskId', encodedHistory);
+    await prefs.setStringList('${StorageKeys.chatHistoryKey}$taskId', encodedHistory);
   }
 
   Future<List<Map<String, dynamic>>> loadChatHistory(String taskId) async {
     final prefs = await SharedPreferences.getInstance();
-    final String key = '$_chatHistoryKey$taskId';
+    final String key = '${StorageKeys.chatHistoryKey}$taskId';
 
     // 1. Try to load as a single String (old format)
     final String? encodedHistoryString = prefs.getString(key);
@@ -88,28 +72,28 @@ class LocalStorageService {
 
   Future<void> saveLastTrainingResult(String result) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_lastTrainingResultKey, result);
+    await prefs.setString(StorageKeys.lastTrainingResultKey, result);
   }
 
   Future<String?> loadLastTrainingResult() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_lastTrainingResultKey);
+    return prefs.getString(StorageKeys.lastTrainingResultKey);
   }
 
   String getAppropriateKeyName(String service) {
     if (service == "openai") {
-      return _openAIApiKeyKey;
+      return StorageKeys.openAIApiKeyKey;
     } else if (service == "notion") {
-      return _notionApiKeyKey;
+      return StorageKeys.notionApiKeyKey;
     }
     return '';
   }
 
   String getAppropriateTimeStampName(String service) {
     if (service == "openai") {
-      return _openAIApiKeyTimestampKey;
+      return StorageKeys.openAIApiKeyTimestampKey;
     } else if (service == "notion") {
-      return _notionApiKeyTimestampKey;
+      return StorageKeys.notionApiKeyTimestampKey;
     }
     return '';
   }
@@ -140,31 +124,31 @@ class LocalStorageService {
 
   Future<void> saveUserLevel(String userId, String level) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('$_userLevelKey$userId', level);
+    await prefs.setString('${StorageKeys.userLevelKey}$userId', level);
     await prefs.setString(
-      '$_userLevelTimestampKey$userId',
+      '${StorageKeys.userLevelTimestampKey}$userId',
       DateTime.now().toIso8601String(),
     );
   }
 
   Future<Map<String, String?>> loadUserLevel(String userId) async {
     final prefs = await SharedPreferences.getInstance();
-    final level = prefs.getString('$_userLevelKey$userId');
-    final timestamp = prefs.getString('$_userLevelTimestampKey$userId');
+    final level = prefs.getString('${StorageKeys.userLevelKey}$userId');
+    final timestamp = prefs.getString('${StorageKeys.userLevelTimestampKey}$userId');
     return {'level': level, 'timestamp': timestamp};
   }
 
   Future<void> saveLastTrainedDate(String taskId, DateTime date) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
-      '$_lastTrainedDateKey$taskId',
+      '${StorageKeys.lastTrainedDateKey}$taskId',
       date.toIso8601String(),
     );
   }
 
   Future<DateTime?> loadLastTrainedDate(String taskId) async {
     final prefs = await SharedPreferences.getInstance();
-    final String? dateString = prefs.getString('$_lastTrainedDateKey$taskId');
+    final String? dateString = prefs.getString('${StorageKeys.lastTrainedDateKey}$taskId');
     if (dateString == null) {
       return null;
     }
@@ -176,8 +160,8 @@ class LocalStorageService {
   /// Otherwise, it's reset to 1.
   Future<void> incrementStreak(String userId, DateTime date) async {
     final prefs = await SharedPreferences.getInstance();
-    final streakDateKey = '$_streakDateKey$userId';
-    final streakCountKey = '$_streakCountKey$userId';
+    final streakDateKey = '${StorageKeys.streakDateKey}$userId';
+    final streakCountKey = '${StorageKeys.streakCountKey}$userId';
 
     final lastDateString = prefs.getString(streakDateKey);
     int currentStreak = prefs.getInt(streakCountKey) ?? 0;
@@ -203,13 +187,13 @@ class LocalStorageService {
   /// Loads the user's current streak count.
   Future<int> loadStreakCount(String userId) async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt('$_streakCountKey$userId') ?? 0;
+    return prefs.getInt('${StorageKeys.streakCountKey}$userId') ?? 0;
   }
 
   /// Records a study session for the given date for the heat-map.
   Future<void> recordSession(String userId, DateTime date) async {
     final prefs = await SharedPreferences.getInstance();
-    final key = '$_sessionMapKey$userId';
+    final key = '${StorageKeys.sessionMapKey}$userId';
     final dateString = "${date.year}-${date.month}-${date.day}";
 
     final sessionMap = await loadSessionMap(userId);
@@ -221,7 +205,7 @@ class LocalStorageService {
   /// Loads the session map for the heat-map.
   Future<Map<String, int>> loadSessionMap(String userId) async {
     final prefs = await SharedPreferences.getInstance();
-    final key = '$_sessionMapKey$userId';
+    final key = '${StorageKeys.sessionMapKey}$userId';
     final String? jsonString = prefs.getString(key);
 
     if (jsonString != null && jsonString.isNotEmpty) {
