@@ -81,6 +81,7 @@ flutter:
   assets:
     - .env
     - assets/images/
+    - assets/images/proficiency_levels/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

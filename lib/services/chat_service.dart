@@ -1,23 +1,17 @@
-import 'package:memora/domain/usecases/chat_usecases.dart';
 import 'package:memora/models/chat_message.dart';
+import 'package:memora/repositories/chat/chat_repository.dart';
 
 class ChatService {
-  final ChatUsecases _chatUsecases;
+  final ChatRepository _chatRepository;
 
-  ChatService(this._chatUsecases);
+  ChatService(this._chatRepository);
 
-  Future<List<ChatMessage>> loadChatHistory(String taskId) async {
-    return await _chatUsecases.loadChatHistory(taskId);
-  }
+  Future<List<ChatMessage>> loadChatHistory(String taskId) =>
+      _chatRepository.loadChatHistory(taskId);
 
-  Future<void> saveChatHistory(
-    String taskId,
-    List<ChatMessage> messages,
-  ) async {
-    await _chatUsecases.saveChatHistory(taskId, messages);
-  }
+  Future<void> saveChatHistory(String taskId, List<ChatMessage> messages) =>
+      _chatRepository.saveChatHistory(taskId, messages);
 
-  Future<void> clearChatHistory(String taskId) async {
-    await _chatUsecases.clearChatHistory(taskId);
-  }
+  Future<void> clearChatHistory(String taskId) =>
+      _chatRepository.clearChatHistory(taskId);
 }

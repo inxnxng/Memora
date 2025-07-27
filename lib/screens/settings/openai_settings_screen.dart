@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:memora/domain/usecases/openai_usecases.dart';
+import 'package:memora/services/openai_service.dart';
 import 'package:provider/provider.dart';
 
 class OpenAISettingsScreen extends StatefulWidget {
@@ -11,7 +11,7 @@ class OpenAISettingsScreen extends StatefulWidget {
 }
 
 class _OpenAISettingsScreenState extends State<OpenAISettingsScreen> {
-  late final OpenAIUsecases _openAIUsecases;
+  late final OpenAIService _openAIService;
   final TextEditingController _openAIApiKeyController = TextEditingController();
   Map<String, String?> _openAIApiKey = {'value': null, 'timestamp': null};
   bool _isLoading = false;
@@ -19,7 +19,7 @@ class _OpenAISettingsScreenState extends State<OpenAISettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _openAIUsecases = Provider.of<OpenAIUsecases>(context, listen: false);
+    _openAIService = Provider.of<OpenAIService>(context, listen: false);
     _loadKeys();
   }
 
@@ -27,7 +27,7 @@ class _OpenAISettingsScreenState extends State<OpenAISettingsScreen> {
     setState(() {
       _isLoading = true;
     });
-    _openAIApiKey = await _openAIUsecases.getApiKeyWithTimestamp();
+    _openAIApiKey = await _openAIService.getApiKeyWithTimestamp();
     _openAIApiKeyController.text = ''; // Clear controller
     setState(() {
       _isLoading = false;
@@ -41,24 +41,27 @@ class _OpenAISettingsScreenState extends State<OpenAISettingsScreen> {
   }
 
   Future<void> _saveOpenAIApiKey() async {
-    if (_openAIApiKeyController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('OpenAI API Key를 입력해주세요.')),
-      );
+    final token = _openAIApiKeyController.text.trim();
+
+    if (token.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('OpenAI API Key를 입력해주세요.')));
       return;
     }
+
     setState(() {
       _isLoading = true;
     });
     try {
-      await _openAIUsecases.saveApiKeyWithTimestamp(
+      await _openAIService.saveApiKeyWithTimestamp(
         _openAIApiKeyController.text,
       );
       await _loadKeys(); // Reload to update timestamp
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('OpenAI API Key 저장 완료!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('OpenAI API Key 저장 완료!')));
       _openAIApiKeyController.clear();
     } catch (e) {
       if (mounted) {
@@ -86,10 +89,7 @@ class _OpenAISettingsScreenState extends State<OpenAISettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'OpenAI API Key',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
+                  _buildSectionTitle('OpenAI API Key 설정'),
                   const SizedBox(height: 8),
                   const Text(
                     'Memora의 퀴즈 생성 기능에 사용됩니다. API 키는 로컬 디바이스에만 안전하게 저장됩니다.',
@@ -99,9 +99,9 @@ class _OpenAISettingsScreenState extends State<OpenAISettingsScreen> {
                   _buildKeyInput(
                     controller: _openAIApiKeyController,
                     label: 'OpenAI API Key',
+                    currentValue: _openAIApiKey['value'],
                     timestamp: _openAIApiKey['timestamp'],
                     onSave: _saveOpenAIApiKey,
-                    currentValue: _openAIApiKey['value'],
                   ),
                 ],
               ),
@@ -159,6 +159,13 @@ class _OpenAISettingsScreenState extends State<OpenAISettingsScreen> {
           style: const TextStyle(fontSize: 12, color: Colors.grey),
         ),
       ],
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10.0, top: 10.0),
+      child: Text(title, style: Theme.of(context).textTheme.headlineSmall),
     );
   }
 

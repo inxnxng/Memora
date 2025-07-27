@@ -1,9 +1,7 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:memora/providers/user_provider.dart';
 import 'package:memora/screens/home_screen.dart';
-import 'package:memora/screens/onboarding_screen.dart';
+import 'package:memora/screens/onboarding/onboarding_screen.dart';
 import 'package:provider/provider.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -13,55 +11,62 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
+class _SplashScreenState extends State<SplashScreen> {
+  late Future<void> _initFuture;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    );
-    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
-    _controller.forward();
-    _checkUserLevel();
-  }
-
-  Future<void> _checkUserLevel() async {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    await userProvider.loadUserProfile();
-
-    Timer(const Duration(seconds: 3), () {
-      if (userProvider.userLevel == null) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (BuildContext context) => const OnboardingScreen(),
-          ),
-        );
-      } else {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (BuildContext context) => const HomeScreen(),
-          ),
-        );
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+    // Start initialization when the widget is first created.
+    _initFuture = Provider.of<UserProvider>(
+      context,
+      listen: false,
+    ).initializeUser();
   }
 
   @override
   Widget build(BuildContext context) {
+    return FutureBuilder<void>(
+      future: _initFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.done) {
+          // After initialization, check the user level.
+          final userProvider = Provider.of<UserProvider>(
+            context,
+            listen: false,
+          );
+          if (userProvider.userLevel == null) {
+            // If no level, navigate to Onboarding.
+            return const OnboardingScreen();
+          } else {
+            // If level exists, navigate to Home.
+            return const HomeScreen();
+          }
+        }
+
+        // While initializing, show the splash screen UI.
+        return _buildSplashScreenUI();
+      },
+    );
+  }
+
+  Widget _buildSplashScreenUI() {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+
     return Scaffold(
-      body: FadeTransition(
-        opacity: _animation,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment.center,
+            radius: 0.8,
+            colors: isDarkMode
+                ? [Colors.grey[900]!, Colors.black]
+                : [Colors.white, theme.scaffoldBackgroundColor],
+          ),
+        ),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,

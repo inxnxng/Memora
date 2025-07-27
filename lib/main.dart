@@ -2,25 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:memora/data/datasources/openai_remote_data_source.dart';
-import 'package:memora/domain/usecases/chat_usecases.dart';
-import 'package:memora/domain/usecases/notion_usecases.dart';
-import 'package:memora/domain/usecases/openai_usecases.dart';
-import 'package:memora/domain/usecases/task_usecases.dart';
-import 'package:memora/domain/usecases/user_usecases.dart';
 import 'package:memora/providers/notion_provider.dart';
 import 'package:memora/providers/task_provider.dart';
 import 'package:memora/providers/user_provider.dart';
-import 'package:memora/repositories/chat_repository.dart';
-import 'package:memora/repositories/notion_auth_repository.dart';
-import 'package:memora/repositories/notion_database_repository.dart';
-import 'package:memora/repositories/notion_repository.dart';
-import 'package:memora/repositories/openai_api_key_repository.dart';
-import 'package:memora/repositories/openai_repository.dart';
-import 'package:memora/repositories/task_repository.dart';
+import 'package:memora/repositories/chat/chat_repository.dart';
+import 'package:memora/repositories/notion/notion_auth_repository.dart';
+import 'package:memora/repositories/notion/notion_database_repository.dart';
+import 'package:memora/repositories/notion/notion_repository.dart';
+import 'package:memora/repositories/openai/openai_auth_repository.dart';
+import 'package:memora/repositories/openai/openai_repository.dart';
+import 'package:memora/repositories/task/task_repository.dart';
+import 'package:memora/repositories/user/user_repository.dart';
 import 'package:memora/screens/splash_screen.dart';
 import 'package:memora/services/chat_service.dart';
 import 'package:memora/services/local_storage_service.dart';
+import 'package:memora/services/notion_service.dart';
 import 'package:memora/services/openai_service.dart';
+import 'package:memora/services/settings_service.dart';
+import 'package:memora/services/task_service.dart';
 import 'package:provider/provider.dart';
 
 void main() async {
@@ -32,18 +31,26 @@ void main() async {
       providers: [
         // Foundational Services & Repositories
         Provider<LocalStorageService>(create: (_) => LocalStorageService()),
-        Provider<NotionAuthRepository>(create: (_) => NotionAuthRepository()),
+        Provider<SettingsService>(
+          create: (context) =>
+              SettingsService(context.read<LocalStorageService>()),
+        ),
+        Provider<NotionAuthRepository>(
+          create: (context) =>
+              NotionAuthRepository(context.read<LocalStorageService>()),
+        ),
         Provider<NotionDatabaseRepository>(
           create: (_) => NotionDatabaseRepository(),
         ),
-        Provider<OpenAIApiKeyRepository>(
-          create: (context) =>
-              OpenAIApiKeyRepository(context.read<LocalStorageService>()),
-        ),
         Provider<NotionRepository>(
           create: (context) => NotionRepository(
-            authRepository: context.read<NotionAuthRepository>(),
+            notionAuthRepository: context.read<NotionAuthRepository>(),
           ),
+        ),
+
+        Provider<OpenAIAuthRepository>(
+          create: (context) =>
+              OpenAIAuthRepository(context.read<LocalStorageService>()),
         ),
         Provider<OpenAIRemoteDataSource>(
           create: (context) => OpenAIRemoteDataSource(
@@ -53,7 +60,7 @@ void main() async {
         Provider<OpenAIRepository>(
           create: (context) => OpenAIRepository(
             remoteDataSource: context.read<OpenAIRemoteDataSource>(),
-            apiKeyRepository: context.read<OpenAIApiKeyRepository>(),
+            authRepository: context.read<OpenAIAuthRepository>(),
           ),
         ),
         Provider<TaskRepository>(
@@ -66,54 +73,53 @@ void main() async {
           create: (context) =>
               ChatRepository(context.read<LocalStorageService>()),
         ),
+        Provider<UserRepository>(
+          create: (context) =>
+              UserRepository(context.read<LocalStorageService>()),
+        ),
 
-        // Usecase Classes
-        Provider<NotionUsecases>(
-          create: (context) => NotionUsecases(
+        // Business Logic Services
+        Provider<NotionService>(
+          create: (context) => NotionService(
             notionAuthRepository: context.read<NotionAuthRepository>(),
             notionDatabaseRepository: context.read<NotionDatabaseRepository>(),
             notionRepository: context.read<NotionRepository>(),
           ),
         ),
-        Provider<OpenAIUsecases>(
-          create: (context) => OpenAIUsecases(
-            apiKeyRepository: context.read<OpenAIApiKeyRepository>(),
+        Provider<OpenAIService>(
+          create: (context) => OpenAIService(
+            openAIAuthRepository: context.read<OpenAIAuthRepository>(),
             openAIRepository: context.read<OpenAIRepository>(),
           ),
         ),
-        Provider<ChatUsecases>(
-          create: (context) => ChatUsecases(context.read<ChatRepository>()),
-        ),
-        Provider<TaskUsecases>(
-          create: (context) => TaskUsecases(context.read<TaskRepository>()),
-        ),
-        Provider<UserUsecases>(
-          create: (context) =>
-              UserUsecases(context.read<LocalStorageService>()),
-        ),
-
-        // App-level Services
-        Provider<OpenAIService>(
-          create: (context) => OpenAIService(context.read<OpenAIUsecases>()),
-        ),
         Provider<ChatService>(
-          create: (context) => ChatService(context.read<ChatUsecases>()),
+          create: (context) => ChatService(context.read<ChatRepository>()),
+        ),
+        Provider<TaskService>(
+          create: (context) => TaskService(context.read<TaskRepository>()),
         ),
 
         // ChangeNotifierProviders (UI-level state)
         ChangeNotifierProvider(
+          create: (context) =>
+              UserProvider(userRepository: context.read<UserRepository>()),
+        ),
+        ChangeNotifierProvider(
           create: (context) => NotionProvider(
-            notionUsecases: context.read<NotionUsecases>(),
-            openAIUsecases: context.read<OpenAIUsecases>(),
+            notionService: context.read<NotionService>(),
+            openAIService: context.read<OpenAIService>(),
+          )..initialize(),
+        ),
+        ChangeNotifierProxyProvider<NotionProvider, TaskProvider>(
+          create: (context) => TaskProvider(
+            taskService: context.read<TaskService>(),
+            notionDatabaseId: null, // Initial value
           ),
-        ),
-        ChangeNotifierProvider(
-          create: (context) =>
-              TaskProvider(taskUsecases: context.read<TaskUsecases>()),
-        ),
-        ChangeNotifierProvider(
-          create: (context) =>
-              UserProvider(userUsecases: context.read<UserUsecases>()),
+          update: (context, notionProvider, previousTaskProvider) =>
+              TaskProvider(
+                taskService: context.read<TaskService>(),
+                notionDatabaseId: notionProvider.databaseId,
+              ),
         ),
       ],
       child: const MyApp(),

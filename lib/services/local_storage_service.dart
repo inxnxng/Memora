@@ -8,6 +8,8 @@ class LocalStorageService {
   static const String _lastTrainingResultKey = 'last_training_result';
   static const String _openAIApiKeyKey = 'openai_api_key';
   static const String _openAIApiKeyTimestampKey = 'openai_api_key_timestamp';
+  static const String _notionApiKeyKey = 'notion_api_key';
+  static const String _notionApiKeyTimestampKey = 'notion_api_key_timestamp';
   static const String _lastTrainedDateKey =
       'last_trained_date_'; // Suffix with task ID
   static const String _userLevelKey = 'user_level_'; // Suffix with user ID
@@ -17,8 +19,18 @@ class LocalStorageService {
   static const String _streakDateKey = 'streak_date_'; // Suffix with user ID
   static const String _sessionMapKey = 'session_map_'; // Suffix with user ID
   static const String _userIdKey = 'memora_user_id';
+  static const String _userNameKey = 'user_name_'; // Suffix with user ID
 
-  /// Gets the stored user ID, or creates and stores a new one if none exists.
+  Future<void> saveUserName(String userId, String name) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('$_userNameKey$userId', name);
+  }
+
+  Future<String?> loadUserName(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('$_userNameKey$userId');
+  }
+
   Future<String> getOrCreateUserId() async {
     final prefs = await SharedPreferences.getInstance();
     String? userId = prefs.getString(_userIdKey);
@@ -84,20 +96,46 @@ class LocalStorageService {
     return prefs.getString(_lastTrainingResultKey);
   }
 
-  Future<void> saveApiKeyWithTimestamp(String apiKey) async {
+  String getAppropriateKeyName(String service) {
+    if (service == "openai") {
+      return _openAIApiKeyKey;
+    } else if (service == "notion") {
+      return _notionApiKeyKey;
+    }
+    return '';
+  }
+
+  String getAppropriateTimeStampName(String service) {
+    if (service == "openai") {
+      return _openAIApiKeyTimestampKey;
+    } else if (service == "notion") {
+      return _notionApiKeyTimestampKey;
+    }
+    return '';
+  }
+
+  Future<void> saveApiKeyWithTimestamp(String keyName, String apiKey) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_openAIApiKeyKey, apiKey);
+    await prefs.setString(getAppropriateKeyName(keyName), apiKey);
     await prefs.setString(
-      _openAIApiKeyTimestampKey,
+      getAppropriateTimeStampName(keyName),
       DateTime.now().toIso8601String(),
     );
   }
 
-  Future<Map<String, String?>> getApiKeyWithTimestamp() async {
+  Future<Map<String, String?>> getApiKeyWithTimestamp(String keyName) async {
     final prefs = await SharedPreferences.getInstance();
-    final apiKey = prefs.getString(_openAIApiKeyKey);
-    final timestamp = prefs.getString(_openAIApiKeyTimestampKey);
-    return {'value': apiKey, 'timestamp': timestamp};
+
+    String? apiKey = prefs.getString(getAppropriateKeyName(keyName));
+    String? timeStamp = prefs.getString(getAppropriateTimeStampName(keyName));
+
+    return {'value': apiKey, 'timestamp': timeStamp};
+  }
+
+  Future<void> deleteApiKey(String keyName) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(getAppropriateKeyName(keyName));
+    await prefs.remove(getAppropriateTimeStampName(keyName));
   }
 
   Future<void> saveUserLevel(String userId, String level) async {
@@ -197,5 +235,17 @@ class LocalStorageService {
       }
     }
     return {};
+  }
+
+  // Generic value getter
+  Future<String?> getValue(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(key);
+  }
+
+  // Generic value setter
+  Future<void> saveValue(String key, String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(key, value);
   }
 }

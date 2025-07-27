@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:memora/domain/usecases/user_usecases.dart';
+import 'package:memora/models/proficiency_level.dart';
+import 'package:memora/repositories/user/user_repository.dart';
 
 class UserProvider with ChangeNotifier {
-  final UserUsecases _userUsecases;
+  final UserRepository _userRepository;
 
-  String? _userLevel;
+  ProficiencyLevel? _userLevel;
+  String? _displayName;
   String? _levelTimestamp;
   int _streakCount = 0;
   Map<String, int> _sessionMap = {};
   bool _isLoading = true;
   String? _userId;
 
-  String? get userLevel => _userLevel;
+  ProficiencyLevel? get userLevel => _userLevel;
+  String? get displayName => _displayName;
   String? get levelTimestamp => _levelTimestamp;
   int get streakCount => _streakCount;
   Map<String, int> get sessionMap => _sessionMap;
   bool get isLoading => _isLoading;
-  // Use a getter with a null check to ensure userId is initialized before use.
   String get userId {
     if (_userId == null) {
       throw StateError(
@@ -26,17 +28,16 @@ class UserProvider with ChangeNotifier {
     return _userId!;
   }
 
-  UserProvider({required UserUsecases userUsecases})
-    : _userUsecases = userUsecases {
+  UserProvider({required UserRepository userRepository})
+    : _userRepository = userRepository {
     initializeUser();
   }
 
-  /// Initializes the user by fetching or creating a user ID, then loads profile data.
   Future<void> initializeUser() async {
     _isLoading = true;
     Future.microtask(() => notifyListeners());
 
-    _userId = await _userUsecases.getOrCreateUserId();
+    _userId = await _userRepository.getOrCreateUserId();
     await loadUserProfile();
   }
 
@@ -44,35 +45,37 @@ class UserProvider with ChangeNotifier {
     _isLoading = true;
     Future.microtask(() => notifyListeners());
 
-    // Ensure we have a userId before proceeding
     if (_userId == null) {
-      // If userId is somehow null, stop loading and exit loading state.
       _isLoading = false;
       Future.microtask(() => notifyListeners());
       return;
     }
 
-    final data = await _userUsecases.loadUserLevelWithTimestamp(userId);
-    _userLevel = data['level'];
+    final data = await _userRepository.loadUserLevelWithTimestamp(userId);
+    _userLevel = ProficiencyLevel.fromString(data['level']);
     _levelTimestamp = data['timestamp'];
-    _streakCount = await _userUsecases.loadStreakCount(userId);
-    _sessionMap = await _userUsecases.loadSessionMap(userId);
+    _displayName = await _userRepository.loadUserName(userId);
+    _streakCount = await _userRepository.loadStreakCount(userId);
+    _sessionMap = await _userRepository.loadSessionMap(userId);
 
     _isLoading = false;
     Future.microtask(() => notifyListeners());
   }
 
-  Future<void> saveUserLevel(String level) async {
-    await _userUsecases.saveUserLevel(userId, level);
+  Future<void> saveUserLevel(ProficiencyLevel level) async {
+    await _userRepository.saveUserLevel(userId, level);
     await loadUserProfile();
   }
 
-  /// Records a learning session and updates the profile state.
+  Future<void> saveUserName(String name) async {
+    await _userRepository.saveUserName(userId, name);
+    await loadUserProfile();
+  }
+
   Future<void> recordLearningSession() async {
     final now = DateTime.now();
-    await _userUsecases.recordSession(userId, now);
-    await _userUsecases.incrementStreak(userId, now);
-    // Reload all profile data to ensure consistency
+    await _userRepository.recordSession(userId, now);
+    await _userRepository.incrementStreak(userId, now);
     await loadUserProfile();
   }
 }

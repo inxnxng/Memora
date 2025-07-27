@@ -1,6 +1,8 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:memora/providers/notion_provider.dart';
+import 'package:memora/services/notion_service.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -12,56 +14,106 @@ class NotionSettingsScreen extends StatefulWidget {
 }
 
 class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
-  late final NotionProvider _notionProvider;
+  late final NotionService _notionService;
   final TextEditingController _notionApiTokenController =
       TextEditingController();
   final TextEditingController _notionDatabaseSearchController =
       TextEditingController();
-
+  Map<String, String?> _notionApiKey = {'value': null, 'timestamp': null};
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _notionProvider = Provider.of<NotionProvider>(context, listen: false);
-    // Load initial state without causing rebuilds before build method
+    _notionService = Provider.of<NotionService>(context, listen: false);
+    _loadKeys();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadInitialData();
+      Provider.of<NotionProvider>(context, listen: false).initialize();
     });
   }
 
-  void _loadInitialData() {
-    // You might want to show existing token's masked value or status
-    // For now, we just ensure the provider has the latest state.
-    setState(() {});
+  Future<void> _loadKeys() async {
+    setState(() {
+      _isLoading = true;
+    });
+    _notionApiKey = await _notionService.getApiKeyWithTimestamp();
+    _notionApiTokenController.text = ''; // Clear controller
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  String _formatTimestamp(String? timestamp) {
+    if (timestamp == null) return '미입력';
+    final dateTime = DateTime.parse(timestamp);
+    return DateFormat('yy.MM.dd HH:mm').format(dateTime);
   }
 
   Future<void> _saveNotionApiToken() async {
-    if (_notionApiTokenController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Notion API 토큰을 입력해주세요.')),
-      );
+    final token = _notionApiTokenController.text.trim();
+
+    if (token.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Notion API 토큰을 입력해주세요.')));
       return;
     }
+
     setState(() {
       _isLoading = true;
     });
     try {
-      await _notionProvider.setApiToken(_notionApiTokenController.text);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Notion API Token 저장 완료!')),
+      if (!token.startsWith('ntn_')) {
+        final bool? shouldSave = await showDialog<bool>(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('잘못된 API 키 형식'),
+              content: const Text(
+                'Notion API 키는 보통 "ntn_"으로 시작합니다. 입력하신 키가 올바른지 확인해주세요.\n\n그래도 저장하시겠습니까?',
+              ),
+              actions: <Widget>[
+                TextButton(
+                  child: const Text('취소'),
+                  onPressed: () => Navigator.of(context).pop(false),
+                ),
+                TextButton(
+                  child: const Text('그래도 저장'),
+                  onPressed: () => Navigator.of(context).pop(true),
+                ),
+              ],
+            );
+          },
         );
-        _notionApiTokenController.clear();
+        if (shouldSave != true) {
+          setState(() {
+            _isLoading = false;
+          });
+          return;
+        }
       }
+      await _notionService.saveApiKeyWithTimestamp(
+        _notionApiTokenController.text,
+      );
+      await _loadKeys();
+
+      if (mounted) {
+        await Provider.of<NotionProvider>(context, listen: false).initialize();
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Notion Key 저장 완료!')));
+      _notionApiTokenController.clear();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Notion API Token 저장 실패: ${e.toString()}')),
+          SnackBar(content: Text('Notion Key 저장 실패: ${e.toString()}')),
         );
       }
     } finally {
-      if(mounted) {
+      if (mounted) {
         setState(() {
           _isLoading = false;
         });
@@ -71,108 +123,172 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Using Consumer at a higher level to react to provider changes
     return Consumer<NotionProvider>(
       builder: (context, notionProvider, child) {
         return Scaffold(
           appBar: AppBar(title: const Text('Notion 연동 관리')),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildSectionTitle('API 키 설정'),
-                _buildInstructionCard(),
-                const SizedBox(height: 16),
-                _buildKeyInput(
-                  controller: _notionApiTokenController,
-                  label: 'Notion API Token',
-                  onSave: _saveNotionApiToken,
-                  currentValue: notionProvider.apiToken,
-                ),
-                const SizedBox(height: 30),
-                _buildSectionTitle('데이터베이스 연결'),
-                const Text(
-                  'API 키를 저장하고 데이터베이스에 연결 권한을 부여한 후, 아래에서 데이터베이스를 검색하고 선택하세요.',
-                  style: TextStyle(color: Colors.grey),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _notionDatabaseSearchController,
-                  decoration: InputDecoration(
-                    hintText: '데이터베이스 이름으로 검색',
-                    border: const OutlineInputBorder(),
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.search),
-                      onPressed: () {
-                        notionProvider.searchNotionDatabases(
-                          query: _notionDatabaseSearchController.text,
-                        );
-                      },
-                    ),
+          body: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildSectionTitle('API 키 설정'),
+                      _buildInstructionCard(),
+                      const SizedBox(height: 16),
+                      _buildKeyInput(
+                        controller: _notionApiTokenController,
+                        label: 'Notion API Token',
+                        currentValue: _notionApiKey["value"],
+                        timestamp: _notionApiKey['timestamp'],
+                        onSave: _saveNotionApiToken,
+                      ),
+                      const SizedBox(height: 30),
+                      _buildSectionTitle('데이터베이스 연결'),
+                      const Text(
+                        'API 키를 저장하고 데이터베이스에 연결 권한을 부여한 후, 아래에서 데이터베이스를 검색하고 선택하세요.',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _notionDatabaseSearchController,
+                        decoration: InputDecoration(
+                          hintText: '데이터베이스 이름으로 검색',
+                          border: const OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.search),
+                            onPressed: () {
+                              notionProvider.searchNotionDatabases(
+                                query: _notionDatabaseSearchController.text,
+                              );
+                            },
+                          ),
+                        ),
+                        onSubmitted: (query) {
+                          notionProvider.searchNotionDatabases(query: query);
+                        },
+                      ),
+                      if (notionProvider.databaseTitle != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 16.0),
+                          child: Text(
+                            '현재 연결된 DB: ${notionProvider.databaseTitle}',
+                            style: const TextStyle(
+                              color: Colors.green,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 10),
+                      _buildDatabaseList(notionProvider),
+                      const SizedBox(height: 30),
+                    ],
                   ),
-                  onSubmitted: (query) {
-                    notionProvider.searchNotionDatabases(query: query);
-                  },
                 ),
-                const SizedBox(height: 10),
-                _buildDatabaseList(notionProvider),
-              ],
-            ),
-          ),
         );
       },
     );
   }
 
   Widget _buildInstructionCard() {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+    final cardColor = isDarkMode
+        ? theme.colorScheme.surfaceContainerHighest.withAlpha(
+            (255 * 0.3).round(),
+          )
+        : theme.colorScheme.surfaceContainerHighest;
+    final linkColor = theme.colorScheme.primary;
+
     return Card(
       elevation: 0,
-      color: Colors.grey.shade100,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: Colors.grey.shade300),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Notion API 키 발급 및 연동 방법',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(height: 12),
-            _buildStep(1, "Notion의 ", "내 연동 페이지로 이동", "https://www.notion.so/my-integrations"),
-            _buildStep(2, "'+ 새 연동 만들기' 버튼을 클릭하여 'Memora' 등의 이름으로 연동을 생성합니다."),
-            _buildStep(3, "생성된 '내부 연동 토큰'을 복사하여 아래에 붙여넣고 저장합니다."),
-            const Divider(height: 24),
-            _buildStep(4, "Memora와 연동할 Notion 데이터베이스 페이지 우측 상단 '...' 메뉴에서 '+ 연결 추가'를 선택합니다."),
-            _buildStep(5, "검색창에서 방금 만든 연동('Memora')을 찾아 선택하여 데이터베이스 접근 권한을 부여합니다."),
-          ],
+      color: cardColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        title: Text(
+          'API 키 발급 및 연동 방법',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
+        subtitle: const Text('자세한 안내 보기'),
+        leading: Icon(
+          Icons.integration_instructions_outlined,
+          color: theme.colorScheme.primary,
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+                _buildStep(
+                  icon: Icons.link,
+                  text: "Notion의 ",
+                  linkText: "내 연동 페이지로 이동",
+                  url: "https://www.notion.so/my-integrations",
+                  linkColor: linkColor,
+                ),
+                _buildStep(
+                  icon: Icons.add_circle_outline,
+                  text: "'+ 새 연동 만들기'를 클릭하여 연동을 생성합니다.",
+                ),
+                _buildStep(
+                  icon: Icons.copy,
+                  text: "생성된 '내부 연동 토큰'을 복사하여 아래에 붙여넣으세요.",
+                ),
+                const Divider(height: 24),
+                _buildStep(
+                  icon: Icons.add_link,
+                  text: "연동할 Notion 페이지 우측 상단 '...' 메뉴에서 '+ 연결 추가'를 선택하세요.",
+                ),
+                _buildStep(
+                  icon: Icons.search,
+                  text: "검색창에서 방금 만든 연동을 찾아 선택하여 권한을 부여합니다.",
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildStep(int number, String text, [String? linkText, String? url]) {
+  Widget _buildStep({
+    required IconData icon,
+    required String text,
+    String? linkText,
+    String? url,
+    Color? linkColor,
+  }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('$number. ', style: const TextStyle(fontWeight: FontWeight.bold)),
+          Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 12),
           Expanded(
             child: RichText(
               text: TextSpan(
-                style: DefaultTextStyle.of(context).style,
+                style: Theme.of(context).textTheme.bodyMedium,
                 children: [
                   TextSpan(text: text),
                   if (linkText != null && url != null)
                     TextSpan(
                       text: linkText,
-                      style: TextStyle(color: Theme.of(context).primaryColor, decoration: TextDecoration.underline),
-                      recognizer: TapGestureRecognizer()..onTap = () => launchUrl(Uri.parse(url)),
+                      style: TextStyle(
+                        color: linkColor,
+                        decoration: TextDecoration.underline,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = () => launchUrl(Uri.parse(url)),
                     ),
                 ],
               ),
@@ -187,7 +303,8 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
     if (notionProvider.isSearchingDatabases) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (notionProvider.notionConnectionError != null) {
+    if (notionProvider.notionConnectionError != null &&
+        notionProvider.availableDatabases.isEmpty) {
       return Padding(
         padding: const EdgeInsets.all(8.0),
         child: Text(
@@ -233,11 +350,12 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
     required String label,
     required VoidCallback onSave,
     String? currentValue,
+    String? timestamp,
   }) {
     String maskedValue = '';
     if (currentValue != null && currentValue.isNotEmpty) {
-      maskedValue = currentValue.length > 5
-          ? '${currentValue.substring(0, 5)}*****'
+      maskedValue = currentValue.length > 8
+          ? '${currentValue.substring(0, 8)}*****'
           : '*****';
     }
 
@@ -257,7 +375,7 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
           obscureText: true,
           onSubmitted: (_) => onSave(),
           decoration: InputDecoration(
-            hintText: 'Enter your $label',
+            hintText: 'ntn... 형태의 API 키를 입력하세요',
             border: const OutlineInputBorder(),
             suffixIcon: _isLoading
                 ? const Padding(
@@ -270,6 +388,11 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
                     tooltip: '저장',
                   ),
           ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '마지막 업데이트: ${_formatTimestamp(timestamp)}',
+          style: const TextStyle(fontSize: 12, color: Colors.grey),
         ),
       ],
     );
@@ -289,5 +412,3 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
     super.dispose();
   }
 }
-
-
