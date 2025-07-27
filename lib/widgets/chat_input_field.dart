@@ -2,14 +2,18 @@ import 'package:flutter/material.dart';
 
 class ChatInputField extends StatelessWidget {
   final TextEditingController controller;
+  final FocusNode? focusNode;
   final ValueChanged<String> onSubmitted;
   final VoidCallback onSendPressed;
+  final bool isEnabled;
 
   const ChatInputField({
     super.key,
     required this.controller,
+    this.focusNode,
     required this.onSubmitted,
     required this.onSendPressed,
+    this.isEnabled = true,
   });
 
   @override
@@ -21,18 +25,23 @@ class ChatInputField extends StatelessWidget {
           Expanded(
             child: TextField(
               controller: controller,
+              focusNode: focusNode,
               decoration: InputDecoration(
                 hintText: '메시지를 입력하세요...',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20.0),
                 ),
               ),
-              onSubmitted: onSubmitted,
+              onSubmitted: isEnabled ? onSubmitted : null,
+              enabled: isEnabled,
             ),
           ),
           const SizedBox(width: 8.0),
           FloatingActionButton(
-            onPressed: onSendPressed,
+            onPressed: isEnabled ? onSendPressed : null,
+            backgroundColor: isEnabled
+                ? Theme.of(context).colorScheme.primary
+                : Colors.grey,
             child: const Icon(Icons.send),
           ),
         ],

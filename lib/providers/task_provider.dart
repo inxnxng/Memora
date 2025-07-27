@@ -10,6 +10,7 @@ class TaskProvider with ChangeNotifier {
   List<Task> _tasks = [];
   bool _isLoading = true;
   DateTime? _roadmapStartDate;
+  Map<DateTime, int> _heatmapData = {};
 
   TaskProvider({required TaskService taskService, String? notionDatabaseId})
     : _taskService = taskService,
@@ -22,6 +23,7 @@ class TaskProvider with ChangeNotifier {
   double get progress => _tasks.isEmpty
       ? 0.0
       : _tasks.where((task) => task.isCompleted).length / _tasks.length;
+  Map<DateTime, int> get heatmapData => _heatmapData;
 
   int get currentRoadmapDay {
     if (_roadmapStartDate == null) return 1;
@@ -36,6 +38,7 @@ class TaskProvider with ChangeNotifier {
 
     await _loadRoadmapStartDate();
     _tasks = await _taskService.getTasks(_notionDatabaseId);
+    await fetchHeatmapData();
 
     _isLoading = false;
     notifyListeners();
@@ -58,5 +61,15 @@ class TaskProvider with ChangeNotifier {
       // If remote state needed to be updated, a call to _taskService would be here.
       notifyListeners();
     }
+  }
+
+  Future<void> addStudyRecordForToday() async {
+    await _taskService.addStudyRecordForToday();
+    await fetchHeatmapData(); // Refresh heatmap data after adding a new record
+  }
+
+  Future<void> fetchHeatmapData() async {
+    _heatmapData = await _taskService.getHeatmapData();
+    notifyListeners();
   }
 }

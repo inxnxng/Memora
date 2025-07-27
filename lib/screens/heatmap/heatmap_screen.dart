@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_heatmap_calendar/flutter_heatmap_calendar.dart';
 import 'package:memora/constants/heatmap_colors.dart';
 import 'package:memora/constants/storage_keys.dart';
-import 'package:memora/providers/user_provider.dart';
+import 'package:memora/providers/task_provider.dart';
 import 'package:memora/services/local_storage_service.dart';
 import 'package:provider/provider.dart';
 
@@ -23,6 +23,10 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
   void initState() {
     super.initState();
     _loadHeatmapColor();
+    // Fetch initial data
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<TaskProvider>(context, listen: false).fetchHeatmapData();
+    });
   }
 
   Future<void> _loadHeatmapColor() async {
@@ -47,11 +51,9 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final userProvider = Provider.of<UserProvider>(context);
+    final taskProvider = Provider.of<TaskProvider>(context);
 
-    final datasets = userProvider.sessionMap.map((key, value) {
-      return MapEntry(DateTime.parse(key), value);
-    });
+    final datasets = taskProvider.heatmapData;
 
     final DateTime endDate = DateTime.now();
     DateTime startDate;
@@ -82,7 +84,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildStreakCard(context, userProvider.streakCount),
+            // _buildStreakCard(context, userProvider.streakCount), // Temporarily disabled
             const SizedBox(height: 24),
             Text('학습 기록', style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 16),
@@ -159,30 +161,30 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
     );
   }
 
-  Widget _buildStreakCard(BuildContext context, int streakCount) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.local_fire_department,
-              color: Colors.orange,
-              size: 32,
-            ),
-            const SizedBox(width: 16),
-            Text(
-              '현재 $streakCount일 연속 학습 중!',
-              style: Theme.of(
-                context,
-              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // Widget _buildStreakCard(BuildContext context, int streakCount) {
+  //   return Card(
+  //     elevation: 2,
+  //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+  //     child: Padding(
+  //       padding: const EdgeInsets.all(20.0),
+  //       child: Row(
+  //         mainAxisAlignment: MainAxisAlignment.center,
+  //         children: [
+  //           const Icon(
+  //             Icons.local_fire_department,
+  //             color: Colors.orange,
+  //             size: 32,
+  //           ),
+  //           const SizedBox(width: 16),
+  //           Text(
+  //             '현재 $streakCount일 연속 학습 중!',
+  //             style: Theme.of(
+  //               context,
+  //             ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 }

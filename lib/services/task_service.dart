@@ -61,4 +61,12 @@ class TaskService {
 
   Future<void> saveLastTrainedDate(String taskId, DateTime date) =>
       _repository.saveLastTrainedDate(taskId, date);
+
+  Future<void> addStudyRecordForToday() async {
+    await _repository.addStudyRecord(DateTime.now());
+  }
+
+  Future<Map<DateTime, int>> getHeatmapData() async {
+    return await _repository.getStudyRecords();
+  }
 }

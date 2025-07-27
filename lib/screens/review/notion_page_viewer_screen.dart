@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:markdown_widget/markdown_widget.dart';
 import 'package:memora/providers/notion_provider.dart';
+import 'package:memora/providers/task_provider.dart';
+import 'package:memora/screens/review/notion_quiz_chat_screen.dart';
 import 'package:provider/provider.dart';
 
 class NotionPageViewerScreen extends StatefulWidget {
@@ -19,19 +23,73 @@ class NotionPageViewerScreen extends StatefulWidget {
 
 class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
   late Future<String> _markdownFuture;
+  bool _showCompleteButton = false;
+  String _pageContent = '';
 
   @override
   void initState() {
     super.initState();
-    // Access the provider without listening to it for one-off async operations.
     final notionProvider = Provider.of<NotionProvider>(context, listen: false);
     _markdownFuture = notionProvider.renderNotionDbAsMarkdown(widget.pageId);
+    _markdownFuture.then((content) {
+      if (mounted) {
+        setState(() {
+          _pageContent = content;
+        });
+      }
+    });
+
+    Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _showCompleteButton = true;
+        });
+      }
+    });
+  }
+
+  void _completeStudy(BuildContext context) {
+    final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+    taskProvider
+        .addStudyRecordForToday()
+        .then((_) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('오늘의 학습이 기록되었습니다!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          // Optionally, pop the screen or disable the button
+          if (mounted) {
+            setState(() {
+              _showCompleteButton = false; // Prevent multiple submissions
+            });
+          }
+        })
+        .catchError((error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('학습 기록에 실패했습니다: $error'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.pageTitle)),
+      appBar: AppBar(
+        title: Text(widget.pageTitle),
+        actions: [
+          if (_showCompleteButton)
+            IconButton(
+              icon: const Icon(Icons.check_circle),
+              tooltip: '학습 완료',
+              onPressed: () => _completeStudy(context),
+            ),
+        ],
+      ),
       body: FutureBuilder<String>(
         future: _markdownFuture,
         builder: (context, snapshot) {
@@ -57,6 +115,33 @@ class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
           }
         },
       ),
+      persistentFooterButtons: [
+        if (_pageContent.isNotEmpty)
+          Center(
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.quiz_outlined),
+              label: const Text('복습하기'),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => NotionQuizChatScreen(
+                      pageTitle: widget.pageTitle,
+                      pageContent: _pageContent,
+                    ),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30,
+                  vertical: 15,
+                ),
+                textStyle: const TextStyle(fontSize: 16),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

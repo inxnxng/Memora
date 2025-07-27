@@ -29,4 +29,12 @@ class TaskRepository {
   Future<DateTime?> loadLastTrainedDate(String taskId) async {
     return _localStorageService.loadLastTrainedDate(taskId);
   }
+
+  Future<void> addStudyRecord(DateTime date) async {
+    await _localStorageService.addStudyRecord(date);
+  }
+
+  Future<Map<DateTime, int>> getStudyRecords() async {
+    return await _localStorageService.getStudyRecords();
+  }
 }

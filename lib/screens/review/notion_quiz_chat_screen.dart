@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:memora/models/chat_message.dart';
+import 'package:memora/providers/task_provider.dart';
 import 'package:memora/services/openai_service.dart';
 import 'package:memora/services/chat_service.dart';
 import 'package:memora/widgets/chat_input_field.dart';
@@ -24,6 +25,7 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
   late final OpenAIService _openAIService;
   late final ChatService _chatService;
   final TextEditingController _textController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
   final List<ChatMessage> _messages = [];
   bool _isLoading = true;
 
@@ -37,6 +39,13 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
     _openAIService = Provider.of<OpenAIService>(context, listen: false);
     _chatService = Provider.of<ChatService>(context, listen: false);
     _startQuizSession();
+  }
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    _focusNode.dispose();
+    super.dispose();
   }
 
   Future<void> _startQuizSession() async {
@@ -54,9 +63,12 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
     } catch (e) {
       _addMessage("Error starting quiz: ${e.toString()}", isUser: false);
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        _focusNode.requestFocus();
+      }
     }
   }
 
@@ -74,17 +86,12 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
   }
 
   void _sendMessage(String text) async {
-    if (text.isEmpty) return;
-
-    if (text == '/reset') {
-      _textController.clear();
-      return;
-    }
-
-    if (_quizFinished) return;
+    if (text.isEmpty || _isLoading) return;
 
     _addMessage(text, isUser: true);
     _textController.clear();
+    _focusNode.requestFocus();
+
     setState(() {
       _isLoading = true;
     });
@@ -94,28 +101,53 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
 
       if (_questionCount < 3) {
         bool isCorrect = aiResponse.toLowerCase().startsWith('correct');
-        setState(() {
-          _quizResults[_questionCount] = isCorrect;
-          _questionCount++;
-        });
+        if (mounted) {
+          setState(() {
+            _quizResults[_questionCount] = isCorrect;
+            _questionCount++;
+          });
+        }
       }
 
       _addMessage(aiResponse, isUser: false);
 
       if (_questionCount >= 3) {
-        setState(() {
-          _quizFinished = true;
-        });
+        if (mounted) {
+          setState(() {
+            _quizFinished = true;
+          });
+        }
       }
-      // Save chat history after each message exchange
       await _chatService.saveChatHistory(widget.pageTitle, _messages);
     } catch (e) {
       _addMessage("Error: ${e.toString()}", isUser: false);
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
+  }
+
+  void _completeStudy() {
+    final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+    taskProvider.addStudyRecordForToday().then((_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('오늘의 학습이 기록되었습니다!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.of(context).pop();
+    }).catchError((error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('학습 기록에 실패했습니다: $error'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    });
   }
 
   @override
@@ -141,12 +173,11 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
             }),
           ),
           const SizedBox(width: 10),
-          if (_quizFinished)
-            IconButton(
-              icon: const Icon(Icons.exit_to_app),
-              onPressed: () => Navigator.of(context).pop(),
-              tooltip: '나가기',
-            ),
+          IconButton(
+            icon: const Icon(Icons.check_circle_outline),
+            onPressed: _completeStudy,
+            tooltip: '학습 완료',
+          ),
         ],
       ),
       body: Column(
@@ -156,19 +187,12 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
                 ? const Center(child: CircularProgressIndicator())
                 : ChatMessagesList(messages: _messages),
           ),
-          if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.all(8.0),
-              child: LinearProgressIndicator(),
-            ),
           ChatInputField(
             controller: _textController,
-            onSubmitted: (_isLoading || _quizFinished)
-                ? (_) {}
-                : (text) => _sendMessage(text),
-            onSendPressed: (_isLoading || _quizFinished)
-                ? () {}
-                : () => _sendMessage(_textController.text),
+            focusNode: _focusNode,
+            onSubmitted: (text) => _sendMessage(text),
+            onSendPressed: () => _sendMessage(_textController.text),
+            isEnabled: !_isLoading,
           ),
         ],
       ),

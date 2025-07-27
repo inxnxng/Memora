@@ -33,7 +33,10 @@ class LocalStorageService {
     final List<String> encodedHistory = history
         .map((msg) => '${msg['role']}|${msg['content']}|${msg['timestamp']}')
         .toList();
-    await prefs.setStringList('${StorageKeys.chatHistoryKey}$taskId', encodedHistory);
+    await prefs.setStringList(
+      '${StorageKeys.chatHistoryKey}$taskId',
+      encodedHistory,
+    );
   }
 
   Future<List<Map<String, dynamic>>> loadChatHistory(String taskId) async {
@@ -134,7 +137,9 @@ class LocalStorageService {
   Future<Map<String, String?>> loadUserLevel(String userId) async {
     final prefs = await SharedPreferences.getInstance();
     final level = prefs.getString('${StorageKeys.userLevelKey}$userId');
-    final timestamp = prefs.getString('${StorageKeys.userLevelTimestampKey}$userId');
+    final timestamp = prefs.getString(
+      '${StorageKeys.userLevelTimestampKey}$userId',
+    );
     return {'level': level, 'timestamp': timestamp};
   }
 
@@ -148,7 +153,9 @@ class LocalStorageService {
 
   Future<DateTime?> loadLastTrainedDate(String taskId) async {
     final prefs = await SharedPreferences.getInstance();
-    final String? dateString = prefs.getString('${StorageKeys.lastTrainedDateKey}$taskId');
+    final String? dateString = prefs.getString(
+      '${StorageKeys.lastTrainedDateKey}$taskId',
+    );
     if (dateString == null) {
       return null;
     }
@@ -231,5 +238,31 @@ class LocalStorageService {
   Future<void> saveValue(String key, String value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(key, value);
+  }
+
+  Future<void> addStudyRecord(DateTime date) async {
+    final prefs = await SharedPreferences.getInstance();
+    final records = prefs.getStringList(StorageKeys.studyRecords) ?? [];
+    final dateString = date.toIso8601String().substring(0, 10); // YYYY-MM-DD
+
+    // Add the date string to the list
+    records.add(dateString);
+
+    // Save the updated list
+    await prefs.setStringList(StorageKeys.studyRecords, records);
+  }
+
+  Future<Map<DateTime, int>> getStudyRecords() async {
+    final prefs = await SharedPreferences.getInstance();
+    final records = prefs.getStringList(StorageKeys.studyRecords) ?? [];
+    final Map<DateTime, int> heatmapData = {};
+
+    for (final dateString in records) {
+      final date = DateTime.parse(dateString);
+      final dayOnly = DateTime(date.year, date.month, date.day);
+      heatmapData[dayOnly] = (heatmapData[dayOnly] ?? 0) + 1;
+    }
+
+    return heatmapData;
   }
 }

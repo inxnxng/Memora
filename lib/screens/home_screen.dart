@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_heatmap_calendar/flutter_heatmap_calendar.dart';
 import 'package:memora/constants/heatmap_colors.dart';
+import 'package:memora/constants/storage_keys.dart';
 import 'package:memora/models/proficiency_level.dart';
 import 'package:memora/providers/notion_provider.dart';
+import 'package:memora/providers/task_provider.dart';
 import 'package:memora/providers/user_provider.dart';
 import 'package:memora/screens/heatmap/heatmap_screen.dart';
 import 'package:memora/screens/profile/profile_screen.dart';
-import 'package:memora/screens/review/til_review_selection_screen.dart';
 import 'package:memora/screens/settings/notion_settings_screen.dart';
 import 'package:memora/screens/settings/settings_screen.dart';
+import 'package:memora/screens/review/til_review_selection_screen.dart';
 import 'package:memora/services/settings_service.dart';
 import 'package:provider/provider.dart';
 
@@ -21,13 +23,19 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   Color _heatmapColor = heatmapColorOptions
-      .firstWhere((c) => c.name == kDefaultHeatmapColor)
+      .firstWhere((c) => c.name == StorageKeys.defaultHeatmapColor)
       .color;
 
   @override
   void initState() {
     super.initState();
-    _loadHeatmapColor();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadHeatmapColor();
+        // Fetch heatmap data when the screen is initialized
+        Provider.of<TaskProvider>(context, listen: false).fetchHeatmapData();
+      }
+    });
   }
 
   Future<void> _loadHeatmapColor() async {
@@ -37,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
         .firstWhere(
           (c) => c.name == colorName,
           orElse: () => heatmapColorOptions.firstWhere(
-            (c) => c.name == kDefaultHeatmapColor,
+            (c) => c.name == StorageKeys.defaultHeatmapColor,
           ),
         )
         .color;
@@ -104,15 +112,15 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: Consumer2<NotionProvider, UserProvider>(
-        builder: (context, notionProvider, userProvider, child) {
+      body: Consumer3<NotionProvider, UserProvider, TaskProvider>(
+        builder: (context, notionProvider, userProvider, taskProvider, child) {
           return Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(child: _buildHeatmapButton(userProvider)),
+                Expanded(child: _buildHeatmapButton(taskProvider)),
                 const SizedBox(height: 20),
                 Expanded(
                   child: _buildMenuButton(
@@ -152,10 +160,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildHeatmapButton(UserProvider userProvider) {
-    final datasets = userProvider.sessionMap.map((key, value) {
-      return MapEntry(DateTime.parse(key), value);
-    });
+  Widget _buildHeatmapButton(TaskProvider taskProvider) {
+    final datasets = taskProvider.heatmapData;
 
     final endDate = DateTime.now();
     final startDate = endDate.subtract(const Duration(days: 10 * 7));
