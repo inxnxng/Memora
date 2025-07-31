@@ -34,14 +34,16 @@ class TaskProvider with ChangeNotifier {
 
   Future<void> _initialize() async {
     _isLoading = true;
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
+    ();
 
     await _loadRoadmapStartDate();
     _tasks = await _taskService.getTasks(_notionDatabaseId);
     await fetchHeatmapData();
 
     _isLoading = false;
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
+    ();
   }
 
   Future<void> _loadRoadmapStartDate() async {
@@ -59,7 +61,8 @@ class TaskProvider with ChangeNotifier {
       task.isCompleted = !task.isCompleted;
       // The business logic for this is now implicitly handled by state change.
       // If remote state needed to be updated, a call to _taskService would be here.
-      notifyListeners();
+      Future.microtask(() => notifyListeners());
+      ();
     }
   }
 
@@ -70,6 +73,5 @@ class TaskProvider with ChangeNotifier {
 
   Future<void> fetchHeatmapData() async {
     _heatmapData = await _taskService.getHeatmapData();
-    notifyListeners();
   }
 }

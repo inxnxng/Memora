@@ -1,5 +1,5 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:memora/data/datasources/openai_remote_data_source.dart';
 import 'package:memora/providers/notion_provider.dart';
@@ -13,7 +13,8 @@ import 'package:memora/repositories/openai/openai_auth_repository.dart';
 import 'package:memora/repositories/openai/openai_repository.dart';
 import 'package:memora/repositories/task/task_repository.dart';
 import 'package:memora/repositories/user/user_repository.dart';
-import 'package:memora/screens/splash_screen.dart';
+import 'package:memora/screens/auth_gate.dart';
+import 'package:memora/services/auth_service.dart';
 import 'package:memora/services/chat_service.dart';
 import 'package:memora/services/local_storage_service.dart';
 import 'package:memora/services/notion_service.dart';
@@ -24,13 +25,15 @@ import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: ".env");
+
+  await Firebase.initializeApp();
 
   runApp(
     MultiProvider(
       providers: [
         // Foundational Services & Repositories
         Provider<LocalStorageService>(create: (_) => LocalStorageService()),
+        Provider<AuthService>(create: (_) => AuthService()),
         Provider<SettingsService>(
           create: (context) =>
               SettingsService(context.read<LocalStorageService>()),
@@ -53,9 +56,7 @@ void main() async {
               OpenAIAuthRepository(context.read<LocalStorageService>()),
         ),
         Provider<OpenAIRemoteDataSource>(
-          create: (context) => OpenAIRemoteDataSource(
-            apiKey: dotenv.env['OPENAI_API_KEY'] ?? '',
-          ),
+          create: (context) => OpenAIRemoteDataSource(),
         ),
         Provider<OpenAIRepository>(
           create: (context) => OpenAIRepository(
@@ -160,7 +161,7 @@ class MyApp extends StatelessWidget {
         dialogTheme: DialogThemeData(backgroundColor: Colors.grey[900]),
       ),
       themeMode: ThemeMode.system,
-      home: const SplashScreen(),
+      home: const AuthGate(),
       debugShowCheckedModeBanner: false,
     );
   }

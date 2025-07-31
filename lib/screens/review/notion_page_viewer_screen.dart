@@ -39,7 +39,8 @@ class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
       }
     });
 
-    Timer(const Duration(seconds: 3), () {
+    // 학습 페이지에서 n초 이상 잔류할 경우 complete 가능 상태
+    Timer(const Duration(seconds: 10), () {
       if (mounted) {
         setState(() {
           _showCompleteButton = true;

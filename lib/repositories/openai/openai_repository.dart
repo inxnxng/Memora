@@ -19,13 +19,18 @@ class OpenAIRepository {
     return apiKey;
   }
 
+  Stream<String> generateTrainingContentStream(String userPrompt) async* {
+    final apiKey = await _getApiKey();
+    yield* remoteDataSource.generateTrainingContentStream(userPrompt, apiKey);
+  }
+
   Future<String> generateTrainingContent(String userPrompt) async {
-    await _getApiKey(); // Ensures API key exists before making a call
-    return remoteDataSource.generateTrainingContent(userPrompt);
+    final apiKey = await _getApiKey();
+    return remoteDataSource.generateTrainingContent(userPrompt, apiKey);
   }
 
   Future<Map<String, dynamic>> createQuizFromText(String text) async {
-    await _getApiKey(); // Ensures API key exists before making a call
-    return remoteDataSource.createQuizFromText(text);
+    final apiKey = await _getApiKey();
+    return remoteDataSource.createQuizFromText(text, apiKey);
   }
 }

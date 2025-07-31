@@ -58,3 +58,8 @@ macos/Runner.xcodeproj/xcuserdata/
 # ETC
 .DS_Store
 lib/firebase_options.dart
+
+
+# .idea
+.idea
+.metadata

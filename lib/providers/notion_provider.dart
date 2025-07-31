@@ -49,7 +49,8 @@ class NotionProvider with ChangeNotifier {
   // Methods
   Future<void> initialize() async {
     _isLoading = true;
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
+    ();
     try {
       final result = await _notionService.initializeConnection();
       _handleConnectionResult(result);
@@ -61,13 +62,15 @@ class NotionProvider with ChangeNotifier {
       _databaseTitle = null;
     }
     _isLoading = false;
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
+    ();
   }
 
   Future<void> fetchNotionPages() async {
     if (!isConnected) return;
     _arePagesLoading = true;
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
+    ();
 
     try {
       _pages = await _notionService.getPagesFromDB(_databaseId!);
@@ -78,19 +81,22 @@ class NotionProvider with ChangeNotifier {
     }
 
     _arePagesLoading = false;
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
+    ();
   }
 
   Future<void> searchNotionDatabases({String? query}) async {
     if (_apiToken == null) {
       _notionConnectionError = 'Notion API 토큰이 설정되지 않았습니다.';
-      notifyListeners();
+      Future.microtask(() => notifyListeners());
+      ();
       return;
     }
 
     _isSearchingDatabases = true;
     _availableDatabases = [];
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
+    ();
 
     try {
       _availableDatabases = await _notionService.searchDatabases(query: query);
@@ -101,16 +107,19 @@ class NotionProvider with ChangeNotifier {
     }
 
     _isSearchingDatabases = false;
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
+    ();
   }
 
   Future<void> connectNotionDatabase(String dbId, String dbTitle) async {
     _isLoading = true;
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
+    ();
     if (_apiToken == null) {
       _notionConnectionError = 'Notion API 토큰이 설정되지 않았습니다.';
       _isLoading = false;
-      notifyListeners();
+      Future.microtask(() => notifyListeners());
+      ();
       return;
     }
     try {
@@ -122,12 +131,14 @@ class NotionProvider with ChangeNotifier {
       _notionConnectionError = 'Failed to connect to database: ${e.toString()}';
     }
     _isLoading = false;
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
+    ();
   }
 
   Future<void> setApiToken(String apiToken) async {
     _isLoading = true;
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
+    ();
     await _notionService.updateApiToken(apiToken);
     await initialize(); // This will set isLoading to false and notify listeners
   }
@@ -136,7 +147,8 @@ class NotionProvider with ChangeNotifier {
     if (!isConnected) return;
     _isQuizLoading = true;
     _currentQuiz = null;
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
+    ();
 
     try {
       if (_pages.isEmpty) await fetchNotionPages();
@@ -157,7 +169,8 @@ class NotionProvider with ChangeNotifier {
     }
 
     _isQuizLoading = false;
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
+    ();
   }
 
   Future<String> getPageContent(String pageId) async {

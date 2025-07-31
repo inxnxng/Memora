@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:memora/constants/storage_keys.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uuid/uuid.dart';
 
 class LocalStorageService {
   Future<void> saveUserName(String userId, String name) async {
@@ -13,16 +12,6 @@ class LocalStorageService {
   Future<String?> loadUserName(String userId) async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('${StorageKeys.userNameKey}$userId');
-  }
-
-  Future<String> getOrCreateUserId() async {
-    final prefs = await SharedPreferences.getInstance();
-    String? userId = prefs.getString(StorageKeys.userIdKey);
-    if (userId == null) {
-      userId = const Uuid().v4();
-      await prefs.setString(StorageKeys.userIdKey, userId);
-    }
-    return userId;
   }
 
   Future<void> saveChatHistory(

@@ -13,6 +13,9 @@ class SettingsService {
   }
 
   Future<void> setHeatmapColorName(String colorName) async {
-    await _localStorageService.saveValue(StorageKeys.heatmapColorKey, colorName);
+    await _localStorageService.saveValue(
+      StorageKeys.heatmapColorKey,
+      colorName,
+    );
   }
 }

@@ -99,3 +99,7 @@ lib/
 - **앱스토어 출시 전 MVP**: iOS TestFlight로 개인 테스트
 - **대상 사용자**: 기억력 향상을 원하거나 일상을 구조화하고 싶은 사용자
 - **추후 계획**: Android 확장, 친구 초대/팔로우 시스템, 퀴즈 기반 회고 추가
+
+
+
+firebase apps:create ios memora (macos) --bundle-id=com.inkyung.memora --json --project=memora-a49c9

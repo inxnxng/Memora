@@ -4,53 +4,30 @@ import 'package:memora/screens/home_screen.dart';
 import 'package:memora/screens/onboarding/onboarding_screen.dart';
 import 'package:provider/provider.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen> {
-  late Future<void> _initFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    // Start initialization when the widget is first created.
-    _initFuture = Provider.of<UserProvider>(
-      context,
-      listen: false,
-    ).initializeUser();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return FutureBuilder<void>(
-      future: _initFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.done) {
-          // After initialization, check the user level.
-          final userProvider = Provider.of<UserProvider>(
-            context,
-            listen: false,
-          );
-          if (userProvider.userLevel == null) {
-            // If no level, navigate to Onboarding.
-            return const OnboardingScreen();
-          } else {
-            // If level exists, navigate to Home.
-            return const HomeScreen();
-          }
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, child) {
+        if (userProvider.isLoading) {
+          return _buildSplashScreenUI(context);
         }
 
-        // While initializing, show the splash screen UI.
-        return _buildSplashScreenUI();
+        // After loading, check the user level.
+        if (userProvider.userLevel == null) {
+          // If no level, navigate to Onboarding.
+          return const OnboardingScreen();
+        } else {
+          // If level exists, navigate to Home.
+          return const HomeScreen();
+        }
       },
     );
   }
 
-  Widget _buildSplashScreenUI() {
+  Widget _buildSplashScreenUI(BuildContext context) {
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
 

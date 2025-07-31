@@ -44,3 +44,11 @@ class Task {
     );
   }
 }
+
+class NotionPage {
+  final String id;
+  final String title;
+  final String content;
+
+  NotionPage({required this.id, required this.title, required this.content});
+}

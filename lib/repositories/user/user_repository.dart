@@ -24,9 +24,6 @@ class UserRepository {
   Future<String?> loadUserName(String userId) =>
       _localStorageService.loadUserName(userId);
 
-  Future<String> getOrCreateUserId() =>
-      _localStorageService.getOrCreateUserId();
-
   // Streak and Session Methods
   Future<void> incrementStreak(String userId, DateTime date) =>
       _localStorageService.incrementStreak(userId, date);

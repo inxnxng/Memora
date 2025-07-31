@@ -1,8 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:memora/models/chat_message.dart';
 import 'package:memora/providers/task_provider.dart';
-import 'package:memora/services/openai_service.dart';
 import 'package:memora/services/chat_service.dart';
+import 'package:memora/services/openai_service.dart';
 import 'package:memora/widgets/chat_input_field.dart';
 import 'package:memora/widgets/chat_messages_list.dart';
 import 'package:provider/provider.dart';
@@ -27,11 +29,11 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
   final TextEditingController _textController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   final List<ChatMessage> _messages = [];
-  bool _isLoading = true;
+  bool _isLoading = false;
 
   int _questionCount = 0;
   final List<bool?> _quizResults = [null, null, null];
-  bool _quizFinished = false;
+  StreamSubscription<String>? _streamSubscription;
 
   @override
   void initState() {
@@ -43,33 +45,57 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
 
   @override
   void dispose() {
+    _streamSubscription?.cancel();
     _textController.dispose();
     _focusNode.dispose();
     super.dispose();
   }
 
-  Future<void> _startQuizSession() async {
+  void _startQuizSession() {
+    if (_isLoading) return;
     setState(() {
       _isLoading = true;
     });
 
-    try {
-      final initialPrompt =
-          "Based on the following content from my Notion page '${widget.pageTitle}', please quiz me to help me remember it. Ask me one question at a time. After I answer, please tell me if I am correct or incorrect by starting your response with 'Correct.' or 'Incorrect.'. Then, ask the next question. Ask a total of 3 questions.";
-      final aiResponse = await _openAIService.generateTrainingContent(
-        initialPrompt,
-      );
-      _addMessage(aiResponse, isUser: false);
-    } catch (e) {
-      _addMessage("Error starting quiz: ${e.toString()}", isUser: false);
-    } finally {
-      if (mounted) {
+    final initialPrompt =
+        "Based on the following content from my Notion page '${widget.pageTitle}', please quiz me to help me remember it. Ask me one question at a time. After I answer, please tell me if I am correct or incorrect by starting your response with 'Correct.' or 'Incorrect.'. Then, ask the next question. Ask a total of 3 questions.";
+
+    _addMessage("", isUser: false); // Add a placeholder for the AI message
+
+    final stream = _openAIService.generateTrainingContentStream(initialPrompt);
+    String fullResponse = "";
+    _streamSubscription = stream.listen(
+      (contentChunk) {
+        fullResponse += contentChunk;
         setState(() {
-          _isLoading = false;
+          _messages[0] = ChatMessage(
+            content: fullResponse,
+            sender: MessageSender.ai,
+            timestamp: DateTime.now(),
+          );
         });
-        _focusNode.requestFocus();
-      }
-    }
+      },
+      onDone: () {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+          _focusNode.requestFocus();
+        }
+      },
+      onError: (error) {
+        if (mounted) {
+          setState(() {
+            _messages[0] = ChatMessage(
+              content: "Error starting quiz: ${error.toString()}",
+              sender: MessageSender.ai,
+              timestamp: DateTime.now(),
+            );
+            _isLoading = false;
+          });
+        }
+      },
+    );
   }
 
   void _addMessage(String text, {bool isUser = true}) {
@@ -85,9 +111,10 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
     });
   }
 
-  void _sendMessage(String text) async {
+  void _sendMessage(String text) {
     if (text.isEmpty || _isLoading) return;
 
+    _streamSubscription?.cancel();
     _addMessage(text, isUser: true);
     _textController.clear();
     _focusNode.requestFocus();
@@ -96,34 +123,61 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
       _isLoading = true;
     });
 
+    _addMessage("", isUser: false);
+
     try {
-      final aiResponse = await _openAIService.generateTrainingContent(text);
+      final stream = _openAIService.generateTrainingContentStream(text);
+      String fullResponse = "";
 
-      if (_questionCount < 3) {
-        bool isCorrect = aiResponse.toLowerCase().startsWith('correct');
-        if (mounted) {
+      _streamSubscription = stream.listen(
+        (contentChunk) {
+          fullResponse += contentChunk;
           setState(() {
-            _quizResults[_questionCount] = isCorrect;
-            _questionCount++;
+            _messages[0] = ChatMessage(
+              content: fullResponse,
+              sender: MessageSender.ai,
+              timestamp: DateTime.now(),
+            );
           });
-        }
-      }
-
-      _addMessage(aiResponse, isUser: false);
-
-      if (_questionCount >= 3) {
-        if (mounted) {
-          setState(() {
-            _quizFinished = true;
-          });
-        }
-      }
-      await _chatService.saveChatHistory(widget.pageTitle, _messages);
+        },
+        onDone: () async {
+          if (_questionCount < 3) {
+            bool isCorrect = fullResponse.toLowerCase().startsWith('correct');
+            if (mounted) {
+              setState(() {
+                _quizResults[_questionCount] = isCorrect;
+                _questionCount++;
+              });
+            }
+          }
+          await _chatService.saveChatHistory(widget.pageTitle, _messages);
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+          }
+        },
+        onError: (error) {
+          if (mounted) {
+            setState(() {
+              _messages[0] = ChatMessage(
+                content: "Error: ${error.toString()}",
+                sender: MessageSender.ai,
+                timestamp: DateTime.now(),
+              );
+              _isLoading = false;
+            });
+          }
+        },
+      );
     } catch (e) {
-      _addMessage("Error: ${e.toString()}", isUser: false);
-    } finally {
       if (mounted) {
         setState(() {
+          _messages[0] = ChatMessage(
+            content: "Error: ${e.toString()}",
+            sender: MessageSender.ai,
+            timestamp: DateTime.now(),
+          );
           _isLoading = false;
         });
       }
@@ -132,22 +186,25 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
 
   void _completeStudy() {
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
-    taskProvider.addStudyRecordForToday().then((_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('오늘의 학습이 기록되었습니다!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      Navigator.of(context).pop();
-    }).catchError((error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('학습 기록에 실패했습니다: $error'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    });
+    taskProvider
+        .addStudyRecordForToday()
+        .then((_) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('오늘의 학습이 기록되었습니다!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.of(context).pop();
+        })
+        .catchError((error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('학습 기록에 실패했습니다: $error'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        });
   }
 
   @override
@@ -163,9 +220,13 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
                 child: Icon(
                   _quizResults[index] == true
                       ? Icons.circle
+                      : _quizResults[index] == false
+                      ? Icons.close
                       : Icons.circle_outlined,
                   color: _quizResults[index] == true
                       ? Colors.green
+                      : _quizResults[index] == false
+                      ? Colors.red
                       : Colors.grey,
                   size: 16,
                 ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:memora/models/proficiency_level.dart';
 import 'package:memora/providers/user_provider.dart';
+import 'package:memora/services/auth_service.dart';
 import 'package:provider/provider.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -104,6 +105,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               child: const Text('저장'),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () async {
+                await context.read<AuthService>().signOut();
+                // The AuthGate will handle navigation to the LoginScreen.
+                // We just need to pop this screen.
+                if (mounted) {
+                  Navigator.of(context).pop();
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: const Text('로그아웃'),
             ),
           ],
         ),

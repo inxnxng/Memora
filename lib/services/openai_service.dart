@@ -32,6 +32,10 @@ class OpenAIService {
 
   // --- Core AI Functionality ---
 
+  Stream<String> generateTrainingContentStream(String userPrompt) {
+    return _openAIRepository.generateTrainingContentStream(userPrompt);
+  }
+
   Future<Map<String, dynamic>> createQuizFromText(String text) {
     return _openAIRepository.createQuizFromText(text);
   }

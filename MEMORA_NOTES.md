@@ -16,7 +16,7 @@ Memora는 사용자 데이터 저장, 인증, 랭킹 기능을 위해 Firebase�
 
 ### 2. iOS 앱 추가 및 설정
 1. 생성된 프로젝트의 대시보드에서 iOS 아이콘을 클릭하여 새 앱을 추가합니다.
-2. **Apple 번들 ID**를 입력합니다. Xcode 프로젝트의 `Runner > General` 탭에서 확인할 수 있습니다. (예: `com.example.memora`)
+2. **Apple 번들 ID**를 입력합니다. Xcode 프로젝트의 `Runner > General` 탭에서 확인할 수 있습니다. (예: `com.inkyung.memora`)
 3. 앱 닉네임(선택 사항)을 입력하고 **앱 등록** 버튼을 클릭합니다.
 4. **`GoogleService-Info.plist` 파일을 다운로드**합니다. 이 파일은 Firebase가 앱과 통신하는 데 필요한 모든 정보를 담고 있습니다.
 5. 다운로드한 `GoogleService-Info.plist` 파일을 Xcode를 열어 `Runner/Runner` 디렉토리로 드래그 앤 드롭합니다. 파일을 추가할 때 **"Copy items if needed"** 옵션이 선택되어 있는지 확인하세요.
@@ -70,14 +70,5 @@ Memora는 Notion TIL 내용을 바탕으로 AI 퀴즈를 생성하기 위해 Ope
 2. **"Create new secret key"** 버튼을 클릭하여 새로운 API 키를 생성합니다.
 3. 생성된 키를 즉시 복사하여 안전한 곳에 보관하세요. (키는 다시 확인할 수 없습니다.)
 
-### 2. 프로젝트에 API 키 설정
-1. Memora 프로젝트의 루트 디렉토리(`memora/`)에 `.env` 라는 이름의 파일을 생성합니다. (이 파일은 이미 생성되어 있어야 합니다.)
-2. `.env` 파일을 열고 아래와 같이 자신의 API 키를 입력합니다.
-
-   ```
-   OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-   ```
-
-3. 이 파일은 `.gitignore`에 등록되어 있어, Git 저장소에 키가 노출될 염려가 없습니다.
 
 ---

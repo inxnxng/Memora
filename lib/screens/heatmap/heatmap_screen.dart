@@ -32,7 +32,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
   Future<void> _loadHeatmapColor() async {
     final colorName =
         await _localStorageService.getValue(StorageKeys.heatmapColorKey) ??
-            StorageKeys.defaultHeatmapColor;
+        StorageKeys.defaultHeatmapColor;
     final selectedColor = heatmapColorOptions
         .firstWhere(
           (c) => c.name == colorName,

@@ -26,7 +26,7 @@ class _HeatmapColorSettingsScreenState
     // getValue is not defined in LocalStorageService, so I will add it.
     final colorName =
         await _localStorageService.getValue(StorageKeys.heatmapColorKey) ??
-            StorageKeys.defaultHeatmapColor;
+        StorageKeys.defaultHeatmapColor;
     if (mounted) {
       setState(() {
         _selectedColorName = colorName;
@@ -36,7 +36,10 @@ class _HeatmapColorSettingsScreenState
 
   Future<void> _setSelectedColor(String colorName) async {
     // saveValue is not defined in LocalStorageService, so I will add it.
-    await _localStorageService.saveValue(StorageKeys.heatmapColorKey, colorName);
+    await _localStorageService.saveValue(
+      StorageKeys.heatmapColorKey,
+      colorName,
+    );
     if (mounted) {
       setState(() {
         _selectedColorName = colorName;
