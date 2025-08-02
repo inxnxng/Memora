@@ -8,10 +8,17 @@ class NotionRemoteDataSource {
 
   NotionRemoteDataSource({required this.apiToken});
 
-  Future<List<dynamic>> getPagesFromDB(String databaseId) async {
+  Future<Map<String, dynamic>> getPagesFromDB(String databaseId,
+      [String? startCursor]) async {
     final url = Uri.parse(
       'https://api.notion.com/v1/databases/$databaseId/query',
     );
+
+    final Map<String, dynamic> body = {};
+    if (startCursor != null) {
+      body['start_cursor'] = startCursor;
+    }
+
     final response = await http.post(
       url,
       headers: {
@@ -19,10 +26,11 @@ class NotionRemoteDataSource {
         'Notion-Version': _notionApiVersion,
         'Content-Type': 'application/json',
       },
+      body: jsonEncode(body),
     );
 
     if (response.statusCode == 200) {
-      return json.decode(utf8.decode(response.bodyBytes))['results'];
+      return json.decode(utf8.decode(response.bodyBytes));
     } else {
       throw Exception('Failed to load pages from Notion: ${response.body}');
     }

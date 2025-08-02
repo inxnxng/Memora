@@ -15,10 +15,16 @@ class NotionRepository {
     return apiToken;
   }
 
-  Future<List<dynamic>> getPagesFromDB(String databaseId) async {
+  Future<Map<String, dynamic>> getPagesFromDB(
+    String databaseId,
+    String? startCursor,
+  ) async {
     final apiToken = await _getApiToken();
     final remoteDataSource = NotionRemoteDataSource(apiToken: apiToken);
-    return remoteDataSource.getPagesFromDB(databaseId);
+    return remoteDataSource.getPagesFromDB(
+      databaseId,
+      startCursor,
+    );
   }
 
   Future<Map<String, dynamic>> getDatabaseInfo(String databaseId) async {

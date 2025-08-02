@@ -1,7 +1,9 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:memora/services/openai_service.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class OpenAISettingsScreen extends StatefulWidget {
   const OpenAISettingsScreen({super.key});
@@ -96,6 +98,8 @@ class _OpenAISettingsScreenState extends State<OpenAISettingsScreen> {
                     style: TextStyle(color: Colors.grey),
                   ),
                   const SizedBox(height: 16),
+                  _buildInstructionCard(),
+                  const SizedBox(height: 16),
                   _buildKeyInput(
                     controller: _openAIApiKeyController,
                     label: 'OpenAI API Key',
@@ -106,6 +110,104 @@ class _OpenAISettingsScreenState extends State<OpenAISettingsScreen> {
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _buildInstructionCard() {
+    final theme = Theme.of(context);
+    final isDarkMode = theme.brightness == Brightness.dark;
+    final cardColor = isDarkMode
+        ? theme.colorScheme.surfaceContainerHighest.withAlpha(
+            (255 * 0.3).round(),
+          )
+        : theme.colorScheme.surfaceContainerHighest;
+    final linkColor = theme.colorScheme.primary;
+
+    return Card(
+      elevation: 0,
+      color: cardColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      clipBehavior: Clip.antiAlias,
+      child: ExpansionTile(
+        title: Text(
+          'API 키 발급 방법',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        subtitle: const Text('자세한 안내 보기'),
+        leading: Icon(
+          Icons.integration_instructions_outlined,
+          color: theme.colorScheme.primary,
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+                _buildStep(
+                  icon: Icons.link,
+                  text: "OpenAI의 ",
+                  linkText: "API Keys 페이지로 이동",
+                  url: "https://platform.openai.com/api-keys",
+                  linkColor: linkColor,
+                ),
+                _buildStep(
+                  icon: Icons.add_circle_outline,
+                  text: "'+ Create new secret key'를 클릭하여 키를 생성합니다.",
+                ),
+                _buildStep(
+                  icon: Icons.copy,
+                  text: "생성된 API Key를 복사하여 아래에 붙여넣으세요.",
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStep({
+    required IconData icon,
+    required String text,
+    String? linkText,
+    String? url,
+    Color? linkColor,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: Theme.of(context).textTheme.bodyMedium,
+                children: [
+                  TextSpan(text: text),
+                  if (linkText != null && url != null)
+                    TextSpan(
+                      text: linkText,
+                      style: TextStyle(
+                        color: linkColor,
+                        decoration: TextDecoration.underline,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = () => launchUrl(Uri.parse(url)),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

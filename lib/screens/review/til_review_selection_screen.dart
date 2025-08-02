@@ -44,29 +44,25 @@ class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
     });
 
     final notionProvider = Provider.of<NotionProvider>(context, listen: false);
-    final List<Future<NotionPage>> pageFutures = [];
+    final List<NotionPage> selectedPages = [];
 
     final allPages = notionProvider.pages;
     final selectedPagesMeta = allPages
         .where((page) => _selectedPageIds.contains(page['id']))
         .toList();
 
-    for (var pageMeta in selectedPagesMeta) {
-      pageFutures.add(
-        Future(() async {
-          final pageId = pageMeta['id'];
-          final titleList = pageMeta['properties']?['Name']?['title'] as List?;
-          final title = titleList?.isNotEmpty == true
-              ? titleList![0]['plain_text']
-              : '제목 없음';
-          final content = await notionProvider.getPageContent(pageId);
-          return NotionPage(id: pageId, title: title, content: content);
-        }),
-      );
-    }
-
     try {
-      final selectedPages = await Future.wait(pageFutures);
+      for (var pageMeta in selectedPagesMeta) {
+        final pageId = pageMeta['id'];
+        final titleList = pageMeta['properties']?['Name']?['title'] as List?;
+        final title = titleList?.isNotEmpty == true
+            ? titleList![0]['plain_text']
+            : '제목 없음';
+        final content = await notionProvider.getPageContent(pageId);
+        selectedPages.add(
+          NotionPage(id: pageId, title: title, content: content),
+        );
+      }
 
       if (!mounted) return;
 
@@ -150,7 +146,7 @@ class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
                     ),
                     elevation: isSelected ? 2 : 1,
                     color: isSelected
-                        ? theme.primaryColor.withOpacity(0.05)
+                        ? theme.primaryColor.withAlpha(13)
                         : theme.cardColor,
                     child: InkWell(
                       onTap: () => _navigateToPageViewer(pageId, title),
@@ -189,7 +185,7 @@ class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
           ),
           if (_isFetchingContent)
             Container(
-              color: Colors.black.withOpacity(0.5),
+              color: Colors.black.withAlpha(128),
               child: const Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,

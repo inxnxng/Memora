@@ -25,6 +25,8 @@ class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
   late Future<String> _markdownFuture;
   bool _showCompleteButton = false;
   String _pageContent = '';
+  final TocController _tocController = TocController();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -110,8 +112,13 @@ class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
             return const Center(child: Text('No content found on this page.'));
           } else {
             return SingleChildScrollView(
+              controller: _scrollController,
               padding: const EdgeInsets.all(16.0),
-              child: MarkdownWidget(data: snapshot.data!, shrinkWrap: true),
+              child: MarkdownWidget(
+                data: snapshot.data!,
+                shrinkWrap: true,
+                tocController: _tocController,
+              ),
             );
           }
         },
@@ -144,5 +151,12 @@ class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
           ),
       ],
     );
+  }
+
+  @override
+  void dispose() {
+    _tocController.dispose();
+    _scrollController.dispose();
+    super.dispose();
   }
 }

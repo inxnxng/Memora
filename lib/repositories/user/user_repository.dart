@@ -24,6 +24,18 @@ class UserRepository {
   Future<String?> loadUserName(String userId) =>
       _localStorageService.loadUserName(userId);
 
+  Future<void> saveUserEmail(String userId, String email) =>
+      _localStorageService.saveUserEmail(userId, email);
+
+  Future<String?> loadUserEmail(String userId) =>
+      _localStorageService.loadUserEmail(userId);
+
+  Future<void> saveUserPhotoUrl(String userId, String photoUrl) =>
+      _localStorageService.saveUserPhotoUrl(userId, photoUrl);
+
+  Future<String?> loadUserPhotoUrl(String userId) =>
+      _localStorageService.loadUserPhotoUrl(userId);
+
   // Streak and Session Methods
   Future<void> incrementStreak(String userId, DateTime date) =>
       _localStorageService.incrementStreak(userId, date);

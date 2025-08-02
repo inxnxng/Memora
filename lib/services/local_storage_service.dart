@@ -14,6 +14,26 @@ class LocalStorageService {
     return prefs.getString('${StorageKeys.userNameKey}$userId');
   }
 
+  Future<void> saveUserEmail(String userId, String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('${StorageKeys.userEmailKey}$userId', email);
+  }
+
+  Future<String?> loadUserEmail(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('${StorageKeys.userEmailKey}$userId');
+  }
+
+  Future<void> saveUserPhotoUrl(String userId, String photoUrl) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('${StorageKeys.userPhotoUrlKey}$userId', photoUrl);
+  }
+
+  Future<String?> loadUserPhotoUrl(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('${StorageKeys.userPhotoUrlKey}$userId');
+  }
+
   Future<void> saveChatHistory(
     String taskId,
     List<Map<String, dynamic>> history,

@@ -50,7 +50,6 @@ class NotionProvider with ChangeNotifier {
   Future<void> initialize() async {
     _isLoading = true;
     Future.microtask(() => notifyListeners());
-    ();
     try {
       final result = await _notionService.initializeConnection();
       _handleConnectionResult(result);
@@ -63,40 +62,54 @@ class NotionProvider with ChangeNotifier {
     }
     _isLoading = false;
     Future.microtask(() => notifyListeners());
-    ();
   }
 
   Future<void> fetchNotionPages() async {
     if (!isConnected) return;
     _arePagesLoading = true;
+    _pages = []; // Clear existing pages
     Future.microtask(() => notifyListeners());
-    ();
 
     try {
-      _pages = await _notionService.getPagesFromDB(_databaseId!);
+      String? nextCursor;
+      bool hasMore;
+
+      do {
+        final response = await _notionService.getPagesFromDB(
+          _databaseId!,
+          nextCursor,
+        );
+        final results = response['results'] as List<dynamic>;
+        _pages.addAll(results);
+
+        hasMore = response['has_more'] as bool;
+        nextCursor = response['next_cursor'] as String?;
+
+        _arePagesLoading =
+            hasMore; // Keep loading indicator if there are more pages
+        Future.microtask(() => notifyListeners());
+      } while (hasMore);
+
       _notionConnectionError = null;
     } catch (e) {
       _pages = [];
       _notionConnectionError = 'Notion 페이지 로딩 오류: 다시 시도해주세요.';
+    } finally {
+      _arePagesLoading = false;
+      Future.microtask(() => notifyListeners());
     }
-
-    _arePagesLoading = false;
-    Future.microtask(() => notifyListeners());
-    ();
   }
 
   Future<void> searchNotionDatabases({String? query}) async {
     if (_apiToken == null) {
       _notionConnectionError = 'Notion API 토큰이 설정되지 않았습니다.';
       Future.microtask(() => notifyListeners());
-      ();
       return;
     }
 
     _isSearchingDatabases = true;
     _availableDatabases = [];
     Future.microtask(() => notifyListeners());
-    ();
 
     try {
       _availableDatabases = await _notionService.searchDatabases(query: query);
@@ -108,18 +121,15 @@ class NotionProvider with ChangeNotifier {
 
     _isSearchingDatabases = false;
     Future.microtask(() => notifyListeners());
-    ();
   }
 
   Future<void> connectNotionDatabase(String dbId, String dbTitle) async {
     _isLoading = true;
     Future.microtask(() => notifyListeners());
-    ();
     if (_apiToken == null) {
       _notionConnectionError = 'Notion API 토큰이 설정되지 않았습니다.';
       _isLoading = false;
       Future.microtask(() => notifyListeners());
-      ();
       return;
     }
     try {
@@ -132,13 +142,11 @@ class NotionProvider with ChangeNotifier {
     }
     _isLoading = false;
     Future.microtask(() => notifyListeners());
-    ();
   }
 
   Future<void> setApiToken(String apiToken) async {
     _isLoading = true;
     Future.microtask(() => notifyListeners());
-    ();
     await _notionService.updateApiToken(apiToken);
     await initialize(); // This will set isLoading to false and notify listeners
   }
@@ -148,7 +156,6 @@ class NotionProvider with ChangeNotifier {
     _isQuizLoading = true;
     _currentQuiz = null;
     Future.microtask(() => notifyListeners());
-    ();
 
     try {
       if (_pages.isEmpty) await fetchNotionPages();
@@ -170,7 +177,6 @@ class NotionProvider with ChangeNotifier {
 
     _isQuizLoading = false;
     Future.microtask(() => notifyListeners());
-    ();
   }
 
   Future<String> getPageContent(String pageId) async {

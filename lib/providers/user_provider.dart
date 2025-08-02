@@ -8,6 +8,8 @@ class UserProvider with ChangeNotifier {
 
   ProficiencyLevel? _userLevel;
   String? _displayName;
+  String? _email;
+  String? _photoURL;
   String? _levelTimestamp;
   int _streakCount = 0;
   Map<String, int> _sessionMap = {};
@@ -16,6 +18,8 @@ class UserProvider with ChangeNotifier {
 
   ProficiencyLevel? get userLevel => _userLevel;
   String? get displayName => _displayName;
+  String? get email => _email;
+  String? get photoURL => _photoURL;
   String? get levelTimestamp => _levelTimestamp;
   int get streakCount => _streakCount;
   Map<String, int> get sessionMap => _sessionMap;
@@ -31,36 +35,53 @@ class UserProvider with ChangeNotifier {
     FirebaseAuth.instance.authStateChanges().listen((user) {
       if (user != null) {
         _userId = user.uid;
+        _syncFirebaseAuthUser(user);
         loadUserProfile(); // Load data for the new user
       } else {
         // User is logged out, reset state
         _userId = null;
         _userLevel = null;
         _displayName = null;
+        _email = null;
+        _photoURL = null;
         _levelTimestamp = null;
         _streakCount = 0;
         _sessionMap = {};
         _isLoading = false;
-        notifyListeners();
+        Future.microtask(() => notifyListeners());
       }
     });
+  }
+
+  Future<void> _syncFirebaseAuthUser(User user) async {
+    if (user.displayName != null) {
+      await _userRepository.saveUserName(user.uid, user.displayName!);
+    }
+    if (user.email != null) {
+      await _userRepository.saveUserEmail(user.uid, user.email!);
+    }
+    if (user.photoURL != null) {
+      await _userRepository.saveUserPhotoUrl(user.uid, user.photoURL!);
+    }
   }
 
   Future<void> loadUserProfile() async {
     if (_userId == null) return;
 
     _isLoading = true;
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
 
     final data = await _userRepository.loadUserLevelWithTimestamp(_userId!);
     _userLevel = ProficiencyLevel.fromString(data['level']);
     _levelTimestamp = data['timestamp'];
     _displayName = await _userRepository.loadUserName(_userId!);
+    _email = await _userRepository.loadUserEmail(_userId!);
+    _photoURL = await _userRepository.loadUserPhotoUrl(_userId!);
     _streakCount = await _userRepository.loadStreakCount(_userId!);
     _sessionMap = await _userRepository.loadSessionMap(_userId!);
 
     _isLoading = false;
-    notifyListeners();
+    Future.microtask(() => notifyListeners());
   }
 
   Future<void> saveUserLevel(ProficiencyLevel level) async {

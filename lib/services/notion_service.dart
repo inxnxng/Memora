@@ -57,8 +57,11 @@ class NotionService {
     return notionRepository.searchDatabases(query: query);
   }
 
-  Future<List<dynamic>> getPagesFromDB(String databaseId) {
-    return notionRepository.getPagesFromDB(databaseId);
+  Future<Map<String, dynamic>> getPagesFromDB(
+    String databaseId, [
+    String? startCursor,
+  ]) {
+    return notionRepository.getPagesFromDB(databaseId, startCursor);
   }
 
   // --- Page Content ---

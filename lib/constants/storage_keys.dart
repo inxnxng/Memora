@@ -15,6 +15,9 @@ class StorageKeys {
   static const String sessionMapKey = 'session_map_'; // Suffix with user ID
   static const String userIdKey = 'memora_user_id';
   static const String userNameKey = 'user_name_'; // Suffix with user ID
+  static const String userEmailKey = 'user_email_'; // Suffix with user ID
+  static const String userPhotoUrlKey =
+      'user_photo_url_'; // Suffix with user ID
   static const String heatmapColorKey = 'heatmap_color';
   static const String defaultHeatmapColor = 'GitHub Green';
   static const String studyRecords = 'study_records';

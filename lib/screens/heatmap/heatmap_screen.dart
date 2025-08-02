@@ -95,14 +95,23 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: HeatMap(
-                  datasets: datasets,
-                  startDate: startDate,
-                  endDate: endDate,
-                  colorMode: ColorMode.opacity,
-                  showText: false,
-                  scrollable: true,
-                  colorsets: {1: _heatmapColor},
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final double width = constraints.maxWidth;
+                    // Adjust the divisor to control the size of the heatmap tiles
+                    final double tileSize = width / 20;
+
+                    return HeatMap(
+                      datasets: datasets,
+                      startDate: startDate,
+                      endDate: endDate,
+                      size: tileSize,
+                      colorMode: ColorMode.opacity,
+                      showText: false,
+                      scrollable: true,
+                      colorsets: {1: _heatmapColor},
+                    );
+                  },
                 ),
               ),
             ),
