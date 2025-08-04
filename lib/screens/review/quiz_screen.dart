@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:memora/providers/notion_provider.dart';
-import 'package:memora/screens/review/notion_quiz_chat_screen.dart';
+import 'package:memora/widgets/common_app_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart'; // New import
 
@@ -68,11 +69,11 @@ class _QuizScreenState extends State<QuizScreen> {
     final notionProvider = Provider.of<NotionProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('TIL 복습')),
+      appBar: const CommonAppBar(title: 'TIL 복습'),
       body: notionProvider.arePagesLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator())
           : notionProvider.pages.isEmpty
-          ? const Center(
+          ? Center(
               child: Text(
                 'Notion API 연결이 필요합니다. 설정에서 API 키와 데이터베이스 ID를 확인해주세요.',
               ),
@@ -82,7 +83,7 @@ class _QuizScreenState extends State<QuizScreen> {
                 _buildHorizontalPageList(notionProvider.pages),
                 if (_selectedIndex != null)
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
                     child: Text(
                       (notionProvider.pages[_selectedIndex!]['properties']?['Name']?['title']
                                       as List?)
@@ -92,7 +93,7 @@ class _QuizScreenState extends State<QuizScreen> {
                                 .pages[_selectedIndex!]['properties']!['Name']!['title']![0]['plain_text']
                           : '제목 없음',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
@@ -101,19 +102,17 @@ class _QuizScreenState extends State<QuizScreen> {
                 if (_selectedPageContent != null)
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                      padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
                       child: Text(
                         _selectedPageContent!,
-                        style: const TextStyle(fontSize: 16.0),
+                        style: TextStyle(fontSize: 16.0),
                       ),
                     ),
                   )
                 else if (_selectedIndex != null)
-                  const Expanded(
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
+                  Expanded(child: Center(child: CircularProgressIndicator())),
                 _buildReviewButton(notionProvider),
-                const SizedBox(height: 30),
+                SizedBox(height: 30),
               ],
             ),
     );
@@ -246,22 +245,22 @@ class _QuizScreenState extends State<QuizScreen> {
                     pageId,
                   );
                   if (!mounted) return; // Add this line
-                  Navigator.pop(context); // Dismiss loading indicator
+                  context.pop(); // Dismiss loading indicator
 
                   if (mounted) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => NotionQuizChatScreen(
-                          pageTitle: pageTitle,
-                          pageContent: pageContent,
-                        ),
-                      ),
+                    context.push(
+                      '/review/quiz/chat',
+                      extra: {
+                        'pageTitle': pageTitle,
+                        'pageContent': pageContent,
+                        'databaseName':
+                            notionProvider.databaseTitle ?? 'Unknown DB',
+                      },
                     );
                   }
                 } catch (e) {
                   if (!mounted) return; // Add this line
-                  Navigator.pop(context); // Dismiss loading indicator
+                  context.pop(); // Dismiss loading indicator
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text('콘텐츠를 불러오는 데 실패했습니다: $e')),
                   );

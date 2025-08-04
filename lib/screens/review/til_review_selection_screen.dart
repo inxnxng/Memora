@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:memora/models/task_model.dart';
 import 'package:memora/providers/notion_provider.dart';
-import 'package:memora/screens/review/notion_page_viewer_screen.dart';
-import 'package:memora/screens/roadmap/combined_training_chat_screen.dart';
+import 'package:memora/router/app_routes.dart';
+import 'package:memora/widgets/common_app_bar.dart';
 import 'package:provider/provider.dart';
 
 class TilReviewSelectionScreen extends StatefulWidget {
@@ -66,13 +67,7 @@ class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
 
       if (!mounted) return;
 
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) =>
-              CombinedTrainingChatScreen(pages: selectedPages),
-        ),
-      );
+      context.push(AppRoutes.review, extra: selectedPages);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -88,13 +83,15 @@ class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
     }
   }
 
-  void _navigateToPageViewer(String pageId, String pageTitle) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) =>
-            NotionPageViewerScreen(pageId: pageId, pageTitle: pageTitle),
-      ),
+  void _navigateToPageViewer(
+    BuildContext context,
+    String pageId,
+    String pageTitle,
+  ) {
+    final notionProvider = Provider.of<NotionProvider>(context, listen: false);
+    final databaseName = notionProvider.databaseTitle ?? 'Unknown DB';
+    context.push(
+      '${AppRoutes.review}/${AppRoutes.notionPage.replaceFirst(':pageId', pageId)}?pageTitle=$pageTitle&databaseName=$databaseName',
     );
   }
 
@@ -102,7 +99,7 @@ class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('TIL 복습 주제 선택')),
+      appBar: const CommonAppBar(title: 'TIL 복습 주제 선택'),
       body: Stack(
         children: [
           Consumer<NotionProvider>(
@@ -145,37 +142,40 @@ class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
                       vertical: 8.0,
                     ),
                     elevation: isSelected ? 2 : 1,
-                    color: isSelected
-                        ? theme.primaryColor.withAlpha(13)
-                        : theme.cardColor,
-                    child: InkWell(
-                      onTap: () => _navigateToPageViewer(pageId, title),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8.0,
-                          vertical: 12.0,
-                        ),
-                        child: Row(
-                          children: [
-                            Checkbox(
-                              value: isSelected,
-                              onChanged: (bool? value) {
-                                _toggleSelection(pageId);
-                              },
-                              activeColor: theme.primaryColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.only(
+                        left: 8,
+                        right: 16,
+                        top: 4,
+                        bottom: 4,
+                      ),
+                      onTap: () =>
+                          _navigateToPageViewer(context, pageId, title),
+                      selected: isSelected,
+                      selectedTileColor: theme.primaryColor.withAlpha(20),
+                      leading: Checkbox(
+                        value: isSelected,
+                        onChanged: (bool? value) {
+                          _toggleSelection(pageId);
+                        },
+                        activeColor: theme.primaryColor,
+                      ),
+                      title: Row(
+                        children: [
+                          Text(emoji, style: const TextStyle(fontSize: 24)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              title,
+                              style: const TextStyle(fontSize: 16),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            const SizedBox(width: 8),
-                            Text(emoji, style: const TextStyle(fontSize: 24)),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Text(
-                                title,
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   );

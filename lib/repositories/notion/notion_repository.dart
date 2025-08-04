@@ -21,10 +21,7 @@ class NotionRepository {
   ) async {
     final apiToken = await _getApiToken();
     final remoteDataSource = NotionRemoteDataSource(apiToken: apiToken);
-    return remoteDataSource.getPagesFromDB(
-      databaseId,
-      startCursor,
-    );
+    return remoteDataSource.getPagesFromDB(databaseId, startCursor);
   }
 
   Future<Map<String, dynamic>> getDatabaseInfo(String databaseId) async {

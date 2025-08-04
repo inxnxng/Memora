@@ -4,6 +4,7 @@ import 'package:memora/constants/heatmap_colors.dart';
 import 'package:memora/constants/storage_keys.dart';
 import 'package:memora/providers/task_provider.dart';
 import 'package:memora/services/local_storage_service.dart';
+import 'package:memora/widgets/common_app_bar.dart';
 import 'package:provider/provider.dart';
 
 class HeatmapScreen extends StatefulWidget {
@@ -30,17 +31,31 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
   }
 
   Future<void> _loadHeatmapColor() async {
-    final colorName =
-        await _localStorageService.getValue(StorageKeys.heatmapColorKey) ??
-        StorageKeys.defaultHeatmapColor;
-    final selectedColor = heatmapColorOptions
-        .firstWhere(
-          (c) => c.name == colorName,
+    final colorString = await _localStorageService.getValue(
+      StorageKeys.heatmapColorKey,
+    );
+
+    Color selectedColor;
+
+    if (colorString != null) {
+      try {
+        selectedColor = Color(int.parse(colorString, radix: 16));
+      } catch (e) {
+        // Fallback for old color name system or invalid hex
+        final colorOption = heatmapColorOptions.firstWhere(
+          (c) => c.name == colorString,
           orElse: () => heatmapColorOptions.firstWhere(
             (c) => c.name == StorageKeys.defaultHeatmapColor,
           ),
-        )
-        .color;
+        );
+        selectedColor = colorOption.color;
+      }
+    } else {
+      final defaultColorOption = heatmapColorOptions.firstWhere(
+        (c) => c.name == StorageKeys.defaultHeatmapColor,
+      );
+      selectedColor = defaultColorOption.color;
+    }
 
     if (mounted) {
       setState(() {
@@ -53,16 +68,19 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
   Widget build(BuildContext context) {
     final taskProvider = Provider.of<TaskProvider>(context);
 
-    final datasets = taskProvider.heatmapData;
+    final detailedDatasets = taskProvider.heatmapData;
+    final heatmapDatasets = detailedDatasets.map(
+      (date, records) => MapEntry(date, records.length),
+    );
 
     final DateTime endDate = DateTime.now();
     DateTime startDate;
 
-    if (datasets.isEmpty) {
+    if (heatmapDatasets.isEmpty) {
       // Default to last 90 days if no data
       startDate = endDate.subtract(const Duration(days: 90));
     } else {
-      final DateTime earliestDate = datasets.keys.reduce(
+      final DateTime earliestDate = heatmapDatasets.keys.reduce(
         (a, b) => a.isBefore(b) ? a : b,
       );
       final int daysDifference = endDate.difference(earliestDate).inDays;
@@ -78,7 +96,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('학습 현황')),
+      appBar: const CommonAppBar(title: '학습 현황'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -102,7 +120,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                     final double tileSize = width / 20;
 
                     return HeatMap(
-                      datasets: datasets,
+                      datasets: heatmapDatasets,
                       startDate: startDate,
                       endDate: endDate,
                       size: tileSize,
@@ -118,14 +136,14 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
             const SizedBox(height: 24),
             Text('학습 상세 기록', style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 16),
-            _buildSessionList(datasets),
+            _buildSessionList(detailedDatasets),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSessionList(Map<DateTime, int> datasets) {
+  Widget _buildSessionList(Map<DateTime, List<Map<String, dynamic>>> datasets) {
     if (datasets.isEmpty) {
       return const Center(
         child: Padding(
@@ -145,13 +163,14 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
       itemBuilder: (context, index) {
         final entry = sortedEntries[index];
         final date = entry.key;
-        final count = entry.value;
+        final records = entry.value;
+        final count = records.length;
         final formattedDate = "${date.year}년 ${date.month}월 ${date.day}일";
 
         return Card(
           elevation: 1,
           margin: const EdgeInsets.symmetric(vertical: 4.0),
-          child: ListTile(
+          child: ExpansionTile(
             leading: Icon(
               Icons.check_circle_outline,
               color: Theme.of(context).colorScheme.primary,
@@ -164,6 +183,19 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                 color: Theme.of(context).colorScheme.primary,
               ),
             ),
+            children: records.map((record) {
+              final dbName = record['databaseName'] as String? ?? '';
+              final title = record['title'] as String? ?? '';
+
+              if (dbName.isEmpty && title.isEmpty) {
+                return const SizedBox.shrink();
+              }
+
+              return ListTile(
+                title: Text(title.isEmpty ? "" : title),
+                subtitle: Text(dbName.isEmpty ? "" : 'DB: $dbName'),
+              );
+            }).toList(),
           ),
         );
       },

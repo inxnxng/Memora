@@ -249,27 +249,56 @@ class LocalStorageService {
     await prefs.setString(key, value);
   }
 
-  Future<void> addStudyRecord(DateTime date) async {
+  Future<void> addStudyRecord(
+    DateTime date, {
+    required String databaseName,
+    required String title,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final records = prefs.getStringList(StorageKeys.studyRecords) ?? [];
-    final dateString = date.toIso8601String().substring(0, 10); // YYYY-MM-DD
-
-    // Add the date string to the list
-    records.add(dateString);
-
-    // Save the updated list
+    final record = {
+      'date': date.toIso8601String().substring(0, 10), // YYYY-MM-DD
+      'databaseName': databaseName,
+      'title': title,
+    };
+    records.add(json.encode(record));
     await prefs.setStringList(StorageKeys.studyRecords, records);
   }
 
-  Future<Map<DateTime, int>> getStudyRecords() async {
+  Future<Map<DateTime, List<Map<String, dynamic>>>> getStudyRecords() async {
     final prefs = await SharedPreferences.getInstance();
     final records = prefs.getStringList(StorageKeys.studyRecords) ?? [];
-    final Map<DateTime, int> heatmapData = {};
+    final Map<DateTime, List<Map<String, dynamic>>> heatmapData = {};
 
-    for (final dateString in records) {
-      final date = DateTime.parse(dateString);
-      final dayOnly = DateTime(date.year, date.month, date.day);
-      heatmapData[dayOnly] = (heatmapData[dayOnly] ?? 0) + 1;
+    for (final recordString in records) {
+      try {
+        final record = json.decode(recordString);
+        // Handle old format (just a date string)
+        if (record is String) {
+          final date = DateTime.parse(record);
+          final dayOnly = DateTime(date.year, date.month, date.day);
+          heatmapData.putIfAbsent(dayOnly, () => []);
+          heatmapData[dayOnly]!.add({'databaseName': '', 'title': '기록 없음'});
+        } else if (record is Map<String, dynamic>) {
+          final date = DateTime.parse(record['date']);
+          final dayOnly = DateTime(date.year, date.month, date.day);
+          heatmapData.putIfAbsent(dayOnly, () => []);
+          heatmapData[dayOnly]!.add({
+            'databaseName': record['databaseName'] ?? '',
+            'title': record['title'] ?? '',
+          });
+        }
+      } catch (e) {
+        // Could be an old string format, try parsing it as a date
+        try {
+          final date = DateTime.parse(recordString);
+          final dayOnly = DateTime(date.year, date.month, date.day);
+          heatmapData.putIfAbsent(dayOnly, () => []);
+          heatmapData[dayOnly]!.add({'databaseName': '', 'title': '기록 없음'});
+        } catch (e2) {
+          // Ignore malformed records
+        }
+      }
     }
 
     return heatmapData;

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 import 'package:memora/models/proficiency_level.dart';
 import 'package:memora/providers/user_provider.dart';
+import 'package:memora/router/app_routes.dart';
 import 'package:memora/services/auth_service.dart';
+import 'package:memora/widgets/common_app_bar.dart';
 import 'package:provider/provider.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -34,7 +36,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('내 정보')),
+      appBar: const CommonAppBar(title: '내 정보'),
       body: Consumer<UserProvider>(
         builder: (context, userProvider, child) {
           if (userProvider.isLoading) {
@@ -48,9 +50,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   _buildProfileCard(userProvider),
                   const SizedBox(height: 20),
-                  _buildEditProfileCard(userProvider),
+                  _buildRankingCard(userProvider),
                   const SizedBox(height: 20),
-                  _buildSessionInfoCard(userProvider),
+                  _buildEditProfileCard(userProvider),
                   const SizedBox(height: 40),
                   _buildLogoutButton(),
                 ],
@@ -122,6 +124,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Widget _buildRankingCard(UserProvider userProvider) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              '랭킹 정보',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('현재 나의 랭킹', style: TextStyle(fontSize: 16)),
+                Text(
+                  userProvider.userRank != null && userProvider.userRank! > 0
+                      ? '${userProvider.userRank}위'
+                      : '랭킹 없음',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => context.push(AppRoutes.ranking),
+              child: const Text('전체 랭킹 확인하기'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildEditProfileCard(UserProvider userProvider) {
     return Card(
       elevation: 2,
@@ -179,57 +221,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildSessionInfoCard(UserProvider userProvider) {
-    final sortedSessions = userProvider.sessionMap.entries.toList()
-      ..sort((a, b) => b.key.compareTo(a.key));
-
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              '학습 기록',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            if (sortedSessions.isEmpty)
-              const Center(child: Text('학습 기록이 없습니다.'))
-            else
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: sortedSessions.length,
-                itemBuilder: (context, index) {
-                  final entry = sortedSessions[index];
-                  final date = DateFormat(
-                    'yyyy-MM-dd',
-                  ).format(DateTime.parse(entry.key));
-                  return ListTile(
-                    title: Text(date),
-                    trailing: Text(
-                      '${entry.value}번 학습',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  );
-                },
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildLogoutButton() {
     return ElevatedButton(
       onPressed: () async {
         await context.read<AuthService>().signOut();
-        if (mounted) {
-          Navigator.of(context).popUntil((route) => route.isFirst);
-        }
       },
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.redAccent,
@@ -270,7 +265,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
+                context.pop();
               },
               child: const Text('닫기'),
             ),

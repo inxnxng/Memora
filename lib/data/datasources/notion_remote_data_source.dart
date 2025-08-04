@@ -8,8 +8,10 @@ class NotionRemoteDataSource {
 
   NotionRemoteDataSource({required this.apiToken});
 
-  Future<Map<String, dynamic>> getPagesFromDB(String databaseId,
-      [String? startCursor]) async {
+  Future<Map<String, dynamic>> getPagesFromDB(
+    String databaseId, [
+    String? startCursor,
+  ]) async {
     final url = Uri.parse(
       'https://api.notion.com/v1/databases/$databaseId/query',
     );

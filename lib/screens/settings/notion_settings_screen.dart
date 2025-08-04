@@ -1,8 +1,10 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:memora/providers/notion_provider.dart';
 import 'package:memora/services/notion_service.dart';
+import 'package:memora/widgets/common_app_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -75,11 +77,11 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
               actions: <Widget>[
                 TextButton(
                   child: const Text('취소'),
-                  onPressed: () => Navigator.of(context).pop(false),
+                  onPressed: () => context.pop(false),
                 ),
                 TextButton(
                   child: const Text('그래도 저장'),
-                  onPressed: () => Navigator.of(context).pop(true),
+                  onPressed: () => context.pop(true),
                 ),
               ],
             );
@@ -126,7 +128,7 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
     return Consumer<NotionProvider>(
       builder: (context, notionProvider, child) {
         return Scaffold(
-          appBar: AppBar(title: const Text('Notion 연동 관리')),
+          appBar: const CommonAppBar(title: 'Notion 연동 관리'),
           body: _isLoading
               ? const Center(child: CircularProgressIndicator())
               : SingleChildScrollView(

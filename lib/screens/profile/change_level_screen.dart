@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:memora/models/proficiency_level.dart';
 import 'package:memora/providers/user_provider.dart';
 import 'package:provider/provider.dart';
@@ -26,6 +27,10 @@ class _ChangeLevelScreenState extends State<ChangeLevelScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
         title: const Text('학습 레벨 변경'),
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -154,7 +159,7 @@ class _ChangeLevelScreenState extends State<ChangeLevelScreen> {
         listen: false,
       ).saveUserLevel(_selectedLevel!);
       if (mounted) {
-        Navigator.of(context).pop();
+        context.pop();
       }
     }
   }

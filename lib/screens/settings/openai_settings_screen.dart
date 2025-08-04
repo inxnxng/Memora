@@ -1,27 +1,29 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:memora/services/openai_service.dart';
+import 'package:memora/widgets/common_app_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class OpenAISettingsScreen extends StatefulWidget {
-  const OpenAISettingsScreen({super.key});
+class OpenaiSettingsScreen extends StatefulWidget {
+  const OpenaiSettingsScreen({super.key});
 
   @override
-  State<OpenAISettingsScreen> createState() => _OpenAISettingsScreenState();
+  State<OpenaiSettingsScreen> createState() => _OpenaiSettingsScreenState();
 }
 
-class _OpenAISettingsScreenState extends State<OpenAISettingsScreen> {
-  late final OpenAIService _openAIService;
-  final TextEditingController _openAIApiKeyController = TextEditingController();
-  Map<String, String?> _openAIApiKey = {'value': null, 'timestamp': null};
+class _OpenaiSettingsScreenState extends State<OpenaiSettingsScreen> {
+  late final OpenAIService _openaiService;
+  final TextEditingController _openaiApiKeyController = TextEditingController();
+  Map<String, String?> _openaiApiKey = {'value': null, 'timestamp': null};
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _openAIService = Provider.of<OpenAIService>(context, listen: false);
+    _openaiService = Provider.of<OpenAIService>(context, listen: false);
     _loadKeys();
   }
 
@@ -29,8 +31,8 @@ class _OpenAISettingsScreenState extends State<OpenAISettingsScreen> {
     setState(() {
       _isLoading = true;
     });
-    _openAIApiKey = await _openAIService.getApiKeyWithTimestamp();
-    _openAIApiKeyController.text = ''; // Clear controller
+    _openaiApiKey = await _openaiService.getApiKeyWithTimestamp();
+    _openaiApiKeyController.text = ''; // 컨트롤러 지우기
     setState(() {
       _isLoading = false;
     });
@@ -42,13 +44,13 @@ class _OpenAISettingsScreenState extends State<OpenAISettingsScreen> {
     return DateFormat('yy.MM.dd HH:mm').format(dateTime);
   }
 
-  Future<void> _saveOpenAIApiKey() async {
-    final token = _openAIApiKeyController.text.trim();
+  Future<void> _saveOpenAiApiKey() async {
+    final token = _openaiApiKeyController.text.trim();
 
     if (token.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('OpenAI API Key를 입력해주세요.')));
+      ).showSnackBar(const SnackBar(content: Text('OpenAI API 키를 입력해주세요.')));
       return;
     }
 
@@ -56,19 +58,47 @@ class _OpenAISettingsScreenState extends State<OpenAISettingsScreen> {
       _isLoading = true;
     });
     try {
-      await _openAIService.saveApiKeyWithTimestamp(
-        _openAIApiKeyController.text,
-      );
-      await _loadKeys(); // Reload to update timestamp
+      if (!token.startsWith('sk-')) {
+        final bool? shouldSave = await showDialog<bool>(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('잘못된 API 키 형식'),
+              content: const Text(
+                'OpenAI API 키는 보통 "sk-"로 시작합니다. 입력하신 키가 올바른지 확인해주세요.\n\n그래도 저장하시겠습니까?',
+              ),
+              actions: <Widget>[
+                TextButton(
+                  child: const Text('취소'),
+                  onPressed: () => context.pop(false),
+                ),
+                TextButton(
+                  child: const Text('그래도 저장'),
+                  onPressed: () => context.pop(true),
+                ),
+              ],
+            );
+          },
+        );
+        if (shouldSave != true) {
+          setState(() {
+            _isLoading = false;
+          });
+          return;
+        }
+      }
+      await _openaiService.saveApiKeyWithTimestamp(token);
+      await _loadKeys();
+
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('OpenAI API Key 저장 완료!')));
-      _openAIApiKeyController.clear();
+      ).showSnackBar(const SnackBar(content: Text('OpenAI Key 저장 완료!')));
+      _openaiApiKeyController.clear();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('OpenAI API Key 저장 실패: ${e.toString()}')),
+          SnackBar(content: Text('OpenAI Key 저장 실패: ${e.toString()}')),
         );
       }
     } finally {
@@ -83,7 +113,7 @@ class _OpenAISettingsScreenState extends State<OpenAISettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('OpenAI API 키 설정')),
+      appBar: const CommonAppBar(title: 'OpenAI API 키 설정'),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -91,21 +121,14 @@ class _OpenAISettingsScreenState extends State<OpenAISettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSectionTitle('OpenAI API Key 설정'),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Memora의 퀴즈 생성 기능에 사용됩니다. API 키는 로컬 디바이스에만 안전하게 저장됩니다.',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                  const SizedBox(height: 16),
                   _buildInstructionCard(),
                   const SizedBox(height: 16),
                   _buildKeyInput(
-                    controller: _openAIApiKeyController,
+                    controller: _openaiApiKeyController,
                     label: 'OpenAI API Key',
-                    currentValue: _openAIApiKey['value'],
-                    timestamp: _openAIApiKey['timestamp'],
-                    onSave: _saveOpenAIApiKey,
+                    currentValue: _openaiApiKey["value"],
+                    timestamp: _openaiApiKey['timestamp'],
+                    onSave: _saveOpenAiApiKey,
                   ),
                 ],
               ),
@@ -136,10 +159,7 @@ class _OpenAISettingsScreenState extends State<OpenAISettingsScreen> {
           ),
         ),
         subtitle: const Text('자세한 안내 보기'),
-        leading: Icon(
-          Icons.integration_instructions_outlined,
-          color: theme.colorScheme.primary,
-        ),
+        leading: Icon(Icons.vpn_key_outlined, color: theme.colorScheme.primary),
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -157,11 +177,11 @@ class _OpenAISettingsScreenState extends State<OpenAISettingsScreen> {
                 ),
                 _buildStep(
                   icon: Icons.add_circle_outline,
-                  text: "'+ Create new secret key'를 클릭하여 키를 생성합니다.",
+                  text: "'+ Create new secret key'를 클릭하여 새 키를 생성합니다.",
                 ),
                 _buildStep(
                   icon: Icons.copy,
-                  text: "생성된 API Key를 복사하여 아래에 붙여넣으세요.",
+                  text: "생성된 API 키를 복사하여 아래에 붙여넣으세요. (주의: 이 키는 한 번만 볼 수 있습니다!)",
                 ),
               ],
             ),
@@ -214,9 +234,9 @@ class _OpenAISettingsScreenState extends State<OpenAISettingsScreen> {
   Widget _buildKeyInput({
     required TextEditingController controller,
     required String label,
-    required String? timestamp,
     required VoidCallback onSave,
     String? currentValue,
+    String? timestamp,
   }) {
     String maskedValue = '';
     if (currentValue != null && currentValue.isNotEmpty) {
@@ -232,7 +252,7 @@ class _OpenAISettingsScreenState extends State<OpenAISettingsScreen> {
           Padding(
             padding: const EdgeInsets.only(bottom: 8.0),
             child: Text(
-              '현재 값: $maskedValue',
+              '현재 키: $maskedValue',
               style: const TextStyle(fontSize: 14, color: Colors.grey),
             ),
           ),
@@ -264,16 +284,9 @@ class _OpenAISettingsScreenState extends State<OpenAISettingsScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10.0, top: 10.0),
-      child: Text(title, style: Theme.of(context).textTheme.headlineSmall),
-    );
-  }
-
   @override
   void dispose() {
-    _openAIApiKeyController.dispose();
+    _openaiApiKeyController.dispose();
     super.dispose();
   }
 }

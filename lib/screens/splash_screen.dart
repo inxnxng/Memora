@@ -1,33 +1,30 @@
-import 'package:flutter/material.dart';
-import 'package:memora/providers/user_provider.dart';
-import 'package:memora/screens/home_screen.dart';
-import 'package:memora/screens/onboarding/onboarding_screen.dart';
-import 'package:provider/provider.dart';
+import 'dart:async';
 
-class SplashScreen extends StatelessWidget {
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:memora/router/app_routes.dart';
+
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer<UserProvider>(
-      builder: (context, userProvider, child) {
-        if (userProvider.isLoading) {
-          return _buildSplashScreenUI(context);
-        }
+  State<SplashScreen> createState() => _SplashScreenState();
+}
 
-        // After loading, check the user level.
-        if (userProvider.userLevel == null) {
-          // If no level, navigate to Onboarding.
-          return const OnboardingScreen();
-        } else {
-          // If level exists, navigate to Home.
-          return const HomeScreen();
-        }
-      },
-    );
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        context.go(AppRoutes.home);
+      }
+    });
   }
 
-  Widget _buildSplashScreenUI(BuildContext context) {
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
 

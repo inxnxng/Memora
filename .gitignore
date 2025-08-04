@@ -62,4 +62,10 @@ lib/firebase_options.dart
 
 # .idea
 .idea
+
+# ETC
 .metadata
+*.jks
+*.keystore
+google-services.json
+.gradle

@@ -1,9 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 enum MessageSender { user, ai }
 
 class ChatMessage {
-  final String content;
-  final MessageSender sender;
-  final DateTime timestamp;
+  String content;
+  MessageSender sender;
+  DateTime timestamp;
 
   ChatMessage({
     required this.content,
@@ -11,21 +13,19 @@ class ChatMessage {
     required this.timestamp,
   });
 
-  // Factory constructor to create a ChatMessage from a map (e.g., from local storage)
   factory ChatMessage.fromMap(Map<String, dynamic> map) {
     return ChatMessage(
       content: map['content'] as String,
-      sender: map['role'] == 'user' ? MessageSender.user : MessageSender.ai,
-      timestamp: DateTime.parse(map['timestamp'] as String),
+      sender: map['sender'] == 'user' ? MessageSender.user : MessageSender.ai,
+      timestamp: (map['timestamp'] as Timestamp).toDate(),
     );
   }
 
-  // Convert ChatMessage to a map for storage
   Map<String, dynamic> toMap() {
     return {
       'content': content,
-      'role': sender == MessageSender.user ? 'user' : 'ai',
-      'timestamp': timestamp.toIso8601String(),
+      'sender': sender == MessageSender.user ? 'user' : 'ai',
+      'timestamp': Timestamp.fromDate(timestamp),
     };
   }
 }

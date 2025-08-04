@@ -1,7 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:memora/screens/settings/heatmap_color_settings_screen.dart';
-import 'package:memora/screens/settings/notion_settings_screen.dart';
-import 'package:memora/screens/settings/openai_settings_screen.dart';
+import 'package:go_router/go_router.dart';
+import 'package:memora/router/app_routes.dart';
+import 'package:memora/widgets/common_app_bar.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -9,7 +11,7 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('설정')),
+      appBar: const CommonAppBar(title: '설정'),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 8.0),
         children: [
@@ -19,12 +21,7 @@ class SettingsScreen extends StatelessWidget {
             title: 'Notion 연동 관리',
             subtitle: 'API 키 및 데이터베이스를 설정합니다.',
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const NotionSettingsScreen(),
-                ),
-              );
+              context.push('${AppRoutes.settings}/${AppRoutes.notionSettings}');
             },
           ),
           _buildSettingsItem(
@@ -33,14 +30,21 @@ class SettingsScreen extends StatelessWidget {
             title: 'OpenAI API 키 설정',
             subtitle: '퀴즈 생성에 사용될 API 키를 관리합니다.',
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const OpenAISettingsScreen(),
-                ),
-              );
+              context.push('${AppRoutes.settings}/${AppRoutes.openaiSettings}');
             },
           ),
+          if (Platform.isAndroid)
+            _buildSettingsItem(
+              context,
+              icon: Icons.notifications_outlined,
+              title: '알림 설정',
+              subtitle: '매일 복습 시간을 설정합니다.',
+              onTap: () {
+                context.push(
+                  '${AppRoutes.settings}/${AppRoutes.notificationSettings}',
+                );
+              },
+            ),
           const Divider(),
           _buildSettingsItem(
             context,
@@ -48,11 +52,8 @@ class SettingsScreen extends StatelessWidget {
             title: '히트맵 색상 변경',
             subtitle: '학습 기록 히트맵의 색상을 변경합니다.',
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const HeatmapColorSettingsScreen(),
-                ),
+              context.push(
+                '${AppRoutes.settings}/${AppRoutes.heatmapColorSettings}',
               );
             },
           ),

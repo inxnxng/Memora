@@ -1,20 +1,23 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:markdown_widget/markdown_widget.dart';
 import 'package:memora/providers/notion_provider.dart';
 import 'package:memora/providers/task_provider.dart';
-import 'package:memora/screens/review/notion_quiz_chat_screen.dart';
+import 'package:memora/widgets/common_app_bar.dart';
 import 'package:provider/provider.dart';
 
 class NotionPageViewerScreen extends StatefulWidget {
   final String pageId;
   final String pageTitle;
+  final String databaseName;
 
   const NotionPageViewerScreen({
     super.key,
     required this.pageId,
     required this.pageTitle,
+    required this.databaseName,
   });
 
   @override
@@ -54,7 +57,10 @@ class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
   void _completeStudy(BuildContext context) {
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
     taskProvider
-        .addStudyRecordForToday()
+        .addStudyRecordForToday(
+          databaseName: widget.databaseName,
+          title: widget.pageTitle,
+        )
         .then((_) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -82,8 +88,8 @@ class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.pageTitle),
+      appBar: CommonAppBar(
+        title: widget.pageTitle,
         actions: [
           if (_showCompleteButton)
             IconButton(
@@ -127,17 +133,16 @@ class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
         if (_pageContent.isNotEmpty)
           Center(
             child: ElevatedButton.icon(
-              icon: const Icon(Icons.quiz_outlined),
+              icon: const Icon(Icons.quiz),
               label: const Text('복습하기'),
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => NotionQuizChatScreen(
-                      pageTitle: widget.pageTitle,
-                      pageContent: _pageContent,
-                    ),
-                  ),
+                context.push(
+                  '/review/quiz/chat',
+                  extra: {
+                    'pageTitle': widget.pageTitle,
+                    'pageContent': _pageContent,
+                    'databaseName': widget.databaseName,
+                  },
                 );
               },
               style: ElevatedButton.styleFrom(

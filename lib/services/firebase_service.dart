@@ -1,6 +1,6 @@
-/*
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:memora/models/chat_message.dart';
 import 'package:memora/models/task_model.dart';
 import 'package:memora/models/user_model.dart';
 
@@ -14,6 +14,33 @@ class FirebaseService {
     if (currentUser == null) {
       await _auth.signInAnonymously();
     }
+  }
+
+  // Method to add a chat message to a specific chat session
+  Future<void> addChatMessage(String chatId, ChatMessage message) async {
+    if (currentUser == null) return;
+    await _firestore
+        .collection('users')
+        .doc(currentUser!.uid)
+        .collection('chats')
+        .doc(chatId)
+        .collection('messages')
+        .add(message.toMap());
+  }
+
+  // Method to get a stream of chat messages for a specific chat session
+  Stream<QuerySnapshot> getChatMessagesStream(String chatId) {
+    if (currentUser == null) {
+      throw Exception("User not logged in");
+    }
+    return _firestore
+        .collection('users')
+        .doc(currentUser!.uid)
+        .collection('chats')
+        .doc(chatId)
+        .collection('messages')
+        .orderBy('timestamp', descending: true)
+        .snapshots();
   }
 
   Future<void> saveTasks(List<Task> tasks) async {
@@ -92,4 +119,3 @@ class FirebaseService {
     return AppUser.fromMap(doc.id, doc.data()!);
   }
 }
-*/

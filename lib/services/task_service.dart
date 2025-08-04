@@ -1,12 +1,8 @@
-import 'dart:math';
-
-import 'package:memora/constants/task_list.dart';
 import 'package:memora/models/task_model.dart';
 import 'package:memora/repositories/task/task_repository.dart';
 
 class TaskService {
   final TaskRepository _repository;
-  final int _totalDays = 30;
 
   TaskService(this._repository);
 
@@ -23,37 +19,11 @@ class TaskService {
       }
     }
 
-    if (fetchedTasks.isEmpty || fetchedTasks.length < _totalDays) {
-      fetchedTasks = _generateLocalTasks(fetchedTasks);
-    }
-
     for (var task in fetchedTasks) {
       task.lastTrainedDate = await loadLastTrainedDate(task.id);
     }
 
     return fetchedTasks;
-  }
-
-  List<Task> _generateLocalTasks(List<Task> existingTasks) {
-    final Map<int, Task> taskMap = {
-      for (var task in existingTasks) task.day: task,
-    };
-    return List<Task>.generate(_totalDays, (index) {
-      final dayNumber = index + 1;
-      if (taskMap.containsKey(dayNumber)) {
-        return taskMap[dayNumber]!;
-      } else {
-        final taskDetail = dailyTasks[Random().nextInt(dailyTasks.length)];
-        return Task(
-          id: 'day$dayNumber',
-          title: 'Day $dayNumber: ${taskDetail['title']}',
-          description: taskDetail['description'] ?? '',
-          day: dayNumber,
-          isCompleted: false,
-          lastTrainedDate: null,
-        );
-      }
-    });
   }
 
   Future<DateTime?> loadLastTrainedDate(String taskId) =>
@@ -62,11 +32,18 @@ class TaskService {
   Future<void> saveLastTrainedDate(String taskId, DateTime date) =>
       _repository.saveLastTrainedDate(taskId, date);
 
-  Future<void> addStudyRecordForToday() async {
-    await _repository.addStudyRecord(DateTime.now());
+  Future<void> addStudyRecordForToday({
+    required String databaseName,
+    required String title,
+  }) async {
+    await _repository.addStudyRecord(
+      DateTime.now(),
+      databaseName: databaseName,
+      title: title,
+    );
   }
 
-  Future<Map<DateTime, int>> getHeatmapData() async {
+  Future<Map<DateTime, List<Map<String, dynamic>>>> getHeatmapData() async {
     return await _repository.getStudyRecords();
   }
 }

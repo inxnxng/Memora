@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:memora/models/proficiency_level.dart';
 import 'package:memora/providers/user_provider.dart';
-import 'package:memora/screens/home_screen.dart';
+import 'package:memora/router/app_routes.dart';
 import 'package:provider/provider.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -102,9 +103,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       await userProvider.saveUserLevel(_selectedLevel!);
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+        context.go(AppRoutes.home);
       }
     }
   }

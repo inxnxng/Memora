@@ -3,6 +3,7 @@ class Task {
   final String title;
   final String description;
   final int day;
+  final String? databaseName;
   bool isCompleted;
   DateTime? lastTrainedDate; // New field
 
@@ -11,11 +12,12 @@ class Task {
     required this.title,
     required this.description,
     required this.day,
+    this.databaseName,
     this.isCompleted = false,
     this.lastTrainedDate, // New parameter
   });
 
-  factory Task.fromNotion(Map<String, dynamic> json) {
+  factory Task.fromNotion(Map<String, dynamic> json, {String? databaseName}) {
     final properties = json['properties'];
     final titleProperty = properties['Name']?['title'] as List<dynamic>?;
     final title = titleProperty != null && titleProperty.isNotEmpty
@@ -40,6 +42,7 @@ class Task {
       title: title,
       description: description,
       day: day,
+      databaseName: databaseName,
       isCompleted: isCompleted,
     );
   }

@@ -6,12 +6,11 @@ class ChatService {
 
   ChatService(this._chatRepository);
 
-  Future<List<ChatMessage>> loadChatHistory(String taskId) =>
-      _chatRepository.loadChatHistory(taskId);
+  Stream<List<ChatMessage>> getMessages(String chatId) {
+    return _chatRepository.getChatMessages(chatId);
+  }
 
-  Future<void> saveChatHistory(String taskId, List<ChatMessage> messages) =>
-      _chatRepository.saveChatHistory(taskId, messages);
-
-  Future<void> clearChatHistory(String taskId) =>
-      _chatRepository.clearChatHistory(taskId);
+  Future<void> sendMessage(String chatId, ChatMessage message) async {
+    await _chatRepository.addChatMessage(chatId, message);
+  }
 }

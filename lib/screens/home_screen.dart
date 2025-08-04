@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_heatmap_calendar/flutter_heatmap_calendar.dart';
+import 'package:go_router/go_router.dart';
 import 'package:memora/constants/heatmap_colors.dart';
 import 'package:memora/constants/storage_keys.dart';
 import 'package:memora/models/proficiency_level.dart';
 import 'package:memora/providers/notion_provider.dart';
 import 'package:memora/providers/task_provider.dart';
 import 'package:memora/providers/user_provider.dart';
-import 'package:memora/screens/heatmap/heatmap_screen.dart';
-import 'package:memora/screens/profile/profile_screen.dart';
-import 'package:memora/screens/settings/notion_settings_screen.dart';
-import 'package:memora/screens/settings/settings_screen.dart';
-import 'package:memora/screens/review/til_review_selection_screen.dart';
-import 'package:memora/services/settings_service.dart';
+import 'package:memora/router/app_routes.dart';
+import 'package:memora/services/local_storage_service.dart';
 import 'package:provider/provider.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -22,6 +19,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final LocalStorageService _localStorageService = LocalStorageService();
   Color _heatmapColor = heatmapColorOptions
       .firstWhere((c) => c.name == StorageKeys.defaultHeatmapColor)
       .color;
@@ -39,16 +37,33 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadHeatmapColor() async {
-    final settingsService = context.read<SettingsService>();
-    final colorName = await settingsService.getHeatmapColorName();
-    final selectedColor = heatmapColorOptions
-        .firstWhere(
-          (c) => c.name == colorName,
+    final colorString = await _localStorageService.getValue(
+      StorageKeys.heatmapColorKey,
+    );
+
+    Color selectedColor;
+
+    if (colorString != null) {
+      try {
+        // Try parsing as a hex string first (new format)
+        selectedColor = Color(int.parse(colorString, radix: 16));
+      } catch (e) {
+        // If parsing fails, assume it's a color name (old format)
+        final colorOption = heatmapColorOptions.firstWhere(
+          (c) => c.name == colorString,
           orElse: () => heatmapColorOptions.firstWhere(
             (c) => c.name == StorageKeys.defaultHeatmapColor,
           ),
-        )
-        .color;
+        );
+        selectedColor = colorOption.color;
+      }
+    } else {
+      // If no color is saved, use the default
+      final defaultColorOption = heatmapColorOptions.firstWhere(
+        (c) => c.name == StorageKeys.defaultHeatmapColor,
+      );
+      selectedColor = defaultColorOption.color;
+    }
 
     if (mounted) {
       setState(() {
@@ -78,12 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
           builder: (context, userProvider, child) {
             return GestureDetector(
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ProfileScreen(),
-                  ),
-                );
+                context.push(AppRoutes.profile);
               },
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
@@ -102,12 +112,11 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
-              ).then(
-                (_) => _loadHeatmapColor(),
-              ); // Reload color when returning from settings
+              context
+                  .push(AppRoutes.settings)
+                  .then(
+                    (_) => _loadHeatmapColor(),
+                  ); // Reload color when returning from settings
             },
           ),
         ],
@@ -117,7 +126,6 @@ class _HomeScreenState extends State<HomeScreen> {
           return Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Expanded(child: _buildHeatmapButton(taskProvider)),
@@ -134,19 +142,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             : 'Notion 연결 필요'),
                     onPressed: () {
                       if (notionProvider.isConnected) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const TilReviewSelectionScreen(),
-                          ),
-                        );
+                        context.push(AppRoutes.review);
                       } else {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const NotionSettingsScreen(),
-                          ),
+                        context.push(
+                          '${AppRoutes.settings}/${AppRoutes.notionSettings}',
                         );
                       }
                     },
@@ -161,17 +160,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHeatmapButton(TaskProvider taskProvider) {
-    final datasets = taskProvider.heatmapData;
+    final detailedDatasets = taskProvider.heatmapData;
+    final heatmapDatasets = detailedDatasets.map(
+      (date, records) => MapEntry(date, records.length),
+    );
 
     final endDate = DateTime.now();
     final startDate = endDate.subtract(const Duration(days: 10 * 7));
 
     return ElevatedButton(
       onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const HeatmapScreen()),
-        );
+        context.push(AppRoutes.heatmap);
       },
       style: ElevatedButton.styleFrom(
         padding: const EdgeInsets.all(16),
@@ -186,32 +185,21 @@ class _HomeScreenState extends State<HomeScreen> {
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 22),
           ),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final double availableHeight = constraints.maxHeight;
-                final double calculatedSize = (availableHeight - 40) / 7;
-                final double tileSize = calculatedSize > 0
-                    ? calculatedSize
-                    : 1.0;
-                return IgnorePointer(
-                  child: HeatMap(
-                    datasets: datasets,
-                    startDate: startDate,
-                    endDate: endDate,
-                    size: tileSize,
-                    colorMode: ColorMode.opacity,
-                    fontSize: 0,
-                    showText: false,
-                    scrollable: true,
-                    colorsets: {1: _heatmapColor},
-                    showColorTip: false,
-                  ),
-                );
-              },
+          const SizedBox(height: 10),
+          IgnorePointer(
+            child: HeatMap(
+              datasets: heatmapDatasets,
+              startDate: startDate,
+              endDate: endDate,
+              size: 15,
+              colorMode: ColorMode.opacity,
+              fontSize: 0,
+              showText: false,
+              scrollable: true,
+              colorsets: {1: _heatmapColor},
+              showColorTip: false,
             ),
           ),
-          const SizedBox(height: 10),
         ],
       ),
     );
