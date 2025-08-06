@@ -1,11 +1,17 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:memora/repositories/user/user_repository.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+
+  final UserRepository _userRepository;
+
+  AuthService(UserRepository read, {required UserRepository userRepository})
+    : _userRepository = userRepository;
 
   Future<UserCredential?> signInWithEmail(String email, String password) async {
     try {
@@ -41,6 +47,18 @@ class AuthService {
         UserCredential userCredential = await _auth.signInWithCredential(
           credential,
         );
+
+        if (userCredential.additionalUserInfo?.isNewUser == true) {
+          final user = userCredential.user;
+          if (user != null) {
+            await _userRepository.createUser(
+              user.uid,
+              user.displayName,
+              user.email,
+              user.photoURL,
+            );
+          }
+        }
         return userCredential;
       }
     } catch (e) {

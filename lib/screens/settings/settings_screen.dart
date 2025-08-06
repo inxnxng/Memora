@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:memora/router/app_routes.dart';
@@ -32,7 +33,7 @@ class SettingsScreen extends StatelessWidget {
               context.push('${AppRoutes.settings}/${AppRoutes.openaiSettings}');
             },
           ),
-          if (!kIsWeb) // Show notifications settings only on mobile
+          if (!(Platform.isIOS || !Platform.isMacOS))
             _buildSettingsItem(
               context,
               icon: Icons.notifications_outlined,
@@ -56,7 +57,6 @@ class SettingsScreen extends StatelessWidget {
               );
             },
           ),
-          // Add other settings later if needed
         ],
       ),
     );

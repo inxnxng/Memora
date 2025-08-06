@@ -40,7 +40,12 @@ class ProviderContainer extends StatelessWidget {
           create: (_) => NotificationService()..initialize(),
         ),
         Provider<LocalStorageService>(create: (_) => LocalStorageService()),
-        Provider<AuthService>(create: (_) => AuthService()),
+        Provider<AuthService>(
+          create: (context) => AuthService(
+            context.read<UserRepository>(),
+            userRepository: context.read<UserRepository>(),
+          ),
+        ),
         Provider<SettingsService>(
           create: (context) =>
               SettingsService(context.read<LocalStorageService>()),

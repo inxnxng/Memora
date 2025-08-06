@@ -69,3 +69,7 @@ lib/firebase_options.dart
 *.keystore
 google-services.json
 .gradle
+
+# Ignore android and web directories
+android/
+web/

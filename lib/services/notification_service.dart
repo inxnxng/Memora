@@ -16,43 +16,39 @@ class NotificationService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   Future<void> initialize() async {
-    if (Platform.isAndroid) {
-      // 1. Request permission
+    // FCM token logic for supported platforms (Android, Web)
+    if (kIsWeb || Platform.isAndroid) {
       await _firebaseMessaging.requestPermission();
-
-      // 2. Get the FCM token.
       String? fcmToken;
       try {
-        fcmToken = await _firebaseMessaging.getToken();
+        fcmToken = await _firebaseMessaging.getToken(
+            vapidKey:
+                'BAKDXCQfXzOOKQgMEnCs9e5RQjVmB1YP1FL7a0wG3ghaQXacQFQt_m6MuukLSW7VB3c8Rr8mEbgMjNz7TncsSYU');
       } on FirebaseException catch (e) {
         if (kDebugMode) {
           print('Failed to get FCM token: ${e.code}');
         }
       }
-
       if (kDebugMode) {
         print('FCM Token: $fcmToken');
       }
       if (fcmToken != null) {
         await _saveTokenToDatabase(fcmToken);
       }
-
-      // 3. Listen for token refreshes. This will catch the token if it wasn't ready initially.
       _firebaseMessaging.onTokenRefresh.listen(_saveTokenToDatabase);
+    }
 
-      // 4. Initialize local notifications
+    // Local notifications for foreground messages (Android-only)
+    if (Platform.isAndroid) {
       const AndroidInitializationSettings initializationSettingsAndroid =
           AndroidInitializationSettings('@mipmap/ic_launcher');
-
       const InitializationSettings initializationSettings =
           InitializationSettings(android: initializationSettingsAndroid);
       await _flutterLocalNotificationsPlugin.initialize(initializationSettings);
 
-      // 5. Handle foreground messages
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         RemoteNotification? notification = message.notification;
         AndroidNotification? android = message.notification?.android;
-
         if (notification != null && android != null) {
           _flutterLocalNotificationsPlugin.show(
             notification.hashCode,
@@ -85,31 +81,27 @@ class NotificationService {
   }
 
   Future<void> setNotification(bool isEnabled, TimeOfDay time) async {
-    if (Platform.isAndroid) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('notifications_enabled', isEnabled);
-      await prefs.setInt('notification_hour', time.hour);
-      await prefs.setInt('notification_minute', time.minute);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('notifications_enabled', isEnabled);
+    await prefs.setInt('notification_hour', time.hour);
+    await prefs.setInt('notification_minute', time.minute);
 
-      User? user = _auth.currentUser;
-      if (user != null) {
-        await _firestore.collection('users').doc(user.uid).set({
-          'notificationEnabled': isEnabled,
-          'notificationHour': time.hour,
-          'notificationMinute': time.minute,
-        }, SetOptions(merge: true));
-      }
+    User? user = _auth.currentUser;
+    if (user != null) {
+      await _firestore.collection('users').doc(user.uid).set({
+        'notificationEnabled': isEnabled,
+        'notificationHour': time.hour,
+        'notificationMinute': time.minute,
+      }, SetOptions(merge: true));
     }
   }
 
   Future<Map<String, dynamic>> getNotificationSettings() async {
-    if (Platform.isAndroid) {
-      final prefs = await SharedPreferences.getInstance();
-      final isEnabled = prefs.getBool('notifications_enabled') ?? false;
-      final hour = prefs.getInt('notification_hour') ?? 21;
-      final minute = prefs.getInt('notification_minute') ?? 0;
-      return {'isEnabled': isEnabled, 'hour': hour, 'minute': minute};
-    }
-    return {'isEnabled': false, 'hour': 21, 'minute': 0};
+    final prefs = await SharedPreferences.getInstance();
+    final isEnabled = prefs.getBool('notifications_enabled') ?? false;
+    final hour = prefs.getInt('notification_hour') ?? 21;
+    final minute = prefs.getInt('notification_minute') ?? 0;
+    return {'isEnabled': isEnabled, 'hour': hour, 'minute': minute};
   }
 }
+

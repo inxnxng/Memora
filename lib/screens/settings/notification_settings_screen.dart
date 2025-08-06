@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:memora/services/notification_service.dart';
+import 'package:memora/utils/platform_utils.dart';
 import 'package:memora/widgets/common_app_bar.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
@@ -19,7 +20,9 @@ class NotificationSettingsScreenState
   @override
   void initState() {
     super.initState();
-    _loadSettings();
+    if (PlatformUtils.isAndroid) {
+      _loadSettings();
+    }
   }
 
   Future<void> _loadSettings() async {
@@ -54,26 +57,36 @@ class NotificationSettingsScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const CommonAppBar(title: '알림 설정'),
-      body: ListView(
-        children: [
-          SwitchListTile(
-            title: const Text('복습 알림 받기'),
-            value: _isEnabled,
-            onChanged: (bool value) {
-              setState(() {
-                _isEnabled = value;
-              });
-              _updateSettings();
-            },
-          ),
-          ListTile(
-            title: const Text('알림 시간'),
-            subtitle: Text(_selectedTime.format(context)),
-            onTap: () => _selectTime(context),
-            enabled: _isEnabled,
-          ),
-        ],
-      ),
+      body: PlatformUtils.isAndroid
+          ? ListView(
+              children: [
+                SwitchListTile(
+                  title: const Text('복습 알림 받기'),
+                  value: _isEnabled,
+                  onChanged: (bool value) {
+                    setState(() {
+                      _isEnabled = value;
+                    });
+                    _updateSettings();
+                  },
+                ),
+                ListTile(
+                  title: const Text('알림 시간'),
+                  subtitle: Text(_selectedTime.format(context)),
+                  onTap: () => _selectTime(context),
+                  enabled: _isEnabled,
+                ),
+              ],
+            )
+          : const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text(
+                  '현재 이 플랫폼에서는 알림 기능을 지원하지 않습니다.',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
     );
   }
 }

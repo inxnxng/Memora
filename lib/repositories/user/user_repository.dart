@@ -8,6 +8,28 @@ class UserRepository {
 
   UserRepository(this._localStorageService, this._firestore);
 
+  Future<void> createUser(
+      String userId, String? displayName, String? email, String? photoUrl) async {
+    final userRef = _firestore.collection('users').doc(userId);
+    final doc = await userRef.get();
+
+    if (!doc.exists) {
+      // Document does not exist, create it with initial values
+      await userRef.set({
+        'displayName': displayName ?? 'Anonymous User',
+        'email': email,
+        'photoURL': photoUrl,
+        'streakCount': 0,
+        'level': ProficiencyLevel.beginner.name,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      // Also save to local storage
+      await _localStorageService.saveUserName(userId, displayName ?? 'Anonymous User');
+      if (email != null) await _localStorageService.saveUserEmail(userId, email);
+      if (photoUrl != null) await _localStorageService.saveUserPhotoUrl(userId, photoUrl);
+    }
+  }
+
   Future<ProficiencyLevel?> loadUserLevel(String userId) async {
     final data = await _localStorageService.loadUserLevel(userId);
     return ProficiencyLevel.fromString(data['level']);
