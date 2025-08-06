@@ -32,7 +32,9 @@ class _RankingScreenState extends State<RankingScreen> {
     } else {
       message = "Memora에서 $streak일 연속 학습하며 꾸준함을 실천하고 있어요. 함께해요!";
     }
-    SharePlus.instance.share(ShareParams(text: message));
+    SharePlus.instance.share(
+      ShareParams(text: message, subject: 'Memora 랭킹 공유'),
+    );
   }
 
   @override

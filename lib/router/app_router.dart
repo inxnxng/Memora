@@ -74,12 +74,6 @@ class RedirectLogic {
     if (onSplash || onLogin || onOnboarding) {
       return AppRoutes.home;
     }
-    // console log all status
-    // ignore: avoid_print
-    print(
-      'Redirect Logic: isLoggedIn: $isLoggedIn, isLoading: $isLoading, hasProfile: $hasProfile',
-    );
-
     return null;
   }
 }

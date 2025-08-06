@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:memora/services/notification_service.dart';
-
 import 'package:memora/widgets/common_app_bar.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {

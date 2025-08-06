@@ -7,8 +7,6 @@ class AuthService {
 
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
-  // 처음 실행될 때 initialize the Google Sign-In할 수 ㅣㅇㅆ
-
   Future<UserCredential?> signInWithEmail(String email, String password) async {
     try {
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(
@@ -24,21 +22,27 @@ class AuthService {
 
   Future<UserCredential?> signInWithGoogle() async {
     try {
-      await _googleSignIn.initialize(); // Ensure previous sign-in is cleared
-      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate(
-        scopeHint: [
-          'https://www.googleapis.com/auth/userinfo.email',
-          'https://www.googleapis.com/auth/userinfo.profile',
-        ],
-      );
-      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
-      final AuthCredential credential = GoogleAuthProvider.credential(
-        idToken: googleAuth.idToken,
-      );
-      UserCredential userCredential = await _auth.signInWithCredential(
-        credential,
-      );
-      return userCredential;
+      if (kIsWeb) {
+        // For web, use signInWithPopup which is handled by firebase_auth_web
+        final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+        return await _auth.signInWithPopup(googleProvider);
+      } else {
+        await _googleSignIn.initialize(); // Ensure previous sign-in is cleared
+        final GoogleSignInAccount googleUser = await _googleSignIn.authenticate(
+          scopeHint: [
+            'https://www.googleapis.com/auth/userinfo.email',
+            'https://www.googleapis.com/auth/userinfo.profile',
+          ],
+        );
+        final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+        final AuthCredential credential = GoogleAuthProvider.credential(
+          idToken: googleAuth.idToken,
+        );
+        UserCredential userCredential = await _auth.signInWithCredential(
+          credential,
+        );
+        return userCredential;
+      }
     } catch (e) {
       debugPrint("Error signing in with Google: $e");
       return null;
@@ -47,6 +51,10 @@ class AuthService {
 
   Future<void> signOut() async {
     await _auth.signOut();
-    await _googleSignIn.signOut();
+    // It's recommended to sign out from Google on mobile platforms.
+    // On the web, firebase_auth handles this implicitly.
+    if (!kIsWeb) {
+      await _googleSignIn.signOut();
+    }
   }
 }
