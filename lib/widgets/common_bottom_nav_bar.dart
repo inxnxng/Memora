@@ -4,10 +4,7 @@ import 'package:go_router/go_router.dart';
 class CommonBottomNavBar extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
 
-  const CommonBottomNavBar({
-    super.key,
-    required this.navigationShell,
-  });
+  const CommonBottomNavBar({super.key, required this.navigationShell});
 
   void _onTap(int index) {
     navigationShell.goBranch(
@@ -27,15 +24,16 @@ class CommonBottomNavBar extends StatelessWidget {
           activeIcon: Icon(Icons.article),
           label: 'TIL 복습',
         ),
+
         BottomNavigationBarItem(
           icon: Icon(Icons.home_outlined),
           activeIcon: Icon(Icons.home),
           label: '홈',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline),
-          activeIcon: Icon(Icons.person),
-          label: '프로필',
+          icon: Icon(Icons.emoji_events_outlined),
+          activeIcon: Icon(Icons.emoji_events),
+          label: '랭킹',
         ),
       ],
       type: BottomNavigationBarType.fixed,

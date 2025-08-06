@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:memora/models/proficiency_level.dart';
-import 'package:memora/providers/user_provider.dart';
-import 'package:memora/router/app_routes.dart';
-import 'package:provider/provider.dart';
+import 'package:memora/screens/onboarding/widgets/level_selection_page.dart';
+import 'package:memora/screens/onboarding/widgets/welcome_page.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -14,7 +11,19 @@ class OnboardingScreen extends StatefulWidget {
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
-  ProficiencyLevel? _selectedLevel;
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _goToNextPage() {
+    _pageController.nextPage(
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,89 +31,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: PageView(
         controller: _pageController,
         physics: const NeverScrollableScrollPhysics(),
-        children: [_buildWelcomePage(), _buildLevelSelectionPage()],
-      ),
-    );
-  }
-
-  Widget _buildWelcomePage() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'Welcome to Memora!',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 20),
-          const Text(
-            'To personalize your experience, please select your learning level.',
-            style: TextStyle(fontSize: 18),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 40),
-          ElevatedButton(
-            onPressed: () {
-              _pageController.nextPage(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeIn,
-              );
-            },
-            child: const Text('Get Started'),
-          ),
+          WelcomePage(onNextPage: _goToNextPage),
+          const LevelSelectionPage(),
         ],
       ),
     );
-  }
-
-  Widget _buildLevelSelectionPage() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'Select Your Level',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 20),
-          ...ProficiencyLevel.values.map((level) => _buildLevelOption(level)),
-          const SizedBox(height: 40),
-          ElevatedButton(
-            onPressed: _selectedLevel == null ? null : _saveLevel,
-            child: const Text('Save and Continue'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLevelOption(ProficiencyLevel level) {
-    return RadioListTile<ProficiencyLevel>(
-      title: Text(level.displayName),
-      subtitle: Text('하루 ${level.dailyGoal}번 학습'),
-      value: level,
-      groupValue: _selectedLevel,
-      onChanged: (value) {
-        setState(() {
-          _selectedLevel = value;
-        });
-      },
-    );
-  }
-
-  void _saveLevel() async {
-    if (_selectedLevel != null) {
-      final userProvider = Provider.of<UserProvider>(context, listen: false);
-      await userProvider.saveUserLevel(_selectedLevel!);
-      if (mounted) {
-        context.go(AppRoutes.home);
-      }
-    }
   }
 }

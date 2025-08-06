@@ -13,7 +13,8 @@ class NotionService {
     required this.notionAuthRepository,
     required this.notionDatabaseRepository,
     required this.notionRepository,
-  }) : notionToMarkdownConverter = NotionToMarkdownConverter();
+    required this.notionToMarkdownConverter,
+  });
 
   // --- Connection and Initialization ---
 

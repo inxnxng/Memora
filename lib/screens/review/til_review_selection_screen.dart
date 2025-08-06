@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:memora/models/task_model.dart';
+import 'package:memora/constants/app_strings.dart';
 import 'package:memora/providers/notion_provider.dart';
 import 'package:memora/router/app_routes.dart';
 import 'package:memora/widgets/common_app_bar.dart';
@@ -15,71 +15,28 @@ class TilReviewSelectionScreen extends StatefulWidget {
 }
 
 class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
-  final Set<String> _selectedPageIds = {};
-  bool _isFetchingContent = false;
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<NotionProvider>(context, listen: false).fetchNotionPages();
-    });
-  }
-
-  void _toggleSelection(String pageId) {
-    if (_isFetchingContent) return;
-    setState(() {
-      if (_selectedPageIds.contains(pageId)) {
-        _selectedPageIds.remove(pageId);
-      } else {
-        _selectedPageIds.add(pageId);
-      }
+      final provider = context.read<NotionProvider>();
+      provider.fetchNotionPages();
+      provider.clearPageSelection(); // Clear previous selections
     });
   }
 
   Future<void> _startCombinedTraining() async {
-    if (_selectedPageIds.isEmpty) return;
+    final notionProvider = context.read<NotionProvider>();
+    final success = await notionProvider.fetchCombinedContent();
 
-    setState(() {
-      _isFetchingContent = true;
-    });
-
-    final notionProvider = Provider.of<NotionProvider>(context, listen: false);
-    final List<NotionPage> selectedPages = [];
-
-    final allPages = notionProvider.pages;
-    final selectedPagesMeta = allPages
-        .where((page) => _selectedPageIds.contains(page['id']))
-        .toList();
-
-    try {
-      for (var pageMeta in selectedPagesMeta) {
-        final pageId = pageMeta['id'];
-        final titleList = pageMeta['properties']?['Name']?['title'] as List?;
-        final title = titleList?.isNotEmpty == true
-            ? titleList![0]['plain_text']
-            : '제목 없음';
-        final content = await notionProvider.getPageContent(pageId);
-        selectedPages.add(
-          NotionPage(id: pageId, title: title, content: content),
-        );
-      }
-
-      if (!mounted) return;
-
-      context.push(AppRoutes.review, extra: selectedPages);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('페이지 내용을 불러오는 데 실패했습니다: ${e.toString()}')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isFetchingContent = false;
-        });
-      }
+    if (success && mounted) {
+      context.push(AppRoutes.review, extra: notionProvider.combinedPageContent);
+    } else if (!success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(notionProvider.notionConnectionError ??
+                AppStrings.pageContentLoadFailed)),
+      );
     }
   }
 
@@ -88,8 +45,8 @@ class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
     String pageId,
     String pageTitle,
   ) {
-    final notionProvider = Provider.of<NotionProvider>(context, listen: false);
-    final databaseName = notionProvider.databaseTitle ?? 'Unknown DB';
+    final notionProvider = context.read<NotionProvider>();
+    final databaseName = notionProvider.databaseTitle ?? AppStrings.unknownDb;
     context.push(
       '${AppRoutes.review}/${AppRoutes.notionPage.replaceFirst(':pageId', pageId)}?pageTitle=$pageTitle&databaseName=$databaseName',
     );
@@ -98,92 +55,87 @@ class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final notionProvider = context.watch<NotionProvider>();
+
     return Scaffold(
-      appBar: const CommonAppBar(title: 'TIL 복습 주제 선택'),
+      appBar: const CommonAppBar(title: AppStrings.tilReviewSelectionTitle),
       body: Stack(
         children: [
-          Consumer<NotionProvider>(
-            builder: (context, notionProvider, child) {
-              if (notionProvider.arePagesLoading) {
-                return const Center(child: CircularProgressIndicator());
-              }
+          if (notionProvider.arePagesLoading && notionProvider.pages.isEmpty)
+            const Center(child: CircularProgressIndicator())
+          else if (notionProvider.pages.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text(
+                  AppStrings.noNotionPagesFound,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            )
+          else
+            ListView.builder(
+              itemCount: notionProvider.pages.length,
+              itemBuilder: (context, index) {
+                final page = notionProvider.pages[index];
+                final pageId = page['id'];
+                final properties = page['properties'];
+                final isSelected = notionProvider.selectedPageIds.contains(pageId);
 
-              if (notionProvider.pages.isEmpty) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text(
-                      'Notion 페이지를 찾을 수 없습니다. 설정에서 API 키와 데이터베이스 ID를 확인해주세요.',
-                      textAlign: TextAlign.center,
+                final titleList = properties?['Name']?['title'] as List?;
+                final title = titleList?.isNotEmpty == true
+                    ? titleList![0]['plain_text']
+                    : AppStrings.noTitle;
+
+                final icon = page['icon'];
+                final emoji = icon?['type'] == 'emoji' ? icon['emoji'] : '📄';
+
+                return Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 8.0,
+                  ),
+                  elevation: isSelected ? 2 : 1,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.only(
+                      left: 8,
+                      right: 16,
+                      top: 4,
+                      bottom: 4,
+                    ),
+                    onTap: () =>
+                        _navigateToPageViewer(context, pageId, title),
+                    selected: isSelected,
+                    selectedTileColor: theme.primaryColor.withAlpha(20),
+                    leading: Checkbox(
+                      value: isSelected,
+                      onChanged: (bool? value) {
+                        notionProvider.togglePageSelection(pageId);
+                      },
+                      activeColor: theme.primaryColor,
+                    ),
+                    title: Row(
+                      children: [
+                        Text(emoji, style: const TextStyle(fontSize: 24)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: const TextStyle(fontSize: 16),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 );
-              }
-
-              return ListView.builder(
-                itemCount: notionProvider.pages.length,
-                itemBuilder: (context, index) {
-                  final page = notionProvider.pages[index];
-                  final pageId = page['id'];
-                  final properties = page['properties'];
-                  final isSelected = _selectedPageIds.contains(pageId);
-
-                  final titleList = properties?['Name']?['title'] as List?;
-                  final title = titleList?.isNotEmpty == true
-                      ? titleList![0]['plain_text']
-                      : '제목 없음';
-
-                  final icon = page['icon'];
-                  final emoji = icon?['type'] == 'emoji' ? icon['emoji'] : '📄';
-
-                  return Card(
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                      vertical: 8.0,
-                    ),
-                    elevation: isSelected ? 2 : 1,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.only(
-                        left: 8,
-                        right: 16,
-                        top: 4,
-                        bottom: 4,
-                      ),
-                      onTap: () =>
-                          _navigateToPageViewer(context, pageId, title),
-                      selected: isSelected,
-                      selectedTileColor: theme.primaryColor.withAlpha(20),
-                      leading: Checkbox(
-                        value: isSelected,
-                        onChanged: (bool? value) {
-                          _toggleSelection(pageId);
-                        },
-                        activeColor: theme.primaryColor,
-                      ),
-                      title: Row(
-                        children: [
-                          Text(emoji, style: const TextStyle(fontSize: 24)),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              title,
-                              style: const TextStyle(fontSize: 16),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-          if (_isFetchingContent)
+              },
+            ),
+          if (notionProvider.isFetchingCombinedContent)
             Container(
               color: Colors.black.withAlpha(128),
               child: const Center(
@@ -193,7 +145,7 @@ class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
                     CircularProgressIndicator(),
                     SizedBox(height: 16),
                     Text(
-                      '페이지 내용을 불러오는 중...',
+                      AppStrings.loadingPageContent,
                       style: TextStyle(color: Colors.white, fontSize: 16),
                     ),
                   ],
@@ -202,10 +154,11 @@ class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
             ),
         ],
       ),
-      floatingActionButton: _selectedPageIds.isNotEmpty && !_isFetchingContent
+      floatingActionButton: notionProvider.selectedPageIds.isNotEmpty &&
+              !notionProvider.isFetchingCombinedContent
           ? FloatingActionButton.extended(
               onPressed: _startCombinedTraining,
-              label: const Text('훈련 시작'),
+              label: const Text(AppStrings.startTraining),
               icon: const Icon(Icons.chat_bubble_outline),
             )
           : null,

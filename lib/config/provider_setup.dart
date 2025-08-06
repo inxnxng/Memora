@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:memora/app.dart';
+import 'package:memora/data/datasources/notion_remote_data_source.dart';
 import 'package:memora/data/datasources/openai_remote_data_source.dart';
 import 'package:memora/providers/notion_provider.dart';
 import 'package:memora/providers/task_provider.dart';
@@ -11,6 +12,7 @@ import 'package:memora/repositories/notion/notion_database_repository.dart';
 import 'package:memora/repositories/notion/notion_repository.dart';
 import 'package:memora/repositories/openai/openai_auth_repository.dart';
 import 'package:memora/repositories/openai/openai_repository.dart';
+import 'package:memora/repositories/ranking/ranking_repository.dart';
 import 'package:memora/repositories/task/task_repository.dart';
 import 'package:memora/repositories/user/user_repository.dart';
 import 'package:memora/router/auth_notifier.dart';
@@ -20,6 +22,7 @@ import 'package:memora/services/firebase_service.dart';
 import 'package:memora/services/local_storage_service.dart';
 import 'package:memora/services/notification_service.dart';
 import 'package:memora/services/notion_service.dart';
+import 'package:memora/services/notion_to_markdown_converter.dart';
 import 'package:memora/services/openai_service.dart';
 import 'package:memora/services/settings_service.dart';
 import 'package:memora/services/task_service.dart';
@@ -49,9 +52,13 @@ class ProviderContainer extends StatelessWidget {
         Provider<NotionDatabaseRepository>(
           create: (_) => NotionDatabaseRepository(),
         ),
+        Provider<NotionRemoteDataSource>(
+          create: (_) => NotionRemoteDataSource(),
+        ),
         Provider<NotionRepository>(
           create: (context) => NotionRepository(
             notionAuthRepository: context.read<NotionAuthRepository>(),
+            remoteDataSource: context.read<NotionRemoteDataSource>(),
           ),
         ),
         Provider<OpenAIAuthRepository>(
@@ -83,13 +90,21 @@ class ProviderContainer extends StatelessWidget {
             FirebaseFirestore.instance,
           ),
         ),
+        Provider<RankingRepository>(
+          create: (context) => RankingRepository(FirebaseFirestore.instance),
+        ),
 
         // Business Logic Services
+        Provider<NotionToMarkdownConverter>(
+          create: (_) => NotionToMarkdownConverter(),
+        ),
         Provider<NotionService>(
           create: (context) => NotionService(
             notionAuthRepository: context.read<NotionAuthRepository>(),
             notionDatabaseRepository: context.read<NotionDatabaseRepository>(),
             notionRepository: context.read<NotionRepository>(),
+            notionToMarkdownConverter: context
+                .read<NotionToMarkdownConverter>(),
           ),
         ),
         Provider<OpenAIService>(
@@ -108,8 +123,10 @@ class ProviderContainer extends StatelessWidget {
         // ChangeNotifierProviders (UI-level state)
         ChangeNotifierProvider<AuthNotifier>(create: (_) => AuthNotifier()),
         ChangeNotifierProvider<UserProvider>(
-          create: (context) =>
-              UserProvider(userRepository: context.read<UserRepository>()),
+          create: (context) => UserProvider(
+            userRepository: context.read<UserRepository>(),
+            rankingRepository: context.read<RankingRepository>(),
+          ),
         ),
         ChangeNotifierProvider<NotionProvider>(
           create: (context) => NotionProvider(
@@ -120,11 +137,13 @@ class ProviderContainer extends StatelessWidget {
         ChangeNotifierProxyProvider<NotionProvider, TaskProvider>(
           create: (context) => TaskProvider(
             taskService: context.read<TaskService>(),
-            notionDatabaseId: context.read<NotionProvider>().databaseId,
+            settingsService: context.read<SettingsService>(),
+            notionDatabaseId: null,
           ),
           update: (context, notionProvider, previousTaskProvider) =>
               TaskProvider(
                 taskService: context.read<TaskService>(),
+                settingsService: context.read<SettingsService>(),
                 notionDatabaseId: notionProvider.databaseId,
               ),
         ),

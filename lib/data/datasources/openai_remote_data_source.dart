@@ -2,6 +2,18 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:memora/constants/openai_constants.dart';
+
+class OpenApiException implements Exception {
+  final String message;
+  final int? statusCode;
+  OpenApiException(this.message, {this.statusCode});
+
+  @override
+  String toString() {
+    return 'OpenApiException: $message (Status code: $statusCode)';
+  }
+}
 
 class OpenAIRemoteDataSource {
   OpenAIRemoteDataSource();
@@ -11,7 +23,7 @@ class OpenAIRemoteDataSource {
     String apiKey,
   ) {
     if (apiKey.isEmpty) {
-      return Stream.error(Exception('OpenAI API key not found.'));
+      return Stream.error(OpenApiException('OpenAI API key not found.'));
     }
 
     final client = http.Client();
@@ -26,12 +38,11 @@ class OpenAIRemoteDataSource {
     });
 
     request.body = jsonEncode({
-      'model': 'gpt-4o-mini',
+      'model': OpenAIConstants.gpt4oMini,
       'messages': [
         {
           'role': 'system',
-          'content':
-              'You are a helpful and encouraging memory training assistant. Your goal is to guide the user through memory exercises and provide feedback. Keep responses concise and engaging.',
+          'content': OpenAIConstants.memoryTrainingAssistantPrompt,
         },
         {'role': 'user', 'content': userPrompt},
       ],
@@ -47,7 +58,7 @@ class OpenAIRemoteDataSource {
             return response.stream
                 .transform(utf8.decoder)
                 .transform(const LineSplitter())
-                .where((line) => line.startsWith('data: '))
+                .where((line) => line.startsWith('data: בו'))
                 .map((line) => line.substring(6))
                 .where((data) => data.trim() != '[DONE]')
                 .map((data) {
@@ -58,12 +69,14 @@ class OpenAIRemoteDataSource {
           } else {
             return response.stream.bytesToString().asStream().asyncMap((body) {
               if (response.statusCode == 401) {
-                throw Exception(
+                throw OpenApiException(
                   'OpenAI API key is invalid or unauthorized. Please check your key.',
+                  statusCode: 401,
                 );
               } else {
-                throw Exception(
+                throw OpenApiException(
                   'Failed to generate training content: ${response.statusCode} $body',
+                  statusCode: response.statusCode,
                 );
               }
             });
@@ -83,7 +96,7 @@ class OpenAIRemoteDataSource {
     String apiKey,
   ) async {
     if (apiKey.isEmpty) {
-      throw Exception('OpenAI API key not found.');
+      throw OpenApiException('OpenAI API key not found.');
     }
     final response = await http.post(
       Uri.parse('https://api.openai.com/v1/chat/completions'),
@@ -92,12 +105,11 @@ class OpenAIRemoteDataSource {
         'Authorization': 'Bearer $apiKey',
       },
       body: jsonEncode({
-        'model': 'gpt-4o-mini',
+        'model': OpenAIConstants.gpt4oMini,
         'messages': [
           {
             'role': 'system',
-            'content':
-                'You are a helpful and encouraging memory training assistant. Your goal is to guide the user through memory exercises and provide feedback. Keep responses concise and engaging.',
+            'content': OpenAIConstants.memoryTrainingAssistantPrompt,
           },
           {'role': 'user', 'content': userPrompt},
         ],
@@ -107,12 +119,11 @@ class OpenAIRemoteDataSource {
     if (response.statusCode == 200) {
       final body = json.decode(utf8.decode(response.bodyBytes));
       return body['choices'][0]['message']['content'];
-    } else if (response.statusCode == 401) {
-      throw Exception(
-        'OpenAI API key is invalid or unauthorized. Please check your key.',
-      );
     } else {
-      throw Exception('Failed to generate training content: ${response.body}');
+      throw OpenApiException(
+        'Failed to generate training content: ${response.body}',
+        statusCode: response.statusCode,
+      );
     }
   }
 
@@ -121,7 +132,7 @@ class OpenAIRemoteDataSource {
     String apiKey,
   ) async {
     if (apiKey.isEmpty) {
-      throw Exception('OpenAI API key not found.');
+      throw OpenApiException('OpenAI API key not found.');
     }
     final response = await http.post(
       Uri.parse('https://api.openai.com/v1/chat/completions'),
@@ -130,12 +141,11 @@ class OpenAIRemoteDataSource {
         'Authorization': 'Bearer $apiKey',
       },
       body: jsonEncode({
-        'model': 'gpt-3.5-turbo',
+        'model': OpenAIConstants.gpt35Turbo,
         'messages': [
           {
             'role': 'system',
-            'content':
-                'You are a helpful assistant that creates quizzes. Provide the output in JSON format.',
+            'content': OpenAIConstants.quizCreatorPrompt,
           },
           {
             'role': 'user',
@@ -149,13 +159,17 @@ class OpenAIRemoteDataSource {
     if (response.statusCode == 200) {
       final body = json.decode(utf8.decode(response.bodyBytes));
       final content = body['choices'][0]['message']['content'];
-      return json.decode(content);
-    } else if (response.statusCode == 401) {
-      throw Exception(
-        'OpenAI API key is invalid or unauthorized. Please check your key.',
-      );
+      try {
+        return json.decode(content);
+      } catch (e) {
+        throw OpenApiException(
+            'Failed to parse quiz JSON from OpenAI response: $content');
+      }
     } else {
-      throw Exception('Failed to create quiz: ${response.body}');
+      throw OpenApiException(
+        'Failed to create quiz: ${response.body}',
+        statusCode: response.statusCode,
+      );
     }
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/widgets.dart';
+import 'package:memora/models/task_model.dart';
 import 'package:memora/services/notion_service.dart';
 import 'package:memora/services/openai_service.dart';
 
@@ -28,6 +29,11 @@ class NotionProvider with ChangeNotifier {
   bool _isSearchingDatabases = false;
   bool _isLoading = false;
 
+  // --- TIL Review Selection State ---
+  final Set<String> _selectedPageIds = {};
+  bool _isFetchingCombinedContent = false;
+  List<NotionPage> _combinedPageContent = [];
+
   // Getters
   String? get apiToken => _apiToken;
   String? get apiTokenTimestamp => _apiTokenTimestamp;
@@ -46,7 +52,63 @@ class NotionProvider with ChangeNotifier {
   bool get isSearchingDatabases => _isSearchingDatabases;
   bool get isLoading => _isLoading;
 
-  // Methods
+  // --- TIL Review Selection Getters ---
+  Set<String> get selectedPageIds => _selectedPageIds;
+  bool get isFetchingCombinedContent => _isFetchingCombinedContent;
+  List<NotionPage> get combinedPageContent => _combinedPageContent;
+
+  // --- TIL Review Selection Methods ---
+  void togglePageSelection(String pageId) {
+    if (_selectedPageIds.contains(pageId)) {
+      _selectedPageIds.remove(pageId);
+    } else {
+      _selectedPageIds.add(pageId);
+    }
+    Future.microtask(() => notifyListeners());
+  }
+
+  void clearPageSelection() {
+    _selectedPageIds.clear();
+    _combinedPageContent = [];
+    Future.microtask(() => notifyListeners());
+  }
+
+  Future<bool> fetchCombinedContent() async {
+    if (_selectedPageIds.isEmpty) return false;
+
+    _isFetchingCombinedContent = true;
+    _combinedPageContent = [];
+    Future.microtask(() => notifyListeners());
+
+    final List<NotionPage> selectedPages = [];
+    final selectedPagesMeta = _pages
+        .where((page) => _selectedPageIds.contains(page['id']))
+        .toList();
+
+    try {
+      for (var pageMeta in selectedPagesMeta) {
+        final pageId = pageMeta['id'];
+        final titleList = pageMeta['properties']?['Name']?['title'] as List?;
+        final title = titleList?.isNotEmpty == true
+            ? titleList![0]['plain_text']
+            : '제목 없음';
+        final content = await getPageContent(pageId);
+        selectedPages.add(
+          NotionPage(id: pageId, title: title, content: content),
+        );
+      }
+      _combinedPageContent = selectedPages;
+      return true;
+    } catch (e) {
+      _notionConnectionError = '페이지 내용을 불러오는 데 실패했습니다: ${e.toString()}';
+      return false;
+    } finally {
+      _isFetchingCombinedContent = false;
+      Future.microtask(() => notifyListeners());
+    }
+  }
+
+  // --- General Methods ---
   Future<void> initialize() async {
     _isLoading = true;
     Future.microtask(() => notifyListeners());
@@ -85,8 +147,7 @@ class NotionProvider with ChangeNotifier {
         hasMore = response['has_more'] as bool;
         nextCursor = response['next_cursor'] as String?;
 
-        _arePagesLoading =
-            hasMore; // Keep loading indicator if there are more pages
+        _arePagesLoading = hasMore;
         Future.microtask(() => notifyListeners());
       } while (hasMore);
 
@@ -148,7 +209,7 @@ class NotionProvider with ChangeNotifier {
     _isLoading = true;
     Future.microtask(() => notifyListeners());
     await _notionService.updateApiToken(apiToken);
-    await initialize(); // This will set isLoading to false and notify listeners
+    await initialize();
   }
 
   Future<void> fetchNewQuiz() async {
@@ -163,12 +224,12 @@ class NotionProvider with ChangeNotifier {
       if (_pages.isNotEmpty) {
         final randomPage = _pages[Random().nextInt(_pages.length)];
         final pageId = randomPage['id'];
-        final content = await _notionService.getPageContent(pageId);
+        final content = await getPageContent(pageId);
 
         if (content.trim().isNotEmpty) {
           _currentQuiz = await _openAIService.createQuizFromText(content);
         } else {
-          fetchNewQuiz(); // Retry with another page if content is empty
+          fetchNewQuiz();
         }
       }
     } catch (e) {

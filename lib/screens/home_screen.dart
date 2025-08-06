@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_heatmap_calendar/flutter_heatmap_calendar.dart';
 import 'package:go_router/go_router.dart';
-import 'package:memora/constants/heatmap_colors.dart';
-import 'package:memora/constants/storage_keys.dart';
+import 'package:memora/constants/app_strings.dart';
 import 'package:memora/models/proficiency_level.dart';
 import 'package:memora/providers/notion_provider.dart';
 import 'package:memora/providers/task_provider.dart';
 import 'package:memora/providers/user_provider.dart';
 import 'package:memora/router/app_routes.dart';
-import 'package:memora/services/local_storage_service.dart';
 import 'package:provider/provider.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -19,70 +17,28 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final LocalStorageService _localStorageService = LocalStorageService();
-  Color _heatmapColor = heatmapColorOptions
-      .firstWhere((c) => c.name == StorageKeys.defaultHeatmapColor)
-      .color;
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        _loadHeatmapColor();
-        // Fetch heatmap data when the screen is initialized
-        Provider.of<TaskProvider>(context, listen: false).fetchHeatmapData();
+        // Data is now loaded in providers' initialization
+        // but we can refresh it here if needed, e.g., when returning to the screen.
+        context.read<TaskProvider>().loadHeatmapColor();
+        context.read<TaskProvider>().fetchHeatmapData();
       }
     });
   }
 
-  Future<void> _loadHeatmapColor() async {
-    final colorString = await _localStorageService.getValue(
-      StorageKeys.heatmapColorKey,
-    );
-
-    Color selectedColor;
-
-    if (colorString != null) {
-      try {
-        // Try parsing as a hex string first (new format)
-        selectedColor = Color(int.parse(colorString, radix: 16));
-      } catch (e) {
-        // If parsing fails, assume it's a color name (old format)
-        final colorOption = heatmapColorOptions.firstWhere(
-          (c) => c.name == colorString,
-          orElse: () => heatmapColorOptions.firstWhere(
-            (c) => c.name == StorageKeys.defaultHeatmapColor,
-          ),
-        );
-        selectedColor = colorOption.color;
-      }
-    } else {
-      // If no color is saved, use the default
-      final defaultColorOption = heatmapColorOptions.firstWhere(
-        (c) => c.name == StorageKeys.defaultHeatmapColor,
-      );
-      selectedColor = defaultColorOption.color;
-    }
-
-    if (mounted) {
-      setState(() {
-        _heatmapColor = selectedColor;
-      });
-    }
-  }
-
   String _getProfileImage(ProficiencyLevel? level) {
     String imageLevel = level?.name.toLowerCase() ?? 'default';
-    switch (imageLevel) {
-      case 'beginner':
-      case 'intermediate':
-      case 'advanced':
-      case 'master':
-        return 'assets/images/proficiency_levels/$imageLevel.png';
-      default:
-        return 'assets/images/proficiency_levels/default.png';
-    }
+    // A simple mapping to asset paths.
+    // Consider moving this to the ProficiencyLevel model or a dedicated helper.
+    const basePath = 'assets/images/proficiency_levels/';
+    const validLevels = {'beginner', 'intermediate', 'advanced', 'master'};
+    return validLevels.contains(imageLevel)
+        ? '$basePath$imageLevel.png'
+        : '${basePath}default.png';
   }
 
   @override
@@ -92,9 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
         leading: Consumer<UserProvider>(
           builder: (context, userProvider, child) {
             return GestureDetector(
-              onTap: () {
-                context.push(AppRoutes.profile);
-              },
+              onTap: () => context.push(AppRoutes.profile),
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: CircleAvatar(
@@ -106,7 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           },
         ),
-        title: const Text('🧠 Memora'),
+        title: const Text(AppStrings.appName),
         centerTitle: true,
         actions: [
           IconButton(
@@ -114,64 +68,34 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () {
               context
                   .push(AppRoutes.settings)
-                  .then(
-                    (_) => _loadHeatmapColor(),
-                  ); // Reload color when returning from settings
+                  .then((_) => context.read<TaskProvider>().loadHeatmapColor());
             },
           ),
         ],
       ),
-      body: Consumer3<NotionProvider, UserProvider, TaskProvider>(
-        builder: (context, notionProvider, userProvider, taskProvider, child) {
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: _buildHeatmapButton(taskProvider)),
-                const SizedBox(height: 20),
-                Expanded(
-                  child: _buildMenuButton(
-                    context,
-                    icon: Icons.article,
-                    label: 'TIL 복습',
-                    subLabel:
-                        notionProvider.notionConnectionError ??
-                        (notionProvider.isConnected
-                            ? (notionProvider.databaseTitle ?? 'Notion DB 연결됨')
-                            : 'Notion 연결 필요'),
-                    onPressed: () {
-                      if (notionProvider.isConnected) {
-                        context.push(AppRoutes.review);
-                      } else {
-                        context.push(
-                          '${AppRoutes.settings}/${AppRoutes.notionSettings}',
-                        );
-                      }
-                    },
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(child: _buildHeatmapButton(context)),
+            const SizedBox(height: 20),
+            Expanded(child: _buildTilReviewButton(context)),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildHeatmapButton(TaskProvider taskProvider) {
-    final detailedDatasets = taskProvider.heatmapData;
-    final heatmapDatasets = detailedDatasets.map(
-      (date, records) => MapEntry(date, records.length),
-    );
-
+  Widget _buildHeatmapButton(BuildContext context) {
+    final taskProvider = context.watch<TaskProvider>();
+    final heatmapDatasets = taskProvider.heatmapData
+        .map((date, records) => MapEntry(date, records.length));
     final endDate = DateTime.now();
     final startDate = endDate.subtract(const Duration(days: 10 * 7));
 
     return ElevatedButton(
-      onPressed: () {
-        context.push(AppRoutes.heatmap);
-      },
+      onPressed: () => context.push(AppRoutes.heatmap),
       style: ElevatedButton.styleFrom(
         padding: const EdgeInsets.all(16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -181,39 +105,42 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const Text(
-            '학습 기록',
+            AppStrings.learningRecord,
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 22),
           ),
           const SizedBox(height: 10),
-          IgnorePointer(
-            child: HeatMap(
-              datasets: heatmapDatasets,
-              startDate: startDate,
-              endDate: endDate,
-              size: 15,
-              colorMode: ColorMode.opacity,
-              fontSize: 0,
-              showText: false,
-              scrollable: true,
-              colorsets: {1: _heatmapColor},
-              showColorTip: false,
+          if (taskProvider.isLoading)
+            const CircularProgressIndicator()
+          else
+            IgnorePointer(
+              child: HeatMap(
+                datasets: heatmapDatasets,
+                startDate: startDate,
+                endDate: endDate,
+                size: 15,
+                colorMode: ColorMode.opacity,
+                showText: false,
+                scrollable: true,
+                colorsets: {1: taskProvider.heatmapColor},
+                showColorTip: false,
+              ),
             ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildMenuButton(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required VoidCallback onPressed,
-    String? subLabel,
-  }) {
+  Widget _buildTilReviewButton(BuildContext context) {
+    final notionProvider = context.watch<NotionProvider>();
     return ElevatedButton(
-      onPressed: onPressed,
+      onPressed: () {
+        if (notionProvider.isConnected) {
+          context.push(AppRoutes.review);
+        } else {
+          context.push('${AppRoutes.settings}/${AppRoutes.notionSettings}');
+        }
+      },
       style: ElevatedButton.styleFrom(
         padding: const EdgeInsets.symmetric(vertical: 32),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -221,16 +148,17 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 48),
+          const Icon(Icons.article, size: 48),
           const SizedBox(height: 10),
-          Text(label, style: const TextStyle(fontSize: 28)),
-          if (subLabel != null) ...[
-            const SizedBox(height: 5),
-            Text(
-              subLabel,
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-          ],
+          const Text(AppStrings.tilReview, style: TextStyle(fontSize: 28)),
+          const SizedBox(height: 5),
+          Text(
+            notionProvider.notionConnectionError ??
+                (notionProvider.isConnected
+                    ? (notionProvider.databaseTitle ?? AppStrings.notionConnected)
+                    : AppStrings.notionConnectionNeeded),
+            style: const TextStyle(fontSize: 14, color: Colors.grey),
+          ),
         ],
       ),
     );

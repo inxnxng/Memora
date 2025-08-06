@@ -72,42 +72,4 @@ class UserRepository {
 
   Future<Map<String, int>> loadSessionMap(String userId) =>
       _localStorageService.loadSessionMap(userId);
-
-  /// Fetches the user's rank based on their streak count.
-  Future<int> getUserRank(String userId) async {
-    try {
-      // Get all users sorted by streakCount in descending order
-      final querySnapshot = await _firestore
-          .collection('users')
-          .orderBy('streakCount', descending: true)
-          .get();
-
-      // Find the index (rank) of the current user
-      final userDocs = querySnapshot.docs;
-      for (int i = 0; i < userDocs.length; i++) {
-        if (userDocs[i].id == userId) {
-          return i + 1; // Rank is 1-based
-        }
-      }
-      return -1; // User not found in rankings
-    } catch (e) {
-      // Handle potential errors, e.g., permissions
-      return -1;
-    }
-  }
-
-  /// Fetches the top rankings.
-  Future<List<Map<String, dynamic>>> getTopRankings({int limit = 100}) async {
-    try {
-      final querySnapshot = await _firestore
-          .collection('users')
-          .orderBy('streakCount', descending: true)
-          .limit(limit)
-          .get();
-
-      return querySnapshot.docs.map((doc) => doc.data()).toList();
-    } catch (e) {
-      return [];
-    }
-  }
 }

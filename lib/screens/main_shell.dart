@@ -11,9 +11,7 @@ class MainShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: navigationShell,
-      bottomNavigationBar: CommonBottomNavBar(
-        navigationShell: navigationShell,
-      ),
+      bottomNavigationBar: CommonBottomNavBar(navigationShell: navigationShell),
     );
   }
 }

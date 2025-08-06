@@ -2,12 +2,17 @@ import 'package:memora/data/datasources/notion_remote_data_source.dart';
 import 'package:memora/repositories/notion/notion_auth_repository.dart';
 
 class NotionRepository {
-  final NotionAuthRepository notionAuthRepository;
+  final NotionAuthRepository _notionAuthRepository;
+  final NotionRemoteDataSource _remoteDataSource;
 
-  NotionRepository({required this.notionAuthRepository});
+  NotionRepository({
+    required NotionAuthRepository notionAuthRepository,
+    required NotionRemoteDataSource remoteDataSource,
+  })  : _notionAuthRepository = notionAuthRepository,
+        _remoteDataSource = remoteDataSource;
 
   Future<String> _getApiToken() async {
-    final tokenData = await notionAuthRepository.getApiKeyWithTimestamp();
+    final tokenData = await _notionAuthRepository.getApiKeyWithTimestamp();
     final apiToken = tokenData['value'];
     if (apiToken == null || apiToken.isEmpty) {
       throw Exception('Notion API token not found.');
@@ -20,43 +25,37 @@ class NotionRepository {
     String? startCursor,
   ) async {
     final apiToken = await _getApiToken();
-    final remoteDataSource = NotionRemoteDataSource(apiToken: apiToken);
-    return remoteDataSource.getPagesFromDB(databaseId, startCursor);
+    return _remoteDataSource.getPagesFromDB(apiToken, databaseId, startCursor);
   }
 
   Future<Map<String, dynamic>> getDatabaseInfo(String databaseId) async {
     final apiToken = await _getApiToken();
-    final remoteDataSource = NotionRemoteDataSource(apiToken: apiToken);
-    return remoteDataSource.getDatabaseInfo(databaseId);
+    return _remoteDataSource.getDatabaseInfo(apiToken, databaseId);
   }
 
   Future<String> getPageContent(String pageId) async {
     final apiToken = await _getApiToken();
-    final remoteDataSource = NotionRemoteDataSource(apiToken: apiToken);
-    return remoteDataSource.getPageContent(pageId);
+    return _remoteDataSource.getPageContent(apiToken, pageId);
   }
 
   Future<List<dynamic>> searchDatabases({String? query}) async {
     final apiToken = await _getApiToken();
-    final remoteDataSource = NotionRemoteDataSource(apiToken: apiToken);
-    return remoteDataSource.searchDatabases(query: query);
+    return _remoteDataSource.searchDatabases(apiToken, query: query);
   }
 
   Future<List<dynamic>> getRoadmapTasksFromDB(String databaseId) async {
     final apiToken = await _getApiToken();
-    final remoteDataSource = NotionRemoteDataSource(apiToken: apiToken);
-    return remoteDataSource.getRoadmapTasksFromDB(databaseId);
+    return _remoteDataSource.getRoadmapTasksFromDB(apiToken, databaseId);
   }
 
-  Future<List<Map<String, String>>> getQuizDataFromDB(String databaseId) async {
+  Future<List<Map<String, String>>> getQuizDataFromDB(
+      String databaseId) async {
     final apiToken = await _getApiToken();
-    final remoteDataSource = NotionRemoteDataSource(apiToken: apiToken);
-    return remoteDataSource.getQuizDataFromDB(databaseId);
+    return _remoteDataSource.getQuizDataFromDB(apiToken, databaseId);
   }
 
   Future<List<dynamic>> fetchPageBlocks(String pageId) async {
     final apiToken = await _getApiToken();
-    final remoteDataSource = NotionRemoteDataSource(apiToken: apiToken);
-    return remoteDataSource.fetchPageBlocks(pageId);
+    return _remoteDataSource.fetchPageBlocks(apiToken, pageId);
   }
 }

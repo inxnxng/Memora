@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_heatmap_calendar/flutter_heatmap_calendar.dart';
-import 'package:memora/constants/heatmap_colors.dart';
-import 'package:memora/constants/storage_keys.dart';
+import 'package:memora/constants/app_strings.dart';
 import 'package:memora/providers/task_provider.dart';
-import 'package:memora/services/local_storage_service.dart';
 import 'package:memora/widgets/common_app_bar.dart';
 import 'package:provider/provider.dart';
 
@@ -15,129 +13,76 @@ class HeatmapScreen extends StatefulWidget {
 }
 
 class _HeatmapScreenState extends State<HeatmapScreen> {
-  final LocalStorageService _localStorageService = LocalStorageService();
-  Color _heatmapColor = heatmapColorOptions
-      .firstWhere((c) => c.name == StorageKeys.defaultHeatmapColor)
-      .color;
-
   @override
   void initState() {
     super.initState();
-    _loadHeatmapColor();
-    // Fetch initial data
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<TaskProvider>(context, listen: false).fetchHeatmapData();
+      context.read<TaskProvider>().fetchHeatmapData();
     });
-  }
-
-  Future<void> _loadHeatmapColor() async {
-    final colorString = await _localStorageService.getValue(
-      StorageKeys.heatmapColorKey,
-    );
-
-    Color selectedColor;
-
-    if (colorString != null) {
-      try {
-        selectedColor = Color(int.parse(colorString, radix: 16));
-      } catch (e) {
-        // Fallback for old color name system or invalid hex
-        final colorOption = heatmapColorOptions.firstWhere(
-          (c) => c.name == colorString,
-          orElse: () => heatmapColorOptions.firstWhere(
-            (c) => c.name == StorageKeys.defaultHeatmapColor,
-          ),
-        );
-        selectedColor = colorOption.color;
-      }
-    } else {
-      final defaultColorOption = heatmapColorOptions.firstWhere(
-        (c) => c.name == StorageKeys.defaultHeatmapColor,
-      );
-      selectedColor = defaultColorOption.color;
-    }
-
-    if (mounted) {
-      setState(() {
-        _heatmapColor = selectedColor;
-      });
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final taskProvider = Provider.of<TaskProvider>(context);
-
-    final detailedDatasets = taskProvider.heatmapData;
-    final heatmapDatasets = detailedDatasets.map(
-      (date, records) => MapEntry(date, records.length),
-    );
-
-    final DateTime endDate = DateTime.now();
-    DateTime startDate;
-
-    if (heatmapDatasets.isEmpty) {
-      // Default to last 90 days if no data
-      startDate = endDate.subtract(const Duration(days: 90));
-    } else {
-      final DateTime earliestDate = heatmapDatasets.keys.reduce(
-        (a, b) => a.isBefore(b) ? a : b,
-      );
-      final int daysDifference = endDate.difference(earliestDate).inDays;
-
-      if (daysDifference < 90) {
-        // If the earliest record is within 90 days, show the last 90 days.
-        startDate = endDate.subtract(const Duration(days: 90));
-      } else {
-        // If older than 90 days, calculate weeks needed and set start date.
-        final int totalDays = (daysDifference / 7).ceil() * 7;
-        startDate = endDate.subtract(Duration(days: totalDays - 1));
-      }
-    }
+    final taskProvider = context.watch<TaskProvider>();
 
     return Scaffold(
-      appBar: const CommonAppBar(title: '학습 현황'),
+      appBar: const CommonAppBar(title: AppStrings.heatmapTitle),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // _buildStreakCard(context, userProvider.streakCount), // Temporarily disabled
-            const SizedBox(height: 24),
-            Text('학습 기록', style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 16),
-            Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final double width = constraints.maxWidth;
-                    // Adjust the divisor to control the size of the heatmap tiles
-                    final double tileSize = width / 20;
-
-                    return HeatMap(
-                      datasets: heatmapDatasets,
-                      startDate: startDate,
-                      endDate: endDate,
-                      size: tileSize,
-                      colorMode: ColorMode.opacity,
-                      showText: false,
-                      scrollable: true,
-                      colorsets: {1: _heatmapColor},
-                    );
-                  },
-                ),
-              ),
+            Text(
+              AppStrings.learningRecord,
+              style: Theme.of(context).textTheme.headlineSmall,
             ),
-            const SizedBox(height: 24),
-            Text('학습 상세 기록', style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 16),
-            _buildSessionList(detailedDatasets),
+            _buildHeatmapCard(taskProvider),
+            const SizedBox(height: 24),
+            Text(
+              AppStrings.detailedLearningRecord,
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 16),
+            _buildSessionList(taskProvider.heatmapData),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeatmapCard(TaskProvider taskProvider) {
+    final heatmapDatasets = taskProvider.heatmapData
+        .map((date, records) => MapEntry(date, records.length));
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            if (taskProvider.heatmapStartDate == null ||
+                taskProvider.heatmapEndDate == null) {
+              return const SizedBox(
+                  height: 150, child: Center(child: CircularProgressIndicator()));
+            }
+            final double width = constraints.maxWidth;
+            final double tileSize = width / 20;
+
+            return HeatMap(
+              datasets: heatmapDatasets,
+              startDate: taskProvider.heatmapStartDate!,
+              endDate: taskProvider.heatmapEndDate!,
+              size: tileSize,
+              colorMode: ColorMode.opacity,
+              showText: false,
+              scrollable: true,
+              colorsets: {1: taskProvider.heatmapColor},
+            );
+          },
         ),
       ),
     );
@@ -148,7 +93,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(16.0),
-          child: Text('학습 기록이 없습니다.'),
+          child: Text(AppStrings.noLearningRecord),
         ),
       );
     }
@@ -165,7 +110,8 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
         final date = entry.key;
         final records = entry.value;
         final count = records.length;
-        final formattedDate = "${date.year}년 ${date.month}월 ${date.day}일";
+        final formattedDate =
+            AppStrings.formattedDate(date.year, date.month, date.day);
 
         return Card(
           elevation: 1,
@@ -177,7 +123,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
             ),
             title: Text(formattedDate),
             trailing: Text(
-              '총 $count회 학습',
+              AppStrings.totalLearningCount(count),
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).colorScheme.primary,
@@ -193,7 +139,9 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
 
               return ListTile(
                 title: Text(title.isEmpty ? "" : title),
-                subtitle: Text(dbName.isEmpty ? "" : 'DB: $dbName'),
+                subtitle: Text(dbName.isEmpty
+                    ? ""
+                    : AppStrings.databasePrefix(dbName)),
               );
             }).toList(),
           ),
@@ -201,31 +149,4 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
       },
     );
   }
-
-  // Widget _buildStreakCard(BuildContext context, int streakCount) {
-  //   return Card(
-  //     elevation: 2,
-  //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-  //     child: Padding(
-  //       padding: const EdgeInsets.all(20.0),
-  //       child: Row(
-  //         mainAxisAlignment: MainAxisAlignment.center,
-  //         children: [
-  //           const Icon(
-  //             Icons.local_fire_department,
-  //             color: Colors.orange,
-  //             size: 32,
-  //           ),
-  //           const SizedBox(width: 16),
-  //           Text(
-  //             '현재 $streakCount일 연속 학습 중!',
-  //             style: Theme.of(
-  //               context,
-  //             ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-  //           ),
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }
 }

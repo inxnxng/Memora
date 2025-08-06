@@ -1,10 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:memora/models/proficiency_level.dart';
+import 'package:memora/repositories/ranking/ranking_repository.dart';
 import 'package:memora/repositories/user/user_repository.dart';
 
 class UserProvider with ChangeNotifier {
   final UserRepository _userRepository;
+  final RankingRepository _rankingRepository;
 
   ProficiencyLevel? _userLevel;
   String? _displayName;
@@ -13,9 +15,10 @@ class UserProvider with ChangeNotifier {
   String? _levelTimestamp;
   int _streakCount = 0;
   Map<String, int> _sessionMap = {};
-  int? _userRank; // User's rank
-  bool _isLoading = true; // Start with loading true
+  int? _userRank;
+  bool _isLoading = true;
   String? _userId;
+  User? _user;
 
   ProficiencyLevel? get userLevel => _userLevel;
   String? get displayName => _displayName;
@@ -26,43 +29,54 @@ class UserProvider with ChangeNotifier {
   Map<String, int> get sessionMap => _sessionMap;
   int? get userRank => _userRank;
   bool get isLoading => _isLoading;
-  String? get userId => _userId; // Make it nullable
+  String? get userId => _userId;
+  User? get user => _user;
 
   bool get isProfileComplete => _userLevel != null;
 
-  UserProvider({required UserRepository userRepository})
-    : _userRepository = userRepository {
+  UserProvider({
+    required UserRepository userRepository,
+    required RankingRepository rankingRepository,
+  }) : _userRepository = userRepository,
+       _rankingRepository = rankingRepository {
     _listenToAuthChanges();
   }
 
   void _listenToAuthChanges() {
     FirebaseAuth.instance.authStateChanges().listen((user) {
+      _user = user;
       if (user != null) {
         _userId = user.uid;
         _syncFirebaseAuthUser(user);
-        loadUserProfile(); // Load data for the new user
+        loadUserProfile();
       } else {
-        // User is logged out, reset state
-        _userId = null;
-        _userLevel = null;
-        _displayName = null;
-        _email = null;
-        _photoURL = null;
-        _levelTimestamp = null;
-        _streakCount = 0;
-        _sessionMap = {};
-        _userRank = null;
-        _isLoading = false;
-        Future.microtask(() => notifyListeners());
+        _resetState();
       }
     });
   }
 
-  Future<void> _syncFirebaseAuthUser(User user) async {
-    _displayName = user.displayName;
-    _email = user.email;
-    _photoURL = user.photoURL;
+  void _resetState() {
+    _userId = null;
+    _userLevel = null;
+    _displayName = null;
+    _email = null;
+    _photoURL = null;
+    _levelTimestamp = null;
+    _streakCount = 0;
+    _sessionMap = {};
+    _userRank = null;
+    _isLoading = false;
+    Future.microtask(() => notifyListeners());
+  }
 
+  Future<void> _syncFirebaseAuthUser(User user) async {
+    _displayName =
+        user.displayName ?? await _userRepository.loadUserName(user.uid);
+    _email = user.email ?? await _userRepository.loadUserEmail(user.uid);
+    _photoURL =
+        user.photoURL ?? await _userRepository.loadUserPhotoUrl(user.uid);
+
+    // Save to local and remote stores if info comes from provider
     if (user.displayName != null) {
       await _userRepository.saveUserName(user.uid, user.displayName!);
     }
@@ -72,6 +86,7 @@ class UserProvider with ChangeNotifier {
     if (user.photoURL != null) {
       await _userRepository.saveUserPhotoUrl(user.uid, user.photoURL!);
     }
+    Future.microtask(() => notifyListeners());
   }
 
   Future<void> loadUserProfile() async {
@@ -85,7 +100,6 @@ class UserProvider with ChangeNotifier {
     Future.microtask(() => notifyListeners());
 
     try {
-      // Fetch all user data in parallel, with individual error handling.
       await Future.wait([
         _userRepository
             .loadUserLevelWithTimestamp(_userId!)
@@ -99,19 +113,22 @@ class UserProvider with ChangeNotifier {
             }),
         _userRepository
             .loadUserName(_userId!)
-            .then((name) => _displayName = name)
-            .catchError((_) => _displayName = null),
-        _userRepository
-            .loadUserEmail(_userId!)
-            .then((email) => _email = email)
-            .catchError((_) => _email = null),
+            .then((name) => _displayName = name),
+        _userRepository.loadUserEmail(_userId!).then((email) => _email = email),
         _userRepository
             .loadUserPhotoUrl(_userId!)
-            .then((photoUrl) => _photoURL = photoUrl)
-            .catchError((_) => _photoURL = null),
+            .then((photoUrl) => _photoURL = photoUrl),
+        _userRepository
+            .loadStreakCount(_userId!)
+            .then((count) => _streakCount = count),
+        _userRepository
+            .loadSessionMap(_userId!)
+            .then((map) => _sessionMap = map),
+        _rankingRepository
+            .getUserRank(_userId!)
+            .then((rank) => _userRank = rank),
       ]);
     } catch (e) {
-      // This will catch any other unexpected errors during the process.
       if (kDebugMode) {
         print("An unexpected error occurred while loading user profile: $e");
       }
@@ -138,10 +155,10 @@ class UserProvider with ChangeNotifier {
     final now = DateTime.now();
     await _userRepository.recordSession(_userId!, now);
     await _userRepository.incrementStreak(_userId!, now);
-    await loadUserProfile(); // This will now also reload the rank
+    await loadUserProfile();
   }
 
   Future<List<Map<String, dynamic>>> getTopRankings({int limit = 100}) {
-    return _userRepository.getTopRankings(limit: limit);
+    return _rankingRepository.getTopRankings(limit: limit);
   }
 }

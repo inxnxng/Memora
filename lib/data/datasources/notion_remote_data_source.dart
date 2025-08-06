@@ -2,13 +2,36 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+class NotionApiException implements Exception {
+  final String message;
+  final int? statusCode;
+  NotionApiException(this.message, {this.statusCode});
+
+  @override
+  String toString() {
+    return 'NotionApiException: $message (Status code: $statusCode)';
+  }
+}
+
 class NotionRemoteDataSource {
   static const String _notionApiVersion = '2022-06-28';
-  final String apiToken;
 
-  NotionRemoteDataSource({required this.apiToken});
+  // Constructor is now empty
+  NotionRemoteDataSource();
+
+  Future<Map<String, dynamic>> _handleResponse(http.Response response) async {
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return json.decode(utf8.decode(response.bodyBytes));
+    } else {
+      throw NotionApiException(
+        'Failed to load data from Notion: ${response.body}',
+        statusCode: response.statusCode,
+      );
+    }
+  }
 
   Future<Map<String, dynamic>> getPagesFromDB(
+    String apiToken,
     String databaseId, [
     String? startCursor,
   ]) async {
@@ -30,15 +53,11 @@ class NotionRemoteDataSource {
       },
       body: jsonEncode(body),
     );
-
-    if (response.statusCode == 200) {
-      return json.decode(utf8.decode(response.bodyBytes));
-    } else {
-      throw Exception('Failed to load pages from Notion: ${response.body}');
-    }
+    return _handleResponse(response);
   }
 
-  Future<Map<String, dynamic>> getDatabaseInfo(String databaseId) async {
+  Future<Map<String, dynamic>> getDatabaseInfo(
+      String apiToken, String databaseId) async {
     final url = Uri.parse('https://api.notion.com/v1/databases/$databaseId');
     final response = await http.get(
       url,
@@ -47,15 +66,10 @@ class NotionRemoteDataSource {
         'Notion-Version': _notionApiVersion,
       },
     );
-
-    if (response.statusCode == 200) {
-      return json.decode(utf8.decode(response.bodyBytes));
-    } else {
-      throw Exception('Failed to load database info: ${response.body}');
-    }
+    return _handleResponse(response);
   }
 
-  Future<String> getPageContent(String pageId) async {
+  Future<String> getPageContent(String apiToken, String pageId) async {
     final url = Uri.parse('https://api.notion.com/v1/blocks/$pageId/children');
     final response = await http.get(
       url,
@@ -81,11 +95,15 @@ class NotionRemoteDataSource {
       }
       return contentBuffer.toString();
     } else {
-      throw Exception('Failed to load page content: ${response.body}');
+      throw NotionApiException(
+        'Failed to load page content: ${response.body}',
+        statusCode: response.statusCode,
+      );
     }
   }
 
-  Future<List<dynamic>> searchDatabases({String? query}) async {
+  Future<List<dynamic>> searchDatabases(String apiToken,
+      {String? query}) async {
     final url = Uri.parse('https://api.notion.com/v1/search');
     final response = await http.post(
       url,
@@ -99,15 +117,12 @@ class NotionRemoteDataSource {
         'filter': {'property': 'object', 'value': 'database'},
       }),
     );
-
-    if (response.statusCode == 200) {
-      return json.decode(utf8.decode(response.bodyBytes))['results'];
-    } else {
-      throw Exception('Failed to search databases: ${response.body}');
-    }
+    final data = await _handleResponse(response);
+    return data['results'];
   }
 
-  Future<List<dynamic>> getRoadmapTasksFromDB(String databaseId) async {
+  Future<List<dynamic>> getRoadmapTasksFromDB(
+      String apiToken, String databaseId) async {
     final url = Uri.parse(
       'https://api.notion.com/v1/databases/$databaseId/query',
     );
@@ -124,17 +139,12 @@ class NotionRemoteDataSource {
         ],
       }),
     );
-
-    if (response.statusCode == 200) {
-      return json.decode(utf8.decode(response.bodyBytes))['results'];
-    } else {
-      throw Exception(
-        'Failed to load roadmap tasks from Notion: ${response.body}',
-      );
-    }
+    final data = await _handleResponse(response);
+    return data['results'];
   }
 
-  Future<List<Map<String, String>>> getQuizDataFromDB(String databaseId) async {
+  Future<List<Map<String, String>>> getQuizDataFromDB(
+      String apiToken, String databaseId) async {
     final url = Uri.parse(
       'https://api.notion.com/v1/databases/$databaseId/query',
     );
@@ -173,11 +183,14 @@ class NotionRemoteDataSource {
         return {'question': question, 'answer': answer};
       }).toList();
     } else {
-      throw Exception('Failed to load quiz data from Notion: ${response.body}');
+      throw NotionApiException(
+        'Failed to load quiz data from Notion: ${response.body}',
+        statusCode: response.statusCode,
+      );
     }
   }
 
-  Future<List<dynamic>> fetchPageBlocks(String pageId) async {
+  Future<List<dynamic>> fetchPageBlocks(String apiToken, String pageId) async {
     final url = Uri.parse(
       'https://api.notion.com/v1/blocks/$pageId/children?page_size=100',
     );
@@ -188,11 +201,7 @@ class NotionRemoteDataSource {
         'Notion-Version': _notionApiVersion,
       },
     );
-
-    if (response.statusCode == 200) {
-      return json.decode(utf8.decode(response.bodyBytes))['results'];
-    } else {
-      throw Exception('Failed to fetch page blocks: ${response.body}');
-    }
+    final data = await _handleResponse(response);
+    return data['results'];
   }
 }

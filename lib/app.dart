@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:memora/providers/user_provider.dart';
 import 'package:memora/router/app_router.dart';
@@ -6,18 +7,36 @@ import 'package:memora/router/auth_notifier.dart';
 import 'package:memora/router/router_refresh_notifier.dart';
 import 'package:provider/provider.dart';
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final authNotifier = context.watch<AuthNotifier>();
-    final userProvider = context.watch<UserProvider>();
-    final refreshNotifier = RouterRefreshNotifier(authNotifier, userProvider);
-    final router = createRouter(refreshNotifier, authNotifier, userProvider);
+  State<MyApp> createState() => _MyAppState();
+}
 
+class _MyAppState extends State<MyApp> {
+  late final GoRouter _router;
+  late final RouterRefreshNotifier _refreshNotifier;
+
+  @override
+  void initState() {
+    super.initState();
+    final authNotifier = context.read<AuthNotifier>();
+    final userProvider = context.read<UserProvider>();
+    _refreshNotifier = RouterRefreshNotifier(authNotifier, userProvider);
+    _router = createRouter(_refreshNotifier, authNotifier, userProvider);
+  }
+
+  @override
+  void dispose() {
+    _refreshNotifier.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return MaterialApp.router(
-      routerConfig: router,
+      routerConfig: _router,
       title: 'Memora',
       theme: ThemeData(
         primarySwatch: Colors.blue,
