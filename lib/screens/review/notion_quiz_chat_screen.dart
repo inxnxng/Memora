@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:memora/models/chat_message.dart';
 import 'package:memora/providers/task_provider.dart';
+import 'package:memora/repositories/chat/chat_repository.dart';
 import 'package:memora/services/chat_service.dart';
 import 'package:memora/services/openai_service.dart';
 import 'package:memora/widgets/chat_input_field.dart';
 import 'package:memora/widgets/chat_messages_list.dart';
 import 'package:memora/widgets/common_app_bar.dart';
+import 'package:memora/providers/user_provider.dart';
 import 'package:provider/provider.dart';
 
 class NotionQuizChatScreen extends StatefulWidget {
@@ -30,43 +32,50 @@ class NotionQuizChatScreen extends StatefulWidget {
 class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
   late final OpenAIService _openAIService;
   late final ChatService _chatService;
+  late final UserProvider _userProvider;
   final TextEditingController _textController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   bool _isLoading = false;
-  StreamSubscription<String>? _streamSubscription;
+  StreamSubscription? _streamSubscription;
+  StreamSubscription? _chatHistorySubscription;
 
   // AI의 실시간 응답을 임시로 저장할 변수
   ChatMessage? _streamingAiMessage;
 
-  int _questionCount = 0;
-  final List<bool?> _quizResults = [null, null, null];
-
-  // chatId는 Notion 페이지 제목을 기반으로 생성 (고유 식별자로 사용)
   late final String _chatId;
 
   @override
   void initState() {
     super.initState();
-    _chatId = widget.pageTitle;
+    // Use the robust chatId generation
+    _chatId = ChatRepository.generateChatId([widget.pageTitle]);
     _openAIService = Provider.of<OpenAIService>(context, listen: false);
     _chatService = Provider.of<ChatService>(context, listen: false);
+    _userProvider = Provider.of<UserProvider>(context, listen: false);
     _startQuizSessionIfNeeded();
   }
 
   @override
   void dispose() {
     _streamSubscription?.cancel();
+    _chatHistorySubscription?.cancel();
     _textController.dispose();
     _focusNode.dispose();
+    _userProvider.recordLearningSession();
     super.dispose();
   }
 
   void _startQuizSessionIfNeeded() {
-    // 기존 채팅 기록이 있는지 확인 후, 없으면 퀴즈 시작
-    _chatService.getMessages(_chatId).first.then((messages) {
-      if (messages.isEmpty) {
+    // Listen to the stream to check for history.
+    // This is more robust than using .first.
+    _chatHistorySubscription =
+        _chatService.getMessages(_chatId).listen((messages) {
+      // If messages are empty and we are not already loading a quiz, start one.
+      if (messages.isEmpty && !_isLoading) {
         _startQuizSession();
       }
+      // Once we get the first batch of messages, we don't need this subscription anymore.
+      _chatHistorySubscription?.cancel();
     });
   }
 
@@ -87,15 +96,20 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
 
     _streamSubscription?.cancel();
     _textController.clear();
-    _focusNode.requestFocus();
 
     final userMessage = ChatMessage(
       content: text,
       sender: MessageSender.user,
       timestamp: DateTime.now(),
     );
-    // 사용자 메시지를 먼저 Firestore에 저장
-    await _chatService.sendMessage(_chatId, userMessage);
+    // User message is sent to Firebase, the stream will update the UI and local cache
+    await _chatService.sendMessage(
+      _chatId,
+      userMessage,
+      pageTitle: widget.pageTitle,
+      pageContent: widget.pageContent,
+      databaseName: widget.databaseName,
+    );
 
     _handleAiResponse(text);
   }
@@ -120,33 +134,32 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
           fullResponse += contentChunk;
           setState(() {
             // 스트리밍 중인 메시지 내용 업데이트
-            _streamingAiMessage!.content = fullResponse;
+            if (_streamingAiMessage != null) {
+              _streamingAiMessage!.content = fullResponse;
+            }
           });
         },
         onDone: () async {
-          if (!isInitialMessage && _questionCount < 3) {
-            bool isCorrect = fullResponse.toLowerCase().startsWith('correct');
-            if (mounted) {
-              setState(() {
-                _quizResults[_questionCount] = isCorrect;
-                _questionCount++;
-              });
-            }
+          final finalResponse = fullResponse.trim();
+          if (finalResponse.isNotEmpty) {
+            final aiMessage = ChatMessage(
+              content: finalResponse,
+              sender: MessageSender.ai,
+              timestamp: DateTime.now(),
+            );
+            await _chatService.sendMessage(_chatId, aiMessage);
           }
-          // 최종 AI 메시지를 Firestore에 저장
-          final aiMessage = ChatMessage(
-            content: fullResponse,
-            sender: MessageSender.ai,
-            timestamp: DateTime.now(),
-          );
-          await _chatService.sendMessage(_chatId, aiMessage);
 
           if (mounted) {
             setState(() {
               _isLoading = false;
               _streamingAiMessage = null; // 스트리밍 완료 후 임시 메시지 제거
             });
-            _focusNode.requestFocus();
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                _focusNode.requestFocus();
+              }
+            });
           }
         },
         onError: (error) async {
@@ -160,6 +173,11 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
             setState(() {
               _isLoading = false;
               _streamingAiMessage = null;
+            });
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                _focusNode.requestFocus();
+              }
             });
           }
         },
@@ -212,27 +230,6 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
       appBar: CommonAppBar(
         title: '복습: ${widget.pageTitle}',
         actions: [
-          Row(
-            children: List.generate(3, (index) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2.0),
-                child: Icon(
-                  _quizResults[index] == true
-                      ? Icons.circle
-                      : _quizResults[index] == false
-                      ? Icons.close
-                      : Icons.circle_outlined,
-                  color: _quizResults[index] == true
-                      ? Colors.green
-                      : _quizResults[index] == false
-                      ? Colors.red
-                      : Colors.grey,
-                  size: 16,
-                ),
-              );
-            }),
-          ),
-          const SizedBox(width: 10),
           IconButton(
             icon: const Icon(Icons.check_circle_outline),
             onPressed: _completeStudy,
@@ -248,14 +245,16 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting &&
                     !snapshot.hasData) {
+                  // Now, this should only show briefly as local data loads fast.
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
                   return Center(child: Text('Error: ${snapshot.error}'));
                 }
                 final messages = snapshot.data ?? [];
-                final allMessages = [...messages];
+                final allMessages = messages.reversed.toList();
                 if (_streamingAiMessage != null) {
+                  // Insert streaming message at the beginning (top of the reversed list)
                   allMessages.insert(0, _streamingAiMessage!);
                 }
 

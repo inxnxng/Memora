@@ -1,12 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:memora/app.dart';
+import 'package:memora/data/datasources/gemini_remote_data_source.dart';
 import 'package:memora/data/datasources/notion_remote_data_source.dart';
 import 'package:memora/data/datasources/openai_remote_data_source.dart';
 import 'package:memora/providers/notion_provider.dart';
 import 'package:memora/providers/task_provider.dart';
 import 'package:memora/providers/user_provider.dart';
 import 'package:memora/repositories/chat/chat_repository.dart';
+import 'package:memora/repositories/gemini/gemini_auth_repository.dart';
+import 'package:memora/repositories/gemini/gemini_repository.dart';
 import 'package:memora/repositories/notion/notion_auth_repository.dart';
 import 'package:memora/repositories/notion/notion_database_repository.dart';
 import 'package:memora/repositories/notion/notion_repository.dart';
@@ -19,6 +22,7 @@ import 'package:memora/router/auth_notifier.dart';
 import 'package:memora/services/auth_service.dart';
 import 'package:memora/services/chat_service.dart';
 import 'package:memora/services/firebase_service.dart';
+import 'package:memora/services/gemini_service.dart';
 import 'package:memora/services/local_storage_service.dart';
 import 'package:memora/services/notification_service.dart';
 import 'package:memora/services/notion_service.dart';
@@ -35,60 +39,25 @@ class ProviderContainer extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        // Foundational Services & Repositories
-        Provider<NotificationService>(
-          create: (_) => NotificationService()..initialize(),
-        ),
+        // Foundational Services
         Provider<LocalStorageService>(create: (_) => LocalStorageService()),
-        Provider<AuthService>(
-          create: (context) => AuthService(
-            context.read<UserRepository>(),
-            userRepository: context.read<UserRepository>(),
-          ),
+        Provider<FirebaseService>(create: (_) => FirebaseService()),
+        Provider<NotificationService>(
+          create: (_) => NotificationService(),
         ),
-        Provider<SettingsService>(
-          create: (context) =>
-              SettingsService(context.read<LocalStorageService>()),
-        ),
-        Provider<NotionAuthRepository>(
-          create: (context) =>
-              NotionAuthRepository(context.read<LocalStorageService>()),
-        ),
-        Provider<NotionDatabaseRepository>(
-          create: (_) => NotionDatabaseRepository(),
-        ),
+
+        // Data Sources
         Provider<NotionRemoteDataSource>(
           create: (_) => NotionRemoteDataSource(),
         ),
-        Provider<NotionRepository>(
-          create: (context) => NotionRepository(
-            notionAuthRepository: context.read<NotionAuthRepository>(),
-            remoteDataSource: context.read<NotionRemoteDataSource>(),
-          ),
-        ),
-        Provider<OpenAIAuthRepository>(
-          create: (context) =>
-              OpenAIAuthRepository(context.read<LocalStorageService>()),
-        ),
         Provider<OpenAIRemoteDataSource>(
-          create: (context) => OpenAIRemoteDataSource(),
+          create: (_) => OpenAIRemoteDataSource(),
         ),
-        Provider<OpenAIRepository>(
-          create: (context) => OpenAIRepository(
-            remoteDataSource: context.read<OpenAIRemoteDataSource>(),
-            authRepository: context.read<OpenAIAuthRepository>(),
-          ),
+        Provider<GeminiRemoteDataSource>(
+          create: (_) => GeminiRemoteDataSource(),
         ),
-        Provider<FirebaseService>(create: (_) => FirebaseService()),
-        Provider<TaskRepository>(
-          create: (context) => TaskRepository(
-            context.read<NotionRepository>(),
-            context.read<LocalStorageService>(),
-          ),
-        ),
-        Provider<ChatRepository>(
-          create: (context) => ChatRepository(context.read<FirebaseService>()),
-        ),
+
+        // Repositories
         Provider<UserRepository>(
           create: (context) => UserRepository(
             context.read<LocalStorageService>(),
@@ -98,8 +67,61 @@ class ProviderContainer extends StatelessWidget {
         Provider<RankingRepository>(
           create: (context) => RankingRepository(FirebaseFirestore.instance),
         ),
+        Provider<NotionAuthRepository>(
+          create: (context) =>
+              NotionAuthRepository(context.read<LocalStorageService>()),
+        ),
+        Provider<OpenAIAuthRepository>(
+          create: (context) =>
+              OpenAIAuthRepository(context.read<LocalStorageService>()),
+        ),
+        Provider<GeminiAuthRepository>(
+          create: (context) =>
+              GeminiAuthRepository(context.read<LocalStorageService>()),
+        ),
+        Provider<NotionDatabaseRepository>(
+          create: (_) => NotionDatabaseRepository(),
+        ),
+        Provider<NotionRepository>(
+          create: (context) => NotionRepository(
+            notionAuthRepository: context.read<NotionAuthRepository>(),
+            remoteDataSource: context.read<NotionRemoteDataSource>(),
+          ),
+        ),
+        Provider<OpenAIRepository>(
+          create: (context) => OpenAIRepository(
+            remoteDataSource: context.read<OpenAIRemoteDataSource>(),
+            authRepository: context.read<OpenAIAuthRepository>(),
+          ),
+        ),
+        Provider<GeminiRepository>(
+          create: (context) => GeminiRepository(
+            remoteDataSource: context.read<GeminiRemoteDataSource>(),
+            authRepository: context.read<GeminiAuthRepository>(),
+          ),
+        ),
+        Provider<TaskRepository>(
+          create: (context) => TaskRepository(
+            context.read<NotionRepository>(),
+            context.read<LocalStorageService>(),
+          ),
+        ),
+        Provider<ChatRepository>(
+          create: (context) => ChatRepository(
+            context.read<FirebaseService>(),
+            context.read<LocalStorageService>(),
+          ),
+        ),
 
         // Business Logic Services
+        Provider<AuthService>(
+          create: (context) =>
+              AuthService(userRepository: context.read<UserRepository>()),
+        ),
+        Provider<SettingsService>(
+          create: (context) =>
+              SettingsService(context.read<LocalStorageService>()),
+        ),
         Provider<NotionToMarkdownConverter>(
           create: (_) => NotionToMarkdownConverter(),
         ),
@@ -116,6 +138,12 @@ class ProviderContainer extends StatelessWidget {
           create: (context) => OpenAIService(
             openAIAuthRepository: context.read<OpenAIAuthRepository>(),
             openAIRepository: context.read<OpenAIRepository>(),
+          ),
+        ),
+        Provider<GeminiService>(
+          create: (context) => GeminiService(
+            geminiAuthRepository: context.read<GeminiAuthRepository>(),
+            geminiRepository: context.read<GeminiRepository>(),
           ),
         ),
         Provider<ChatService>(
@@ -137,7 +165,8 @@ class ProviderContainer extends StatelessWidget {
           create: (context) => NotionProvider(
             notionService: context.read<NotionService>(),
             openAIService: context.read<OpenAIService>(),
-          )..initialize(),
+            geminiService: context.read<GeminiService>(),
+          ),
         ),
         ChangeNotifierProxyProvider<NotionProvider, TaskProvider>(
           create: (context) => TaskProvider(

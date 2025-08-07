@@ -6,6 +6,8 @@ class AppUser {
   final String? email;
   final String? photoURL;
   final double progress;
+  final String? geminiApiKey;
+  final DateTime? geminiApiKeySetAt;
 
   AppUser({
     required this.uid,
@@ -13,6 +15,8 @@ class AppUser {
     this.email,
     this.photoURL,
     required this.progress,
+    this.geminiApiKey,
+    this.geminiApiKeySetAt,
   });
 
   factory AppUser.fromMap(String uid, Map<String, dynamic> data) {
@@ -22,6 +26,8 @@ class AppUser {
       email: data['email'],
       photoURL: data['photoURL'],
       progress: (data['progress'] ?? 0.0).toDouble(),
+      geminiApiKey: data['geminiApiKey'],
+      geminiApiKeySetAt: data['geminiApiKeySetAt']?.toDate(),
     );
   }
 
@@ -31,6 +37,8 @@ class AppUser {
       'email': email,
       'photoURL': photoURL,
       'progress': progress,
+      'geminiApiKey': geminiApiKey,
+      'geminiApiKeySetAt': geminiApiKeySetAt,
     };
   }
 
@@ -39,6 +47,8 @@ class AppUser {
     String? email,
     String? photoURL,
     double? progress,
+    String? geminiApiKey,
+    DateTime? geminiApiKeySetAt,
   }) {
     return AppUser(
       uid: uid,
@@ -46,6 +56,8 @@ class AppUser {
       email: email ?? this.email,
       photoURL: photoURL ?? this.photoURL,
       progress: progress ?? this.progress,
+      geminiApiKey: geminiApiKey ?? this.geminiApiKey,
+      geminiApiKeySetAt: geminiApiKeySetAt ?? this.geminiApiKeySetAt,
     );
   }
 }

@@ -34,8 +34,11 @@ class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
     } else if (!success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(notionProvider.notionConnectionError ??
-                AppStrings.pageContentLoadFailed)),
+          content: Text(
+            notionProvider.notionConnectionError ??
+                AppStrings.pageContentLoadFailed,
+          ),
+        ),
       );
     }
   }
@@ -58,7 +61,16 @@ class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
     final notionProvider = context.watch<NotionProvider>();
 
     return Scaffold(
-      appBar: const CommonAppBar(title: AppStrings.tilReviewSelectionTitle),
+      appBar: CommonAppBar(
+        title: AppStrings.tilReviewSelectionTitle,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            onPressed: () => context.push('${AppRoutes.review}/${AppRoutes.chatHistory}'),
+            tooltip: '채팅 기록',
+          ),
+        ],
+      ),
       body: Stack(
         children: [
           if (notionProvider.arePagesLoading && notionProvider.pages.isEmpty)
@@ -80,7 +92,9 @@ class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
                 final page = notionProvider.pages[index];
                 final pageId = page['id'];
                 final properties = page['properties'];
-                final isSelected = notionProvider.selectedPageIds.contains(pageId);
+                final isSelected = notionProvider.selectedPageIds.contains(
+                  pageId,
+                );
 
                 final titleList = properties?['Name']?['title'] as List?;
                 final title = titleList?.isNotEmpty == true
@@ -107,8 +121,7 @@ class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
                       top: 4,
                       bottom: 4,
                     ),
-                    onTap: () =>
-                        _navigateToPageViewer(context, pageId, title),
+                    onTap: () => _navigateToPageViewer(context, pageId, title),
                     selected: isSelected,
                     selectedTileColor: theme.primaryColor.withAlpha(20),
                     leading: Checkbox(
@@ -154,7 +167,8 @@ class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
             ),
         ],
       ),
-      floatingActionButton: notionProvider.selectedPageIds.isNotEmpty &&
+      floatingActionButton:
+          notionProvider.selectedPageIds.isNotEmpty &&
               !notionProvider.isFetchingCombinedContent
           ? FloatingActionButton.extended(
               onPressed: _startCombinedTraining,

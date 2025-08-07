@@ -13,10 +13,12 @@ import 'package:memora/screens/onboarding/onboarding_screen.dart';
 import 'package:memora/screens/profile/change_level_screen.dart';
 import 'package:memora/screens/profile/profile_screen.dart';
 import 'package:memora/screens/ranking/ranking_screen.dart';
+import 'package:memora/screens/review/chat_history_screen.dart';
 import 'package:memora/screens/review/notion_page_viewer_screen.dart';
 import 'package:memora/screens/review/notion_quiz_chat_screen.dart';
 import 'package:memora/screens/review/quiz_screen.dart';
 import 'package:memora/screens/review/til_review_selection_screen.dart';
+import 'package:memora/screens/settings/gemini_settings_screen.dart';
 import 'package:memora/screens/settings/heatmap_color_settings_screen.dart';
 import 'package:memora/screens/settings/notification_settings_screen.dart';
 import 'package:memora/screens/settings/notion_settings_screen.dart';
@@ -32,6 +34,7 @@ class AppRoutes {
   static const String notionPage = 'notion-page/:pageId';
   static const String quiz = 'quiz';
   static const String quizChat = 'chat';
+  static const String chatHistory = 'history';
   static const String ranking = '/ranking';
   static const String home = '/home';
   static const String heatmap = '/heatmap';
@@ -41,6 +44,7 @@ class AppRoutes {
   static const String heatmapColorSettings = 'heatmap-color';
   static const String notionSettings = 'notion';
   static const String openaiSettings = 'openai';
+  static const String geminiSettings = 'gemini';
   static const String notificationSettings = 'notifications';
 
   static GoRoute get splashRoute =>
@@ -71,6 +75,10 @@ class AppRoutes {
         builder: (context, state) => const OpenaiSettingsScreen(),
       ),
       GoRoute(
+        path: geminiSettings,
+        builder: (context, state) => const GeminiSettingsScreen(),
+      ),
+      GoRoute(
         path: notificationSettings,
         builder: (context, state) => const NotificationSettingsScreen(),
       ),
@@ -85,6 +93,10 @@ class AppShellRoutes {
         path: AppRoutes.review,
         builder: (context, state) => const TilReviewSelectionScreen(),
         routes: [
+          GoRoute(
+            path: AppRoutes.chatHistory,
+            builder: (context, state) => const ChatHistoryScreen(),
+          ),
           GoRoute(
             path: AppRoutes.notionPage,
             builder: (context, state) {

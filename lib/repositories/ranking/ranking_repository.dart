@@ -27,21 +27,21 @@ class RankingRepository {
     }
   }
 
-  /// Fetches the top rankings.
-  Future<List<Map<String, dynamic>>> getTopRankings({int limit = 100}) async {
+  Stream<List<Map<String, dynamic>>> getTopRankings({int limit = 100}) {
     try {
-      final querySnapshot = await _firestore
+      return _firestore
           .collection('users')
           .orderBy('streakCount', descending: true)
           .limit(limit)
-          .get();
-
-      return querySnapshot.docs.map((doc) {
-        return {'id': doc.id, ...doc.data()};
-      }).toList();
+          .snapshots()
+          .map((snapshot) {
+        return snapshot.docs.map((doc) {
+          return {'id': doc.id, ...doc.data()};
+        }).toList();
+      });
     } catch (e) {
       // It's better to log the error for debugging purposes.'Error getting top rankings: $e');
-      return [];
+      return Stream.value([]);
     }
   }
 }

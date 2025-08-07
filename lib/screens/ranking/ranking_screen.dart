@@ -12,13 +12,13 @@ class RankingScreen extends StatefulWidget {
 }
 
 class _RankingScreenState extends State<RankingScreen> {
-  late Future<List<Map<String, dynamic>>> _rankingFuture;
+  late Stream<List<Map<String, dynamic>>> _rankingStream;
 
   @override
   void initState() {
     super.initState();
-    // 위젯이 빌드될 때 한 번만 랭킹 데이터를 가져옵니다.
-    _rankingFuture = Provider.of<UserProvider>(
+    // 위젯이 빌드될 때 한 번만 랭킹 스트림을 설정합니다.
+    _rankingStream = Provider.of<UserProvider>(
       context,
       listen: false,
     ).getTopRankings();
@@ -46,8 +46,8 @@ class _RankingScreenState extends State<RankingScreen> {
 
     return Scaffold(
       appBar: const CommonAppBar(title: '전체 랭킹'),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _rankingFuture,
+      body: StreamBuilder<List<Map<String, dynamic>>>(
+        stream: _rankingStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());

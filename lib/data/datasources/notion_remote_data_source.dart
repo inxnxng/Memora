@@ -57,7 +57,9 @@ class NotionRemoteDataSource {
   }
 
   Future<Map<String, dynamic>> getDatabaseInfo(
-      String apiToken, String databaseId) async {
+    String apiToken,
+    String databaseId,
+  ) async {
     final url = Uri.parse('https://api.notion.com/v1/databases/$databaseId');
     final response = await http.get(
       url,
@@ -102,8 +104,10 @@ class NotionRemoteDataSource {
     }
   }
 
-  Future<List<dynamic>> searchDatabases(String apiToken,
-      {String? query}) async {
+  Future<List<dynamic>> searchDatabases(
+    String apiToken, {
+    String? query,
+  }) async {
     final url = Uri.parse('https://api.notion.com/v1/search');
     final response = await http.post(
       url,
@@ -122,7 +126,9 @@ class NotionRemoteDataSource {
   }
 
   Future<List<dynamic>> getRoadmapTasksFromDB(
-      String apiToken, String databaseId) async {
+    String apiToken,
+    String databaseId,
+  ) async {
     final url = Uri.parse(
       'https://api.notion.com/v1/databases/$databaseId/query',
     );
@@ -144,7 +150,9 @@ class NotionRemoteDataSource {
   }
 
   Future<List<Map<String, String>>> getQuizDataFromDB(
-      String apiToken, String databaseId) async {
+    String apiToken,
+    String databaseId,
+  ) async {
     final url = Uri.parse(
       'https://api.notion.com/v1/databases/$databaseId/query',
     );

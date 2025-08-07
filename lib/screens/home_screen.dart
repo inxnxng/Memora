@@ -52,16 +52,15 @@ class _HomeScreenState extends State<HomeScreen> {
             if (photoUrl != null && photoUrl.isNotEmpty) {
               backgroundImage = NetworkImage(photoUrl);
             } else {
-              backgroundImage =
-                  AssetImage(_getProfileImage(userProvider.userLevel));
+              backgroundImage = AssetImage(
+                _getProfileImage(userProvider.userLevel),
+              );
             }
             return GestureDetector(
               onTap: () => context.push(AppRoutes.profile),
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: CircleAvatar(
-                  backgroundImage: backgroundImage,
-                ),
+                child: CircleAvatar(backgroundImage: backgroundImage),
               ),
             );
           },
@@ -95,8 +94,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHeatmapButton(BuildContext context) {
     final taskProvider = context.watch<TaskProvider>();
-    final heatmapDatasets = taskProvider.heatmapData
-        .map((date, records) => MapEntry(date, records.length));
+    final heatmapDatasets = taskProvider.heatmapData.map(
+      (date, records) => MapEntry(date, records.length),
+    );
     final endDate = DateTime.now();
     final startDate = endDate.subtract(const Duration(days: 10 * 7));
 
@@ -125,6 +125,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 startDate: startDate,
                 endDate: endDate,
                 size: 15,
+                fontSize: 0,
                 colorMode: ColorMode.opacity,
                 showText: false,
                 scrollable: true,
@@ -161,7 +162,8 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             notionProvider.notionConnectionError ??
                 (notionProvider.isConnected
-                    ? (notionProvider.databaseTitle ?? AppStrings.notionConnected)
+                    ? (notionProvider.databaseTitle ??
+                          AppStrings.notionConnected)
                     : AppStrings.notionConnectionNeeded),
             style: const TextStyle(fontSize: 14, color: Colors.grey),
           ),

@@ -143,10 +143,7 @@ class OpenAIRemoteDataSource {
       body: jsonEncode({
         'model': OpenAIConstants.gpt35Turbo,
         'messages': [
-          {
-            'role': 'system',
-            'content': OpenAIConstants.quizCreatorPrompt,
-          },
+          {'role': 'system', 'content': OpenAIConstants.quizCreatorPrompt},
           {
             'role': 'user',
             'content':
@@ -163,7 +160,8 @@ class OpenAIRemoteDataSource {
         return json.decode(content);
       } catch (e) {
         throw OpenApiException(
-            'Failed to parse quiz JSON from OpenAI response: $content');
+          'Failed to parse quiz JSON from OpenAI response: $content',
+        );
       }
     } else {
       throw OpenApiException(

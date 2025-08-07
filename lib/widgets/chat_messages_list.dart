@@ -11,16 +11,14 @@ class ChatMessagesList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (messages.isEmpty) {
-      return const Center(
-        child: WavingDots(),
-      );
+      return const Center(child: WavingDots());
     }
     return ListView.builder(
       padding: const EdgeInsets.all(8.0),
       reverse: true,
       itemCount: messages.length,
       itemBuilder: (context, index) {
-        final message = messages[messages.length - 1 - index];
+        final message = messages[index];
         return GestureDetector(
           onLongPress: () {
             Clipboard.setData(ClipboardData(text: message.content));

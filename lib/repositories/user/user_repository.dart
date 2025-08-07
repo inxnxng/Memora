@@ -9,7 +9,11 @@ class UserRepository {
   UserRepository(this._localStorageService, this._firestore);
 
   Future<void> createUser(
-      String userId, String? displayName, String? email, String? photoUrl) async {
+    String userId,
+    String? displayName,
+    String? email,
+    String? photoUrl,
+  ) async {
     final userRef = _firestore.collection('users').doc(userId);
     final doc = await userRef.get();
 
@@ -24,9 +28,16 @@ class UserRepository {
         'createdAt': FieldValue.serverTimestamp(),
       });
       // Also save to local storage
-      await _localStorageService.saveUserName(userId, displayName ?? 'Anonymous User');
-      if (email != null) await _localStorageService.saveUserEmail(userId, email);
-      if (photoUrl != null) await _localStorageService.saveUserPhotoUrl(userId, photoUrl);
+      await _localStorageService.saveUserName(
+        userId,
+        displayName ?? 'Anonymous User',
+      );
+      if (email != null) {
+        await _localStorageService.saveUserEmail(userId, email);
+      }
+      if (photoUrl != null) {
+        await _localStorageService.saveUserPhotoUrl(userId, photoUrl);
+      }
     }
   }
 
@@ -94,4 +105,23 @@ class UserRepository {
 
   Future<Map<String, int>> loadSessionMap(String userId) =>
       _localStorageService.loadSessionMap(userId);
+
+  Future<void> updateGeminiApiKey(String userId, String apiKey) async {
+    await _firestore.collection('users').doc(userId).set({
+      'geminiApiKey': apiKey,
+      'geminiApiKeySetAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  Future<void> ensureStreakCountExists(String userId) async {
+    final userRef = _firestore.collection('users').doc(userId);
+    final doc = await userRef.get();
+
+    if (doc.exists) {
+      final data = doc.data();
+      if (data != null && !data.containsKey('streakCount')) {
+        await userRef.update({'streakCount': 0});
+      }
+    }
+  }
 }

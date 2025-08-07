@@ -20,7 +20,7 @@ class NotificationSettingsScreenState
   @override
   void initState() {
     super.initState();
-    if (PlatformUtils.isAndroid) {
+    if (!PlatformUtils.isApple) {
       _loadSettings();
     }
   }
@@ -57,7 +57,7 @@ class NotificationSettingsScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const CommonAppBar(title: '알림 설정'),
-      body: PlatformUtils.isAndroid
+      body: !PlatformUtils.isApple
           ? ListView(
               children: [
                 SwitchListTile(

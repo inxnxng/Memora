@@ -52,14 +52,13 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
   }
 
   Widget _buildHeatmapCard(TaskProvider taskProvider) {
-    final heatmapDatasets = taskProvider.heatmapData
-        .map((date, records) => MapEntry(date, records.length));
+    final heatmapDatasets = taskProvider.heatmapData.map(
+      (date, records) => MapEntry(date, records.length),
+    );
 
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: LayoutBuilder(
@@ -67,7 +66,9 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
             if (taskProvider.heatmapStartDate == null ||
                 taskProvider.heatmapEndDate == null) {
               return const SizedBox(
-                  height: 150, child: Center(child: CircularProgressIndicator()));
+                height: 150,
+                child: Center(child: CircularProgressIndicator()),
+              );
             }
             final double width = constraints.maxWidth;
             final double tileSize = width / 20;
@@ -110,8 +111,11 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
         final date = entry.key;
         final records = entry.value;
         final count = records.length;
-        final formattedDate =
-            AppStrings.formattedDate(date.year, date.month, date.day);
+        final formattedDate = AppStrings.formattedDate(
+          date.year,
+          date.month,
+          date.day,
+        );
 
         return Card(
           elevation: 1,
@@ -139,9 +143,9 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
 
               return ListTile(
                 title: Text(title.isEmpty ? "" : title),
-                subtitle: Text(dbName.isEmpty
-                    ? ""
-                    : AppStrings.databasePrefix(dbName)),
+                subtitle: Text(
+                  dbName.isEmpty ? "" : AppStrings.databasePrefix(dbName),
+                ),
               );
             }).toList(),
           ),

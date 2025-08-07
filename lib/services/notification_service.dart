@@ -1,11 +1,10 @@
-import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:memora/utils/platform_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationService {
@@ -16,14 +15,14 @@ class NotificationService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   Future<void> initialize() async {
-    // FCM token logic for supported platforms (Android, Web)
-    if (kIsWeb || Platform.isAndroid) {
+    if (!PlatformUtils.isApple) {
       await _firebaseMessaging.requestPermission();
       String? fcmToken;
       try {
         fcmToken = await _firebaseMessaging.getToken(
-            vapidKey:
-                'BAKDXCQfXzOOKQgMEnCs9e5RQjVmB1YP1FL7a0wG3ghaQXacQFQt_m6MuukLSW7VB3c8Rr8mEbgMjNz7TncsSYU');
+          vapidKey:
+              'BAKDXCQfXzOOKQgMEnCs9e5RQjVmB1YP1FL7a0wG3ghaQXacQFQt_m6MuukLSW7VB3c8Rr8mEbgMjNz7TncsSYU',
+        );
       } on FirebaseException catch (e) {
         if (kDebugMode) {
           print('Failed to get FCM token: ${e.code}');
@@ -39,7 +38,7 @@ class NotificationService {
     }
 
     // Local notifications for foreground messages (Android-only)
-    if (Platform.isAndroid) {
+    if (PlatformUtils.isAndroid) {
       const AndroidInitializationSettings initializationSettingsAndroid =
           AndroidInitializationSettings('@mipmap/ic_launcher');
       const InitializationSettings initializationSettings =
@@ -104,4 +103,3 @@ class NotificationService {
     return {'isEnabled': isEnabled, 'hour': hour, 'minute': minute};
   }
 }
-

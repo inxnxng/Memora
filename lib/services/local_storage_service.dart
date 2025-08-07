@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:memora/constants/storage_keys.dart';
+import 'package:memora/models/chat_message.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LocalStorageService {
@@ -34,53 +35,51 @@ class LocalStorageService {
     return prefs.getString('${StorageKeys.userPhotoUrlKey}$userId');
   }
 
+  /// Saves a list of ChatMessage objects to local storage.
   Future<void> saveChatHistory(
     String taskId,
-    List<Map<String, dynamic>> history,
+    List<ChatMessage> messages,
   ) async {
     final prefs = await SharedPreferences.getInstance();
-    final List<String> encodedHistory = history
-        .map((msg) => '${msg['role']}|${msg['content']}|${msg['timestamp']}')
-        .toList();
-    await prefs.setStringList(
-      '${StorageKeys.chatHistoryKey}$taskId',
-      encodedHistory,
-    );
+    final key = '${StorageKeys.chatHistoryKey}$taskId';
+    final List<String> encodedHistory =
+        messages.map((msg) => json.encode(msg.toLocalMap())).toList();
+    await prefs.setStringList(key, encodedHistory);
   }
 
-  Future<List<Map<String, dynamic>>> loadChatHistory(String taskId) async {
+  /// Loads a list of ChatMessage objects from local storage.
+  Future<List<ChatMessage>> loadChatHistory(String taskId) async {
     final prefs = await SharedPreferences.getInstance();
-    final String key = '${StorageKeys.chatHistoryKey}$taskId';
+    final key = '${StorageKeys.chatHistoryKey}$taskId';
 
-    // 1. Try to load as a single String (old format)
-    final String? encodedHistoryString = prefs.getString(key);
-    if (encodedHistoryString != null && encodedHistoryString.isNotEmpty) {
-      final oldHistory = encodedHistoryString.split('\n').map((line) {
-        final parts = line.split('|');
-        return {
-          'role': parts[0],
-          'content': parts.sublist(1).join('|'),
-          'timestamp': DateTime.now()
-              .toIso8601String(), // Assign current timestamp for old data
-        };
-      }).toList();
-      // Migrate the data to the new List<String> format
-      await saveChatHistory(taskId, oldHistory);
-      await prefs.remove(key); // Remove the old String entry
-      return oldHistory;
-    }
-
-    // 2. If not found as a String, try to load as a List<String> (new format)
     final List<String>? encodedHistoryList = prefs.getStringList(key);
     if (encodedHistoryList != null && encodedHistoryList.isNotEmpty) {
-      return encodedHistoryList.map((line) {
-        final parts = line.split('|');
-        return {'role': parts[0], 'content': parts[1], 'timestamp': parts[2]};
-      }).toList();
+      try {
+        return encodedHistoryList
+            .map((line) =>
+                ChatMessage.fromLocalMap(json.decode(line)))
+            .toList();
+      } catch (e) {
+        // If parsing fails, return an empty list, assuming data is corrupt.
+        return [];
+      }
     }
-
     return [];
-  } // For simplicity, storing last result as a string. Can be expanded to JSON.
+  }
+
+  /// Returns all keys corresponding to chat histories.
+  Future<List<String>> getAllChatHistoryKeys() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs
+        .getKeys()
+        .where((key) => key.startsWith(StorageKeys.chatHistoryKey))
+        .toList();
+  }
+
+  /// Extracts the original task/chat ID from a storage key.
+  String getOriginalKey(String storageKey) {
+    return storageKey.replaceFirst(StorageKeys.chatHistoryKey, '');
+  }
 
   Future<void> saveLastTrainingResult(String result) async {
     final prefs = await SharedPreferences.getInstance();
@@ -184,7 +183,9 @@ class LocalStorageService {
 
     if (lastDateString != null) {
       final lastDate = DateTime.parse(lastDateString);
-      final difference = date.difference(lastDate).inDays;
+      final today = DateTime(date.year, date.month, date.day);
+      final lastStudyDay = DateTime(lastDate.year, lastDate.month, lastDate.day);
+      final difference = today.difference(lastStudyDay).inDays;
 
       if (difference == 1) {
         currentStreak++;

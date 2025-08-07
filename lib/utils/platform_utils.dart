@@ -11,4 +11,5 @@ class PlatformUtils {
 
   static bool get isMobile => isAndroid || isIOS;
   static bool get isDesktop => isMacOS || isWindows || isLinux;
+  static bool get isApple => isIOS || isMacOS;
 }

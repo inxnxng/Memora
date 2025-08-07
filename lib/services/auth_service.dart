@@ -10,7 +10,7 @@ class AuthService {
 
   final UserRepository _userRepository;
 
-  AuthService(UserRepository read, {required UserRepository userRepository})
+  AuthService({required UserRepository userRepository})
     : _userRepository = userRepository;
 
   Future<UserCredential?> signInWithEmail(String email, String password) async {

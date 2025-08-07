@@ -26,8 +26,10 @@ class RankingCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(AppStrings.myCurrentRank,
-                    style: TextStyle(fontSize: 16)),
+                const Text(
+                  AppStrings.myCurrentRank,
+                  style: TextStyle(fontSize: 16),
+                ),
                 Text(
                   userRank != null && userRank! > 0
                       ? '$userRank위'

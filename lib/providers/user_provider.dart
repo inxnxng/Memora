@@ -100,6 +100,7 @@ class UserProvider with ChangeNotifier {
     Future.microtask(() => notifyListeners());
 
     try {
+      await _userRepository.ensureStreakCountExists(_userId!);
       await Future.wait([
         _userRepository
             .loadUserLevelWithTimestamp(_userId!)
@@ -158,7 +159,7 @@ class UserProvider with ChangeNotifier {
     await loadUserProfile();
   }
 
-  Future<List<Map<String, dynamic>>> getTopRankings({int limit = 100}) {
+  Stream<List<Map<String, dynamic>>> getTopRankings({int limit = 100}) {
     return _rankingRepository.getTopRankings(limit: limit);
   }
 }

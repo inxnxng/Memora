@@ -8,8 +8,8 @@ class NotionRepository {
   NotionRepository({
     required NotionAuthRepository notionAuthRepository,
     required NotionRemoteDataSource remoteDataSource,
-  })  : _notionAuthRepository = notionAuthRepository,
-        _remoteDataSource = remoteDataSource;
+  }) : _notionAuthRepository = notionAuthRepository,
+       _remoteDataSource = remoteDataSource;
 
   Future<String> _getApiToken() async {
     final tokenData = await _notionAuthRepository.getApiKeyWithTimestamp();
@@ -48,8 +48,7 @@ class NotionRepository {
     return _remoteDataSource.getRoadmapTasksFromDB(apiToken, databaseId);
   }
 
-  Future<List<Map<String, String>>> getQuizDataFromDB(
-      String databaseId) async {
+  Future<List<Map<String, String>>> getQuizDataFromDB(String databaseId) async {
     final apiToken = await _getApiToken();
     return _remoteDataSource.getQuizDataFromDB(apiToken, databaseId);
   }

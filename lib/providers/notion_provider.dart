@@ -2,18 +2,22 @@ import 'dart:math';
 
 import 'package:flutter/widgets.dart';
 import 'package:memora/models/task_model.dart';
+import 'package:memora/services/gemini_service.dart';
 import 'package:memora/services/notion_service.dart';
 import 'package:memora/services/openai_service.dart';
 
 class NotionProvider with ChangeNotifier {
   final NotionService _notionService;
   final OpenAIService _openAIService;
+  final GeminiService _geminiService;
 
   NotionProvider({
     required NotionService notionService,
     required OpenAIService openAIService,
+    required GeminiService geminiService,
   }) : _notionService = notionService,
-       _openAIService = openAIService;
+       _openAIService = openAIService,
+       _geminiService = geminiService;
 
   String? _apiToken;
   String? _apiTokenTimestamp;
@@ -227,7 +231,15 @@ class NotionProvider with ChangeNotifier {
         final content = await getPageContent(pageId);
 
         if (content.trim().isNotEmpty) {
-          _currentQuiz = await _openAIService.createQuizFromText(content);
+          final useGemini = await _geminiService.checkApiKeyAvailability();
+          if (useGemini) {
+            final quizJsonString = await _geminiService.generateQuizFromText(
+              content,
+            );
+            _currentQuiz = {'quiz': quizJsonString};
+          } else {
+            _currentQuiz = await _openAIService.createQuizFromText(content);
+          }
         } else {
           fetchNewQuiz();
         }

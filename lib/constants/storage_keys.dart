@@ -6,7 +6,7 @@ class StorageKeys {
   static const String notionApiKeyKey = 'notion_api_key';
   static const String notionApiKeyTimestampKey = 'notion_api_key_timestamp';
   static const String lastTrainedDateKey =
-      'last_trained_date_'; // Suffix with task ID
+      'last_trained_date_'; // Suffix with user ID
   static const String userLevelKey = 'user_level_'; // Suffix with user ID
   static const String userLevelTimestampKey =
       'user_level_timestamp_'; // Suffix with user ID

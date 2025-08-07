@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:memora/providers/notion_provider.dart';
 import 'package:memora/providers/user_provider.dart';
 import 'package:memora/router/app_router.dart';
 import 'package:memora/router/auth_notifier.dart';
 import 'package:memora/router/router_refresh_notifier.dart';
+import 'package:memora/services/notification_service.dart';
 import 'package:provider/provider.dart';
 
 class MyApp extends StatefulWidget {
@@ -21,6 +23,8 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    context.read<NotificationService>().initialize();
+    context.read<NotionProvider>().initialize();
     final authNotifier = context.read<AuthNotifier>();
     final userProvider = context.read<UserProvider>();
     _refreshNotifier = RouterRefreshNotifier(authNotifier, userProvider);

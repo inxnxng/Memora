@@ -1,8 +1,7 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:memora/router/app_routes.dart';
+import 'package:memora/utils/platform_utils.dart';
 import 'package:memora/widgets/common_app_bar.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -33,7 +32,16 @@ class SettingsScreen extends StatelessWidget {
               context.push('${AppRoutes.settings}/${AppRoutes.openaiSettings}');
             },
           ),
-          if (!(Platform.isIOS || !Platform.isMacOS))
+          _buildSettingsItem(
+            context,
+            icon: Icons.auto_awesome,
+            title: 'Gemini API 키 설정',
+            subtitle: '퀴즈 생성에 사용될 API 키를 관리합니다.',
+            onTap: () {
+              context.push('${AppRoutes.settings}/${AppRoutes.geminiSettings}');
+            },
+          ),
+          if (!PlatformUtils.isApple)
             _buildSettingsItem(
               context,
               icon: Icons.notifications_outlined,
