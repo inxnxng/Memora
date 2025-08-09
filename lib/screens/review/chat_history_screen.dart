@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:memora/models/chat_session.dart';
+import 'package:memora/models/notion_route_extra.dart';
 import 'package:memora/router/app_routes.dart';
 import 'package:memora/services/chat_service.dart';
 import 'package:memora/widgets/common_app_bar.dart';
@@ -96,15 +97,13 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
   }
 
   void _navigateToChat(ChatSession session) {
-    final extra = {
-      'pageTitle': session.pageTitle,
-      'pageContent': session.pageContent,
-      'databaseName': session.databaseName,
-    };
-    context.push(
-      '${AppRoutes.review}/${AppRoutes.quiz}/${AppRoutes.quizChat}',
-      extra: extra,
+    final extra = NotionRouteExtra(
+      chatId: session.chatId,
+      pageTitle: session.pageTitle,
+      databaseName: session.databaseName,
+      isExistingChat: true,
     );
+    context.push(AppRoutes.chat, extra: extra);
   }
 
   @override

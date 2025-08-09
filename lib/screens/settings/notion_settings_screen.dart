@@ -306,8 +306,8 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
       itemCount: notionProvider.availableDatabases.length,
       itemBuilder: (context, index) {
         final db = notionProvider.availableDatabases[index];
-        final dbTitle = db['title']?[0]?['plain_text'] ?? '제목 없음';
-        final dbId = db['id'];
+        final dbTitle = db.title;
+        final dbId = db.id;
         return ListTile(
           title: Text(dbTitle),
           subtitle: Text(dbId),

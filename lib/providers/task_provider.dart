@@ -125,7 +125,7 @@ class TaskProvider with ChangeNotifier {
   }
 
   Future<void> addStudyRecordForToday({
-    required String databaseName,
+    String? databaseName,
     required String title,
   }) async {
     await _taskService.addStudyRecordForToday(

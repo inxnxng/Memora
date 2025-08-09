@@ -1,10 +1,13 @@
 import 'dart:math';
 
 import 'package:flutter/widgets.dart';
-import 'package:memora/models/task_model.dart';
+import 'dart:convert';
+import 'package:memora/models/notion_database.dart';
+import 'package:memora/models/notion_page.dart';
 import 'package:memora/services/gemini_service.dart';
 import 'package:memora/services/notion_service.dart';
 import 'package:memora/services/openai_service.dart';
+import 'package:memora/models/quiz_question.dart';
 
 class NotionProvider with ChangeNotifier {
   final NotionService _notionService;
@@ -24,9 +27,9 @@ class NotionProvider with ChangeNotifier {
   String? _databaseId;
   String? _databaseTitle;
   String? _notionConnectionError;
-  List<dynamic> _pages = [];
-  Map<String, dynamic>? _currentQuiz;
-  List<dynamic> _availableDatabases = [];
+  List<NotionPage> _pages = [];
+  QuizQuestion? _currentQuiz;
+  List<NotionDatabase> _availableDatabases = [];
 
   bool _arePagesLoading = false;
   bool _isQuizLoading = false;
@@ -48,9 +51,9 @@ class NotionProvider with ChangeNotifier {
       _apiToken != null &&
       _databaseId != null &&
       _notionConnectionError == null;
-  Map<String, dynamic>? get currentQuiz => _currentQuiz;
-  List<dynamic> get pages => _pages;
-  List<dynamic> get availableDatabases => _availableDatabases;
+  QuizQuestion? get currentQuiz => _currentQuiz;
+  List<NotionPage> get pages => _pages;
+  List<NotionDatabase> get availableDatabases => _availableDatabases;
   bool get arePagesLoading => _arePagesLoading;
   bool get isQuizLoading => _isQuizLoading;
   bool get isSearchingDatabases => _isSearchingDatabases;
@@ -86,16 +89,13 @@ class NotionProvider with ChangeNotifier {
 
     final List<NotionPage> selectedPages = [];
     final selectedPagesMeta = _pages
-        .where((page) => _selectedPageIds.contains(page['id']))
+        .where((page) => _selectedPageIds.contains(page.id))
         .toList();
 
     try {
       for (var pageMeta in selectedPagesMeta) {
-        final pageId = pageMeta['id'];
-        final titleList = pageMeta['properties']?['Name']?['title'] as List?;
-        final title = titleList?.isNotEmpty == true
-            ? titleList![0]['plain_text']
-            : '제목 없음';
+        final pageId = pageMeta.id;
+        final title = pageMeta.title;
         final content = await getPageContent(pageId);
         selectedPages.add(
           NotionPage(id: pageId, title: title, content: content),
@@ -141,15 +141,19 @@ class NotionProvider with ChangeNotifier {
       bool hasMore;
 
       do {
-        final response = await _notionService.getPagesFromDB(
+        final responseMap = await _notionService.getPagesFromDB(
           _databaseId!,
           nextCursor,
         );
-        final results = response['results'] as List<dynamic>;
-        _pages.addAll(results);
+        final results = responseMap['results'] as List<dynamic>;
+        _pages.addAll(
+          results
+              .map((e) => NotionPage.fromMap(e as Map<String, dynamic>))
+              .toList(),
+        );
 
-        hasMore = response['has_more'] as bool;
-        nextCursor = response['next_cursor'] as String?;
+        hasMore = responseMap['has_more'] as bool;
+        nextCursor = responseMap['next_cursor'] as String?;
 
         _arePagesLoading = hasMore;
         Future.microtask(() => notifyListeners());
@@ -177,7 +181,10 @@ class NotionProvider with ChangeNotifier {
     Future.microtask(() => notifyListeners());
 
     try {
-      _availableDatabases = await _notionService.searchDatabases(query: query);
+      final rawDatabases = await _notionService.searchDatabases(query: query);
+      _availableDatabases = (rawDatabases['results'] as List)
+          .map((db) => NotionDatabase.fromMap(db as Map<String, dynamic>))
+          .toList();
       _notionConnectionError = null;
     } catch (e) {
       _notionConnectionError = '데이터베이스 검색 오류: API 토큰을 확인해주세요.';
@@ -223,11 +230,13 @@ class NotionProvider with ChangeNotifier {
     Future.microtask(() => notifyListeners());
 
     try {
-      if (_pages.isEmpty) await fetchNotionPages();
+      if (_pages.isEmpty) {
+        await fetchNotionPages();
+      }
 
       if (_pages.isNotEmpty) {
         final randomPage = _pages[Random().nextInt(_pages.length)];
-        final pageId = randomPage['id'];
+        final pageId = randomPage.id;
         final content = await getPageContent(pageId);
 
         if (content.trim().isNotEmpty) {
@@ -236,9 +245,11 @@ class NotionProvider with ChangeNotifier {
             final quizJsonString = await _geminiService.createQuizFromText(
               content,
             );
-            _currentQuiz = {'quiz': quizJsonString};
+            final quizMap = json.decode(quizJsonString);
+            _currentQuiz = QuizQuestion.fromJson(quizMap);
           } else {
-            _currentQuiz = await _openAIService.createQuizFromText(content);
+            final quizMap = await _openAIService.createQuizFromText(content);
+            _currentQuiz = QuizQuestion.fromJson(quizMap);
           }
         } else {
           fetchNewQuiz();

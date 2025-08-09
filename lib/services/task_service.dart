@@ -33,7 +33,7 @@ class TaskService {
       _repository.saveLastTrainedDate(taskId, date);
 
   Future<void> addStudyRecordForToday({
-    required String databaseName,
+    String? databaseName,
     required String title,
   }) async {
     await _repository.addStudyRecord(

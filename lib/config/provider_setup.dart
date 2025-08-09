@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:memora/app.dart';
 import 'package:memora/data/datasources/gemini_remote_data_source.dart';
 import 'package:memora/data/datasources/notion_remote_data_source.dart';
@@ -18,7 +19,9 @@ import 'package:memora/repositories/openai/openai_repository.dart';
 import 'package:memora/repositories/ranking/ranking_repository.dart';
 import 'package:memora/repositories/task/task_repository.dart';
 import 'package:memora/repositories/user/user_repository.dart';
+import 'package:memora/router/app_router.dart';
 import 'package:memora/router/auth_notifier.dart';
+import 'package:memora/router/router_refresh_notifier.dart';
 import 'package:memora/services/auth_service.dart';
 import 'package:memora/services/chat_service.dart';
 import 'package:memora/services/firebase_service.dart';
@@ -40,7 +43,10 @@ class ProviderContainer extends StatelessWidget {
     return MultiProvider(
       providers: [
         // Foundational Services
-        Provider<LocalStorageService>(create: (_) => LocalStorageService()),
+        Provider<LocalStorageService>(
+          create: (_) => LocalStorageService(),
+          dispose: (context, localStorageService) => localStorageService.dispose(),
+        ),
         Provider<FirebaseService>(create: (_) => FirebaseService()),
         Provider<NotificationService>(create: (_) => NotificationService()),
 
@@ -105,10 +111,8 @@ class ProviderContainer extends StatelessWidget {
           ),
         ),
         Provider<ChatRepository>(
-          create: (context) => ChatRepository(
-            context.read<FirebaseService>(),
-            context.read<LocalStorageService>(),
-          ),
+          create: (context) =>
+              ChatRepository(context.read<LocalStorageService>()),
         ),
 
         // Business Logic Services
@@ -178,6 +182,20 @@ class ProviderContainer extends StatelessWidget {
                 settingsService: context.read<SettingsService>(),
                 notionDatabaseId: notionProvider.databaseId,
               ),
+        ),
+        Provider<RouterRefreshNotifier>(
+          create: (context) => RouterRefreshNotifier(
+            context.read<AuthNotifier>(),
+            context.read<UserProvider>(),
+          ),
+          dispose: (context, notifier) => notifier.dispose(),
+        ),
+        Provider<GoRouter>(
+          create: (context) => createRouter(
+            context.read<RouterRefreshNotifier>(),
+            context.read<AuthNotifier>(),
+            context.read<UserProvider>(),
+          ),
         ),
       ],
       child: const MyApp(),

@@ -21,13 +21,18 @@ class ChatInputField extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Expanded(
             child: TextField(
               controller: controller,
               focusNode: focusNode,
+              textInputAction: TextInputAction.newline,
+              keyboardType: TextInputType.multiline,
+              maxLines: 5,
+              minLines: 1,
               decoration: InputDecoration(
-                hintText: '메세지를 입력하세요...',
+                hintText: '메세지를 입력하세요.',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20.0),
                 ),

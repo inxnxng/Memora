@@ -1,3 +1,4 @@
+import 'package:memora/models/notion_page.dart';
 import 'package:memora/repositories/notion/notion_auth_repository.dart';
 import 'package:memora/repositories/notion/notion_database_repository.dart';
 import 'package:memora/repositories/notion/notion_repository.dart';
@@ -76,7 +77,7 @@ class NotionService {
 
   // --- Database Operations ---
 
-  Future<List<dynamic>> searchDatabases({String? query}) {
+  Future<Map<String, dynamic>> searchDatabases({String? query}) {
     return notionRepository.searchDatabases(query: query);
   }
 
@@ -94,7 +95,20 @@ class NotionService {
   }
 
   Future<String> renderNotionDbAsMarkdown(String pageId) async {
-    final blocks = await notionRepository.fetchPageBlocks(pageId);
+    final response = await notionRepository.fetchPageBlocks(pageId);
+    final blocks = response['results'] as List<dynamic>;
+    if (blocks.isEmpty) {
+      return '';
+    }
     return notionToMarkdownConverter.convert(blocks);
+  }
+
+  Future<NotionPage?> fetchPageById(String pageId) async {
+    try {
+      final content = await getPageContent(pageId);
+      return NotionPage(id: pageId, title: "Fetched Page", content: content);
+    } catch (e) {
+      return null;
+    }
   }
 }

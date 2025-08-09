@@ -22,6 +22,11 @@ class NotionRemoteDataSource {
   Future<Map<String, dynamic>> _handleResponse(http.Response response) async {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return json.decode(utf8.decode(response.bodyBytes));
+    } else if (response.statusCode == 404) {
+      throw NotionApiException(
+        'Notion resource not found: ${response.body}',
+        statusCode: response.statusCode,
+      );
     } else {
       throw NotionApiException(
         'Failed to load data from Notion: ${response.body}',
@@ -91,7 +96,9 @@ class NotionRemoteDataSource {
         if (block.containsKey(type) && block[type].containsKey('rich_text')) {
           final richText = block[type]['rich_text'] as List;
           for (var textItem in richText) {
-            contentBuffer.writeln(textItem['plain_text']);
+            contentBuffer.writeln(
+              (textItem as Map<String, dynamic>)['plain_text'],
+            );
           }
         }
       }
@@ -104,7 +111,7 @@ class NotionRemoteDataSource {
     }
   }
 
-  Future<List<dynamic>> searchDatabases(
+  Future<Map<String, dynamic>> searchDatabases(
     String apiToken, {
     String? query,
   }) async {
@@ -121,11 +128,30 @@ class NotionRemoteDataSource {
         'filter': {'property': 'object', 'value': 'database'},
       }),
     );
-    final data = await _handleResponse(response);
-    return data['results'];
+    return _handleResponse(response);
   }
 
-  Future<List<dynamic>> getRoadmapTasksFromDB(
+  Future<Map<String, dynamic>> searchPages(
+    String apiToken, {
+    String? query,
+  }) async {
+    final url = Uri.parse('https://api.notion.com/v1/search');
+    final response = await http.post(
+      url,
+      headers: {
+        'Authorization': 'Bearer $apiToken',
+        'Notion-Version': _notionApiVersion,
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'query': query,
+        'filter': {'property': 'object', 'value': 'page'},
+      }),
+    );
+    return _handleResponse(response);
+  }
+
+  Future<Map<String, dynamic>> getRoadmapTasksFromDB(
     String apiToken,
     String databaseId,
   ) async {
@@ -145,8 +171,7 @@ class NotionRemoteDataSource {
         ],
       }),
     );
-    final data = await _handleResponse(response);
-    return data['results'];
+    return _handleResponse(response);
   }
 
   Future<List<Map<String, String>>> getQuizDataFromDB(
@@ -198,7 +223,10 @@ class NotionRemoteDataSource {
     }
   }
 
-  Future<List<dynamic>> fetchPageBlocks(String apiToken, String pageId) async {
+  Future<Map<String, dynamic>> fetchPageBlocks(
+    String apiToken,
+    String pageId,
+  ) async {
     final url = Uri.parse(
       'https://api.notion.com/v1/blocks/$pageId/children?page_size=100',
     );
@@ -209,8 +237,7 @@ class NotionRemoteDataSource {
         'Notion-Version': _notionApiVersion,
       },
     );
-    final data = await _handleResponse(response);
-    return data['results'];
+    return _handleResponse(response);
   }
 
   Future<bool> validateApiKey(String apiToken) async {

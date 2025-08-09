@@ -1,3 +1,5 @@
+import 'package:memora/models/notion_page.dart';
+
 class Task {
   final String id;
   final String title;
@@ -46,12 +48,15 @@ class Task {
       isCompleted: isCompleted,
     );
   }
-}
 
-class NotionPage {
-  final String id;
-  final String title;
-  final String content;
-
-  NotionPage({required this.id, required this.title, required this.content});
+  factory Task.fromNotionPage(NotionPage notionPage, {String? databaseName}) {
+    return Task(
+      id: notionPage.id,
+      title: notionPage.title,
+      description: notionPage.content, // Assuming content can be description
+      day: 0, // Default or derive as needed
+      databaseName: databaseName,
+      isCompleted: false,
+    );
+  }
 }

@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:memora/constants/openai_constants.dart';
+import 'package:memora/constants/prompt_constants.dart';
 
 class OpenApiException implements Exception {
   final String message;
@@ -132,11 +133,7 @@ class OpenAIRemoteDataSource {
         'model': OpenAIConstants.gpt35Turbo,
         'messages': [
           {'role': 'system', 'content': OpenAIConstants.quizCreatorPrompt},
-          {
-            'role': 'user',
-            'content':
-                '다음 텍스트를 기반으로 객관식 퀴즈를 1개 만들어줘. 질문(question), 4개의 선택지(options, list of strings), 정답 인덱스(answer, 0-3)를 포함하는 JSON 형식으로 반환해줘.\n\n$text',
-          },
+          {'role': 'user', 'content': PromptConstants.createQuizPrompt(text)},
         ],
         'temperature': 0.7,
       }),

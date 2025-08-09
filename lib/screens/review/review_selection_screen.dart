@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:memora/constants/app_strings.dart';
+import 'package:memora/models/notion_route_extra.dart';
 import 'package:memora/providers/notion_provider.dart';
 import 'package:memora/router/app_routes.dart';
 import 'package:memora/widgets/common_app_bar.dart';
 import 'package:provider/provider.dart';
 
-class TilReviewSelectionScreen extends StatefulWidget {
-  const TilReviewSelectionScreen({super.key});
+class ReviewSelectionScreen extends StatefulWidget {
+  const ReviewSelectionScreen({super.key});
 
   @override
-  State<TilReviewSelectionScreen> createState() =>
-      _TilReviewSelectionScreenState();
+  State<ReviewSelectionScreen> createState() => _ReviewSelectionScreenState();
 }
 
-class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
+class _ReviewSelectionScreenState extends State<ReviewSelectionScreen> {
   @override
   void initState() {
     super.initState();
@@ -30,11 +30,11 @@ class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
     final success = await notionProvider.fetchCombinedContent();
 
     if (success && mounted) {
-      final databaseName = notionProvider.databaseTitle ?? AppStrings.unknownDb;
-      context.push(
-        '${AppRoutes.review}/${AppRoutes.quiz}/${AppRoutes.quizChat}?databaseName=$databaseName',
-        extra: notionProvider.combinedPageContent,
+      final extra = NotionRouteExtra(
+        pages: notionProvider.combinedPageContent,
+        databaseName: notionProvider.databaseTitle,
       );
+      context.push(AppRoutes.chat, extra: extra);
     } else if (!success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -53,10 +53,14 @@ class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
     String pageTitle,
   ) {
     final notionProvider = context.read<NotionProvider>();
-    final databaseName = notionProvider.databaseTitle ?? AppStrings.unknownDb;
-    context.push(
-      '${AppRoutes.review}/${AppRoutes.notionPage.replaceFirst(':pageId', pageId)}?pageTitle=$pageTitle&databaseName=$databaseName',
+    final databaseName = notionProvider.databaseTitle;
+
+    final extra = NotionRouteExtra(
+      databaseName: databaseName,
+      pageId: pageId,
+      pageTitle: pageTitle,
     );
+    context.push('${AppRoutes.review}/${AppRoutes.notionPage}', extra: extra);
   }
 
   @override
@@ -71,7 +75,7 @@ class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
           IconButton(
             icon: const Icon(Icons.history),
             onPressed: () =>
-                context.push('${AppRoutes.review}/${AppRoutes.chatHistory}'),
+                context.push("${AppRoutes.review}/${AppRoutes.chatHistory}"),
             tooltip: '채팅 기록',
           ),
         ],
@@ -84,7 +88,6 @@ class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(16.0),
-
                 child: Text(
                   AppStrings.noNotionPagesFound,
                   style: TextStyle(fontSize: 16, color: Colors.grey),
@@ -97,19 +100,12 @@ class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
               itemCount: notionProvider.pages.length,
               itemBuilder: (context, index) {
                 final page = notionProvider.pages[index];
-                final pageId = page['id'];
-                final properties = page['properties'];
+                final pageId = page.id;
                 final isSelected = notionProvider.selectedPageIds.contains(
                   pageId,
                 );
-
-                final titleList = properties?['Name']?['title'] as List?;
-                final title = titleList?.isNotEmpty == true
-                    ? titleList![0]['plain_text']
-                    : AppStrings.noTitle;
-
-                final icon = page['icon'];
-                final emoji = icon?['type'] == 'emoji' ? icon['emoji'] : '📄';
+                final title = page.title;
+                final emoji = '📄';
 
                 return Card(
                   margin: const EdgeInsets.symmetric(

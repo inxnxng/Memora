@@ -2,8 +2,8 @@ class NotionToMarkdownConverter {
   String convert(List<dynamic> blocks) {
     final buffer = StringBuffer();
     for (final block in blocks) {
-      final type = block['type'];
-      final content = block[type];
+      final type = block['type'] as String;
+      final content = block[type] ?? {};
 
       switch (type) {
         case 'heading_1':
@@ -50,7 +50,6 @@ class NotionToMarkdownConverter {
           }
           break;
         default:
-          // For unsupported blocks, you can either ignore them or add a placeholder.
           break;
       }
     }

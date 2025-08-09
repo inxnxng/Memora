@@ -1,10 +1,34 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:memora/constants/storage_keys.dart';
 import 'package:memora/models/chat_message.dart';
+import 'package:memora/models/chat_session.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LocalStorageService {
+  final Map<String, StreamController<List<ChatMessage>>>
+  _chatHistoryControllers = {};
+
+  // Private constructor
+  LocalStorageService._internal();
+
+  // Singleton instance
+  static final LocalStorageService _instance = LocalStorageService._internal();
+
+  // Factory constructor to return the singleton instance
+  factory LocalStorageService() {
+    return _instance;
+  }
+
+  // Method to dispose of all controllers when the app closes or is no longer needed
+  void dispose() {
+    _chatHistoryControllers.forEach((key, controller) {
+      controller.close();
+    });
+    _chatHistoryControllers.clear();
+  }
+
   Future<void> saveUserName(String userId, String name) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('${StorageKeys.userNameKey}$userId', name);
@@ -37,37 +61,77 @@ class LocalStorageService {
 
   /// Saves a list of ChatMessage objects to local storage.
   Future<void> saveChatHistory(
-    String taskId,
+    String chatId,
     List<ChatMessage> messages,
   ) async {
     final prefs = await SharedPreferences.getInstance();
-    final key = '${StorageKeys.chatHistoryKey}$taskId';
+    final key = '${StorageKeys.chatHistoryKey}$chatId';
     final List<String> encodedHistory = messages
         .map((msg) => json.encode(msg.toLocalMap()))
         .toList();
     await prefs.setStringList(key, encodedHistory);
+    // Add the updated messages to the stream
+    if (_chatHistoryControllers.containsKey(chatId)) {
+      _chatHistoryControllers[chatId]!.add(messages);
+    }
   }
 
-  /// Loads a list of ChatMessage objects from local storage.
-  Future<List<ChatMessage>> loadChatHistory(String taskId) async {
+  Future<void> saveChatSession(
+    String chatId,
+    String pageTitle,
+    DateTime lastMessageTimestamp,
+    String? databaseName,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
-    final key = '${StorageKeys.chatHistoryKey}$taskId';
+    final key = '${StorageKeys.chatSessionKey}$chatId';
+    final chatSession = ChatSession(
+      chatId: chatId,
+      pageTitle: pageTitle,
+      lastMessageTimestamp: lastMessageTimestamp,
+      databaseName: databaseName ?? '',
+    );
+    await prefs.setString(key, json.encode(chatSession.toMap()));
+  }
 
+  Stream<List<ChatMessage>> loadChatHistory(String chatId) async* {
+    // Ensure a controller exists for this chatId
+    if (!_chatHistoryControllers.containsKey(chatId)) {
+      _chatHistoryControllers[chatId] =
+          StreamController<List<ChatMessage>>.broadcast();
+    }
+
+    // Emit the current history from SharedPreferences first
+    final prefs = await SharedPreferences.getInstance();
+    final key = '${StorageKeys.chatHistoryKey}$chatId';
     final List<String>? encodedHistoryList = prefs.getStringList(key);
+    List<ChatMessage> initialMessages = [];
     if (encodedHistoryList != null && encodedHistoryList.isNotEmpty) {
       try {
-        return encodedHistoryList
+        initialMessages = encodedHistoryList
             .map((line) => ChatMessage.fromLocalMap(json.decode(line)))
             .toList();
       } catch (e) {
-        // If parsing fails, return an empty list, assuming data is corrupt.
-        return [];
+        // Handle decoding errors, return empty list
       }
     }
-    return [];
+    yield initialMessages;
+
+    // Yield subsequent updates from the controller
+    yield* _chatHistoryControllers[chatId]!.stream;
   }
 
-  /// Returns all keys corresponding to chat histories.
+  Future<void> deleteChatHistory(String chatId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = '${StorageKeys.chatHistoryKey}$chatId';
+    await prefs.remove(key);
+  }
+
+  Future<void> deleteChatSession(String chatId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = '${StorageKeys.chatSessionKey}$chatId';
+    await prefs.remove(key);
+  }
+
   Future<List<String>> getAllChatHistoryKeys() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs
@@ -76,7 +140,23 @@ class LocalStorageService {
         .toList();
   }
 
-  /// Extracts the original task/chat ID from a storage key.
+  Future<List<ChatSession>> getAllChatSessions() async {
+    final prefs = await SharedPreferences.getInstance();
+    final allKeys = prefs
+        .getKeys()
+        .where((key) => key.startsWith(StorageKeys.chatSessionKey))
+        .toList();
+
+    final List<ChatSession> sessions = [];
+    for (final key in allKeys) {
+      final jsonString = prefs.getString(key);
+      if (jsonString != null) {
+        sessions.add(ChatSession.fromMap(json.decode(jsonString)));
+      }
+    }
+    return sessions;
+  }
+
   String getOriginalKey(String storageKey) {
     return storageKey.replaceFirst(StorageKeys.chatHistoryKey, '');
   }
@@ -287,7 +367,7 @@ class LocalStorageService {
 
   Future<void> addStudyRecord(
     DateTime date, {
-    required String databaseName,
+    String? databaseName,
     required String title,
   }) async {
     final prefs = await SharedPreferences.getInstance();
@@ -336,7 +416,6 @@ class LocalStorageService {
         }
       }
     }
-
     return heatmapData;
   }
 }

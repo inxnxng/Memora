@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 
-enum MessageSender { user, ai }
+enum MessageSender { user, ai, system }
 
 class ChatMessage {
   final String id;

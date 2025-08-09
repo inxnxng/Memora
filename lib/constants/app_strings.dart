@@ -31,8 +31,6 @@ class AppStrings {
   static const String loginFailed = '로그인에 실패했습니다. 다시 시도해주세요.';
 
   // Onboarding Screen
-  static const String welcomeToMemora = 'Memora에 오신 것을 환영합니다!';
-  static const String personalizeExperience = '더 나은 사용을 위해, 당신의 학습 레벨을 선택해주세요.';
   static const String getStarted = '시작하기';
   static const String selectYourLevel = '레벨 선택';
   static const String saveAndContinue = '저장하고 계속하기';
@@ -47,6 +45,7 @@ class AppStrings {
   static const String startTraining = '훈련 시작';
   static const String pageContentLoadFailed = '페이지 내용을 불러오는 데 실패했습니다.';
   static const String unknownDb = '알 수 없는 DB';
+  static const String unknownPage = '알 수 없는 페이지';
 
   // Home Screen
   static const String appName = '🧠 Memora';

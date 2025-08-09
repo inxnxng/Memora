@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markdown_widget/markdown_widget.dart';
-import 'package:memora/models/task_model.dart';
+import 'package:memora/models/notion_page.dart';
+import 'package:memora/models/notion_route_extra.dart';
 import 'package:memora/providers/notion_provider.dart';
 import 'package:memora/providers/task_provider.dart';
+import 'package:memora/router/app_routes.dart';
 import 'package:memora/widgets/common_app_bar.dart';
 import 'package:provider/provider.dart';
 
@@ -44,14 +46,14 @@ class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
         });
       }
     });
-
-    // Timer(const Duration(seconds: 10), () {
-    //   if (mounted) {
-    //     setState(() {
-    //       _showCompleteButton = true;
-    //     });
-    //   }
-    // });
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent) {
+        setState(() {
+          _showCompleteButton = true;
+        });
+      }
+    });
   }
 
   void _completeStudy(BuildContext context) {
@@ -141,10 +143,11 @@ class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
                   title: widget.pageTitle,
                   content: _pageContent,
                 );
-                context.push(
-                  '/review/quiz/chat?databaseName=${widget.databaseName}',
-                  extra: [page],
+                final routeExtra = NotionRouteExtra(
+                  pages: [page],
+                  databaseName: widget.databaseName,
                 );
+                context.push(AppRoutes.chat, extra: routeExtra);
               },
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(

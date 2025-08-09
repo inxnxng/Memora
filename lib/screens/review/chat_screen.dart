@@ -4,100 +4,98 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:memora/constants/prompt_constants.dart';
 import 'package:memora/models/chat_message.dart';
-import 'package:memora/models/task_model.dart';
+import 'package:memora/models/notion_page.dart';
 import 'package:memora/providers/task_provider.dart';
 import 'package:memora/providers/user_provider.dart';
 import 'package:memora/repositories/chat/chat_repository.dart';
 import 'package:memora/router/app_routes.dart';
 import 'package:memora/services/chat_service.dart';
 import 'package:memora/services/gemini_service.dart';
+import 'package:memora/services/notion_service.dart'; // Added
 import 'package:memora/services/openai_service.dart';
 import 'package:memora/widgets/chat_input_field.dart';
 import 'package:memora/widgets/chat_messages_list.dart';
 import 'package:memora/widgets/common_app_bar.dart';
 import 'package:provider/provider.dart';
 
-class NotionQuizChatScreen extends StatefulWidget {
-  final List<NotionPage> pages;
-  final String databaseName;
+class ChatScreen extends StatefulWidget {
+  final List<NotionPage>? pages; // Made optional
+  final String? databaseName;
+  final String? chatId; // New
+  final String? pageTitle; // New
+  final bool isExistingChat; // New
 
-  const NotionQuizChatScreen({
+  const ChatScreen({
     super.key,
-    required this.pages,
-    required this.databaseName,
+    this.pages,
+    this.databaseName,
+    this.chatId,
+    this.pageTitle,
+    this.isExistingChat = false,
   });
 
   @override
-  State<NotionQuizChatScreen> createState() => _NotionQuizChatScreenState();
+  State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
+class _ChatScreenState extends State<ChatScreen> {
   late final OpenAIService _openAIService;
   late final GeminiService _geminiService;
   late final ChatService _chatService;
+  late final NotionService _notionService; // Added
   late final UserProvider _userProvider;
   final TextEditingController _textController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
-  bool _isLoading = false;
-  StreamSubscription? _streamSubscription;
-  StreamSubscription? _chatHistorySubscription;
 
-  late final String _chatId;
-  late final String _pageTitles;
-  late final String _pageContents;
+  late final Stream<List<ChatMessage>> _chatMessagesStream;
+  late Future<void> _initFuture; // Changed to late, not late final
+
+  late String _chatId;
+  late String _pageTitles;
+  late String _pageContents;
 
   @override
   void initState() {
     super.initState();
-    _pageTitles = widget.pages.map((p) => p.title).join(', ');
-    _pageContents = widget.pages.map((p) => p.content).join('\n\n---\n\n');
-    _chatId = ChatRepository.generateChatId(
-      widget.pages.map((p) => p.id).toList(),
-    );
     _openAIService = Provider.of<OpenAIService>(context, listen: false);
     _geminiService = Provider.of<GeminiService>(context, listen: false);
     _chatService = Provider.of<ChatService>(context, listen: false);
+    _notionService = Provider.of<NotionService>(context, listen: false);
     _userProvider = Provider.of<UserProvider>(context, listen: false);
-    _initializeChat();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _focusNode.requestFocus();
-    });
+
+    _initFuture = _initAsyncData();
+  }
+
+  Future<void> _initAsyncData() async {
+    if (widget.isExistingChat) {
+      _chatId = widget.chatId!;
+      _pageTitles = widget.pageTitle!;
+      final pageIds = widget.chatId!.split('-');
+      final contents = <String>[];
+      for (final id in pageIds) {
+        final fetchedPage = await _notionService.fetchPageById(id);
+        if (fetchedPage != null) {
+          contents.add(fetchedPage.content);
+        }
+      }
+      _pageContents = contents.join('\n\n---\n\n');
+    } else {
+      _pageTitles = widget.pages!.map((p) => p.title).join(', ');
+      _pageContents = widget.pages!.map((p) => p.content).join('\n\n---\n\n');
+      _chatId = ChatRepository.generateChatId(
+        widget.pages!.map((p) => p.id).toList(),
+      );
+    }
+
+    _chatMessagesStream = _chatService.getMessages(_chatId);
   }
 
   @override
   void dispose() {
-    _streamSubscription?.cancel();
-    _chatHistorySubscription?.cancel();
     _textController.dispose();
     _focusNode.dispose();
     _userProvider.recordLearningSession();
     super.dispose();
-  }
-
-  void _initializeChat() {
-    _chatHistorySubscription = _chatService.getMessages(_chatId).listen((
-      messages,
-    ) {
-      if (messages.isEmpty) {
-        _showWelcomeMessage();
-      }
-      _chatHistorySubscription?.cancel();
-    });
-  }
-
-  void _showWelcomeMessage() async {
-    final welcomeMessage = ChatMessage(
-      content: PromptConstants.welcomeMessage(_pageTitles),
-      sender: MessageSender.ai,
-      timestamp: DateTime.now(),
-    );
-    await _chatService.sendMessage(
-      _chatId,
-      welcomeMessage,
-      pageTitle: _pageTitles,
-      pageContent: _pageContents,
-      databaseName: widget.databaseName,
-    );
   }
 
   Future<void> _checkApiKeysAndSendMessage(String text) async {
@@ -109,7 +107,10 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
         _showApiKeyRequiredDialog();
       }
     } else {
-      _sendMessage(text);
+      await _sendMessage(text);
+      if (mounted) {
+        _focusNode.requestFocus();
+      }
     }
   }
 
@@ -139,9 +140,8 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
   }
 
   Future<void> _sendMessage(String text) async {
-    if (text.isEmpty || _isLoading) return;
+    if (text.isEmpty) return;
 
-    _streamSubscription?.cancel();
     _textController.clear();
 
     final userMessage = ChatMessage(
@@ -154,7 +154,6 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
       _chatId,
       userMessage,
       pageTitle: _pageTitles,
-      pageContent: _pageContents,
       databaseName: widget.databaseName,
     );
 
@@ -162,53 +161,17 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
   }
 
   void _handleAiResponse() async {
-    setState(() {
-      _isLoading = true;
-    });
-
     try {
       final hasOpenAIKey = await _openAIService.checkApiKeyAvailability();
       final hasGeminiKey = await _geminiService.checkApiKeyAvailability();
 
       Stream<String> stream;
 
-      final history = await _chatService.getMessages(_chatId).first;
-      final userMessages = history
-          .where((m) => m.sender == MessageSender.user)
-          .toList();
-
-      final isFirstUserMessage = userMessages.length == 1;
-
-      List<Map<String, String>> messagesForApi;
-
-      if (isFirstUserMessage) {
-        messagesForApi = [
-          {'role': 'system', 'content': PromptConstants.reviewSystemPrompt},
-          {
-            'role': 'user',
-            'content': PromptConstants.initialUserPrompt(_pageContents),
-          },
-        ];
-      } else {
-        final chatHistory = history
-            .where(
-              (m) => m.content != PromptConstants.welcomeMessage(_pageTitles),
-            )
-            .map(
-              (msg) => {
-                'role': msg.sender == MessageSender.user ? 'user' : 'assistant',
-                'content': msg.content,
-              },
-            )
-            .toList()
-            .reversed
-            .toList();
-
-        messagesForApi = [
-          {'role': 'system', 'content': PromptConstants.reviewSystemPrompt},
-          ...chatHistory,
-        ];
-      }
+      List<Map<String, String>> messagesForApi = _chatService.buildPromptForAI(
+        await _chatService.getMessages(_chatId).first,
+        _pageContents,
+        _pageTitles,
+      );
 
       if (hasOpenAIKey) {
         stream = _openAIService.generateTrainingContentStream(messagesForApi);
@@ -220,7 +183,7 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
 
       String fullResponse = "";
 
-      _streamSubscription = stream.listen(
+      stream.listen(
         (contentChunk) {
           fullResponse += contentChunk;
         },
@@ -234,12 +197,6 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
             );
             await _chatService.sendMessage(_chatId, aiMessage);
           }
-
-          if (mounted) {
-            setState(() {
-              _isLoading = false;
-            });
-          }
         },
         onError: (error) async {
           final errorMessage = ChatMessage(
@@ -248,11 +205,6 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
             timestamp: DateTime.now(),
           );
           await _chatService.sendMessage(_chatId, errorMessage);
-          if (mounted) {
-            setState(() {
-              _isLoading = false;
-            });
-          }
         },
       );
     } catch (e) {
@@ -262,11 +214,6 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
         timestamp: DateTime.now(),
       );
       await _chatService.sendMessage(_chatId, errorMessage);
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
     }
   }
 
@@ -309,33 +256,78 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: StreamBuilder<List<ChatMessage>>(
-              stream: _chatService.getMessages(_chatId),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting &&
-                    (snapshot.data?.isEmpty ?? true)) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-                final messages = snapshot.data ?? [];
-                return ChatMessagesList(messages: messages);
-              },
-            ),
-          ),
-          ChatInputField(
-            controller: _textController,
-            focusNode: _focusNode,
-            onSubmitted: (text) => _checkApiKeysAndSendMessage(text),
-            onSendPressed: () =>
-                _checkApiKeysAndSendMessage(_textController.text),
-            isEnabled: !_isLoading,
-          ),
-        ],
+      body: FutureBuilder(
+        future: _initFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else {
+            return Column(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => _focusNode.unfocus(),
+                    behavior: HitTestBehavior.translucent,
+                    child: StreamBuilder<List<ChatMessage>>(
+                      stream: _chatMessagesStream,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                                ConnectionState.waiting &&
+                            (snapshot.data?.isEmpty ?? true)) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+                        if (snapshot.hasError) {
+                          return Center(
+                            child: Text('Error: ${snapshot.error}'),
+                          );
+                        }
+                        final messages = snapshot.data ?? [];
+                        List<ChatMessage> displayMessages = messages;
+                        if (displayMessages.isEmpty) {
+                          displayMessages = [
+                            ChatMessage(
+                              content: PromptConstants.welcomeMessage(
+                                _pageTitles,
+                              ),
+                              sender: MessageSender.system,
+                              timestamp: DateTime.now(),
+                            ),
+                          ];
+                        }
+                        return Column(
+                          children: [
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => _focusNode.unfocus(),
+                                behavior: HitTestBehavior.translucent,
+                                child: ChatMessagesList(
+                                  messages: displayMessages,
+                                ),
+                              ),
+                            ),
+                            ChatInputField(
+                              controller: _textController,
+                              focusNode: _focusNode,
+                              onSubmitted: (text) =>
+                                  _checkApiKeysAndSendMessage(text),
+                              onSendPressed: () => _checkApiKeysAndSendMessage(
+                                _textController.text,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
+        },
       ),
     );
   }

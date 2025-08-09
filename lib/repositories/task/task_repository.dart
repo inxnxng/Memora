@@ -1,3 +1,4 @@
+import 'package:memora/models/notion_page.dart';
 import 'package:memora/models/task_model.dart';
 import 'package:memora/repositories/notion/notion_repository.dart';
 import 'package:memora/services/local_storage_service.dart';
@@ -16,16 +17,18 @@ class TaskRepository {
           ? dbTitleProperty[0]['plain_text'] as String
           : 'Untitled DB';
 
-      final notionPages = await _notionRepository.getRoadmapTasksFromDB(
+      final notionResponse = await _notionRepository.getRoadmapTasksFromDB(
         databaseId,
       );
+      final notionPages = (notionResponse['results'] as List)
+          .map((json) => NotionPage.fromMap(json))
+          .toList();
       final tasks = notionPages
-          .map((json) => Task.fromNotion(json, databaseName: databaseName))
+          .map((page) => Task.fromNotionPage(page, databaseName: databaseName))
           .toList();
       tasks.sort((a, b) => a.day.compareTo(b.day));
       return tasks;
     } catch (e) {
-      // Propagate error to be handled by the caller
       rethrow;
     }
   }
@@ -40,7 +43,7 @@ class TaskRepository {
 
   Future<void> addStudyRecord(
     DateTime date, {
-    required String databaseName,
+    String? databaseName,
     required String title,
   }) async {
     await _localStorageService.addStudyRecord(

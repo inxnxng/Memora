@@ -6,22 +6,20 @@
 // **************************************************************************
 
 import 'package:go_router/go_router.dart';
-import 'package:memora/models/task_model.dart';
+import 'package:memora/constants/app_strings.dart';
+import 'package:memora/models/notion_route_extra.dart';
 import 'package:memora/screens/heatmap/heatmap_screen.dart';
 import 'package:memora/screens/home_screen.dart';
 import 'package:memora/screens/login_screen.dart';
-import 'package:memora/screens/onboarding/onboarding_screen.dart';
 import 'package:memora/screens/profile/change_level_screen.dart';
 import 'package:memora/screens/profile/profile_screen.dart';
 import 'package:memora/screens/ranking/ranking_screen.dart';
 import 'package:memora/screens/review/chat_history_screen.dart';
+import 'package:memora/screens/review/chat_screen.dart';
 import 'package:memora/screens/review/notion_page_viewer_screen.dart';
-import 'package:memora/screens/review/notion_quiz_chat_screen.dart';
-import 'package:memora/screens/review/quiz_screen.dart';
-import 'package:memora/screens/review/til_review_selection_screen.dart';
+import 'package:memora/screens/review/review_selection_screen.dart';
 import 'package:memora/screens/settings/gemini_settings_screen.dart';
 import 'package:memora/screens/settings/heatmap_color_settings_screen.dart';
-import 'package:memora/screens/settings/notification_settings_screen.dart';
 import 'package:memora/screens/settings/notion_settings_screen.dart';
 import 'package:memora/screens/settings/openai_settings_screen.dart';
 import 'package:memora/screens/settings/settings_screen.dart';
@@ -31,79 +29,44 @@ class AppRoutes {
   static const String splash = '/';
   static const String login = '/login';
   static const String onboarding = '/onboarding';
-  static const String review = '/review';
-  static const String notionPage = 'notion-page/:pageId';
-  static const String quiz = 'quiz';
-  static const String quizChat = 'chat';
-  static const String chatHistory = 'history';
+
   static const String ranking = '/ranking';
   static const String home = '/home';
   static const String heatmap = '/heatmap';
   static const String profile = '/profile';
   static const String changeLevel = 'change-level';
+
+  static const String review = '/review';
+  static const String notionPage = 'notion-page';
+  static const String chatHistory = 'chatHistory';
+
+  static const String chat = '/chat';
+
   static const String settings = '/settings';
   static const String heatmapColorSettings = 'heatmap-color';
   static const String notionSettings = 'notion';
   static const String openaiSettings = 'openai';
   static const String geminiSettings = 'gemini';
-  static const String notificationSettings = 'notifications';
 
   static GoRoute get splashRoute =>
       GoRoute(path: splash, builder: (context, state) => const SplashScreen());
-
-  static GoRoute get loginRoute =>
-      GoRoute(path: login, builder: (context, state) => const LoginScreen());
-
-  static GoRoute get onboardingRoute => GoRoute(
-    path: onboarding,
-    builder: (context, state) => const OnboardingScreen(),
-  );
-
-  static GoRoute get settingsRoute => GoRoute(
-    path: settings,
-    builder: (context, state) => const SettingsScreen(),
-    routes: [
-      GoRoute(
-        path: heatmapColorSettings,
-        builder: (context, state) => const HeatmapColorSettingsScreen(),
-      ),
-      GoRoute(
-        path: notionSettings,
-        builder: (context, state) => const NotionSettingsScreen(),
-      ),
-      GoRoute(
-        path: openaiSettings,
-        builder: (context, state) => const OpenaiSettingsScreen(),
-      ),
-      GoRoute(
-        path: geminiSettings,
-        builder: (context, state) => const GeminiSettingsScreen(),
-      ),
-      GoRoute(
-        path: notificationSettings,
-        builder: (context, state) => const NotificationSettingsScreen(),
-      ),
-    ],
-  );
 }
 
 class AppShellRoutes {
-  static StatefulShellBranch get reviewBranch => StatefulShellBranch(
+  static final StatefulShellBranch reviewBranch = StatefulShellBranch(
     routes: [
       GoRoute(
         path: AppRoutes.review,
-        builder: (context, state) => const TilReviewSelectionScreen(),
+        builder: (context, state) => const ReviewSelectionScreen(),
         routes: [
-          GoRoute(
-            path: AppRoutes.chatHistory,
-            builder: (context, state) => const ChatHistoryScreen(),
-          ),
           GoRoute(
             path: AppRoutes.notionPage,
             builder: (context, state) {
-              final pageId = state.pathParameters['pageId']!;
-              final pageTitle = state.uri.queryParameters['pageTitle']!;
-              final databaseName = state.uri.queryParameters['databaseName']!;
+              final routeExtra = state.extra as NotionRouteExtra;
+              final pageId = routeExtra.pageId ?? '';
+              final pageTitle = routeExtra.pageTitle ?? '';
+              final databaseName =
+                  routeExtra.databaseName ?? AppStrings.unknownDb;
               return NotionPageViewerScreen(
                 pageId: pageId,
                 pageTitle: pageTitle,
@@ -112,28 +75,38 @@ class AppShellRoutes {
             },
           ),
           GoRoute(
-            path: AppRoutes.quiz,
-            builder: (context, state) => const QuizScreen(),
-            routes: [
-              GoRoute(
-                path: AppRoutes.quizChat,
-                builder: (context, state) {
-                  final pages = state.extra as List<NotionPage>;
-                  final databaseName = state.uri.queryParameters['databaseName']!;
-                  return NotionQuizChatScreen(
-                    pages: pages,
-                    databaseName: databaseName,
-                  );
-                },
-              ),
-            ],
+            path: AppRoutes.chatHistory,
+            builder: (context, state) => const ChatHistoryScreen(),
           ),
         ],
       ),
     ],
   );
-
-  static StatefulShellBranch get rankingBranch => StatefulShellBranch(
+  static final StatefulShellBranch loginBranch = StatefulShellBranch(
+    routes: [
+      GoRoute(
+        path: AppRoutes.login,
+        builder: (context, state) => const LoginScreen(),
+      ),
+    ],
+  );
+  //chat
+  static final StatefulShellBranch chatBranch = StatefulShellBranch(
+    routes: [
+      GoRoute(
+        path: AppRoutes.chat,
+        builder: (context, state) {
+          final routeExtra = state.extra as NotionRouteExtra;
+          return ChatScreen(
+            pages: routeExtra.pages ?? [],
+            databaseName: routeExtra.databaseName ?? AppStrings.unknownDb,
+          );
+        },
+      ),
+    ],
+  );
+  // ranking
+  static final StatefulShellBranch rankingBranch = StatefulShellBranch(
     routes: [
       GoRoute(
         path: AppRoutes.ranking,
@@ -142,7 +115,8 @@ class AppShellRoutes {
     ],
   );
 
-  static StatefulShellBranch get homeBranch => StatefulShellBranch(
+  // home
+  static final StatefulShellBranch homeBranch = StatefulShellBranch(
     routes: [
       GoRoute(
         path: AppRoutes.home,
@@ -151,7 +125,8 @@ class AppShellRoutes {
     ],
   );
 
-  static StatefulShellBranch get heatmapBranch => StatefulShellBranch(
+  // heatmap
+  static final StatefulShellBranch heatmapBranch = StatefulShellBranch(
     routes: [
       GoRoute(
         path: AppRoutes.heatmap,
@@ -160,7 +135,8 @@ class AppShellRoutes {
     ],
   );
 
-  static StatefulShellBranch get profileBranch => StatefulShellBranch(
+  // profile
+  static final StatefulShellBranch profileBranch = StatefulShellBranch(
     routes: [
       GoRoute(
         path: AppRoutes.profile,
@@ -169,6 +145,34 @@ class AppShellRoutes {
           GoRoute(
             path: AppRoutes.changeLevel,
             builder: (context, state) => const ChangeLevelScreen(),
+          ),
+        ],
+      ),
+    ],
+  );
+
+  //settings
+  static final StatefulShellBranch settingsBranch = StatefulShellBranch(
+    routes: [
+      GoRoute(
+        path: AppRoutes.settings,
+        builder: (context, state) => const SettingsScreen(),
+        routes: [
+          GoRoute(
+            path: AppRoutes.heatmapColorSettings,
+            builder: (context, state) => const HeatmapColorSettingsScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.notionSettings,
+            builder: (context, state) => const NotionSettingsScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.openaiSettings,
+            builder: (context, state) => const OpenaiSettingsScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.geminiSettings,
+            builder: (context, state) => const GeminiSettingsScreen(),
           ),
         ],
       ),

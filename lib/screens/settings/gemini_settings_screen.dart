@@ -67,9 +67,13 @@ class _GeminiSettingsScreenState extends State<GeminiSettingsScreen> {
       await _loadKeys();
 
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(isValid ? 'Gemini Key 저장 및 인증 완료!' : 'Gemini Key가 유효하지 않습니다.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isValid ? 'Gemini Key 저장 및 인증 완료!' : 'Gemini Key가 유효하지 않습니다.',
+          ),
+        ),
+      );
       _geminiApiKeyController.clear();
     } catch (e) {
       if (mounted) {

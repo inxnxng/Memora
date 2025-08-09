@@ -1,4 +1,5 @@
 import 'package:memora/data/datasources/notion_remote_data_source.dart';
+import 'package:memora/models/notion_page.dart'; // Added
 import 'package:memora/repositories/notion/notion_auth_repository.dart';
 
 class NotionRepository {
@@ -14,10 +15,22 @@ class NotionRepository {
   Future<String> _getApiToken() async {
     final tokenData = await _notionAuthRepository.getApiKeyWithTimestamp();
     final apiToken = tokenData['value'];
+
     if (apiToken == null || apiToken.isEmpty) {
-      throw Exception('Notion API token not found.');
+      throw Exception('Notion API token is not set.');
     }
     return apiToken;
+  }
+
+  Future<List<NotionPage>> searchPages({String? query}) async {
+    final apiToken = await _getApiToken();
+    final response = await _remoteDataSource.searchPages(
+      apiToken,
+      query: query,
+    );
+    return (response['results'] as List)
+        .map((json) => NotionPage.fromMap(json))
+        .toList();
   }
 
   Future<Map<String, dynamic>> getPagesFromDB(
@@ -38,12 +51,12 @@ class NotionRepository {
     return _remoteDataSource.getPageContent(apiToken, pageId);
   }
 
-  Future<List<dynamic>> searchDatabases({String? query}) async {
+  Future<Map<String, dynamic>> searchDatabases({String? query}) async {
     final apiToken = await _getApiToken();
     return _remoteDataSource.searchDatabases(apiToken, query: query);
   }
 
-  Future<List<dynamic>> getRoadmapTasksFromDB(String databaseId) async {
+  Future<Map<String, dynamic>> getRoadmapTasksFromDB(String databaseId) async {
     final apiToken = await _getApiToken();
     return _remoteDataSource.getRoadmapTasksFromDB(apiToken, databaseId);
   }
@@ -53,7 +66,7 @@ class NotionRepository {
     return _remoteDataSource.getQuizDataFromDB(apiToken, databaseId);
   }
 
-  Future<List<dynamic>> fetchPageBlocks(String pageId) async {
+  Future<Map<String, dynamic>> fetchPageBlocks(String pageId) async {
     final apiToken = await _getApiToken();
     return _remoteDataSource.fetchPageBlocks(apiToken, pageId);
   }

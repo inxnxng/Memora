@@ -19,8 +19,6 @@ GoRouter createRouter(
 
   final routes = <RouteBase>[
     AppRoutes.splashRoute,
-    AppRoutes.loginRoute,
-    AppRoutes.onboardingRoute,
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
         return MainShell(navigationShell: navigationShell);
@@ -34,9 +32,11 @@ GoRouter createRouter(
         // 기본 경로
         AppShellRoutes.heatmapBranch,
         AppShellRoutes.profileBranch,
+        AppShellRoutes.chatBranch,
+        AppShellRoutes.loginBranch,
+        AppShellRoutes.settingsBranch,
       ],
     ),
-    AppRoutes.settingsRoute,
   ];
 
   return GoRouter(
