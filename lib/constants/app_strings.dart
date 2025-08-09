@@ -27,6 +27,7 @@ class AppStrings {
   // Login Screen
   static const String loginTitle = '로그인';
   static const String signInWithGoogle = 'Google 계정으로 로그인';
+  static const String signInWithGitHub = 'GitHub 계정으로 로그인';
   static const String loginFailed = '로그인에 실패했습니다. 다시 시도해주세요.';
 
   // Onboarding Screen

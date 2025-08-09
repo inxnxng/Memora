@@ -1,0 +1,25 @@
+<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Memora Logo">
+
+  <!-- 제목 -->
+  <text x="50%" y="46%" text-anchor="middle" dominant-baseline="middle" font-size="65"
+        font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif"
+        font-weight="700" fill="#121826">
+    Mem<tspan dx="28"> </tspan>ra
+  </text>
+
+  <!-- 별 -->
+  <path d="M173 90 l7.8 15.6 15.6 7.8 -15.6 7.8 -7.8 15.6 -7.8-15.6 -15.6-7.8 15.6-7.8 7.8-15.6z"
+        fill="#7C3AED"/>
+
+  <!-- 서브텍스트 -->
+  <text x="50%" y="63%" text-anchor="middle" dominant-baseline="middle" font-size="20"
+        font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif"
+        font-weight="400" fill="#121826">
+    Study. Recall.
+  </text>
+  <text x="50%" y="75%" text-anchor="middle" dominant-baseline="middle" font-size="25"
+        font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif"
+        font-weight="400" fill="#121826">
+    Own It.
+  </text>
+</svg>

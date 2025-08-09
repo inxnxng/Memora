@@ -2,6 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:memora/repositories/user/user_repository.dart';
+import 'package:memora/screens/login_screen.dart';
+import 'package:memora/utils/platform_utils.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -19,6 +21,9 @@ class AuthService {
         email: email,
         password: password,
       );
+      if (userCredential.user != null) {
+        await _userRepository.updateUserLastLogin(userCredential.user!.uid);
+      }
       return userCredential;
     } catch (e) {
       debugPrint("Error signing in with email: $e");
@@ -28,42 +33,73 @@ class AuthService {
 
   Future<UserCredential?> signInWithGoogle() async {
     try {
-      if (kIsWeb) {
-        // For web, use signInWithPopup which is handled by firebase_auth_web
-        final GoogleAuthProvider googleProvider = GoogleAuthProvider();
-        return await _auth.signInWithPopup(googleProvider);
-      } else {
-        await _googleSignIn.initialize(); // Ensure previous sign-in is cleared
-        final GoogleSignInAccount googleUser = await _googleSignIn.authenticate(
-          scopeHint: [
-            'https://www.googleapis.com/auth/userinfo.email',
-            'https://www.googleapis.com/auth/userinfo.profile',
-          ],
-        );
-        final GoogleSignInAuthentication googleAuth = googleUser.authentication;
-        final AuthCredential credential = GoogleAuthProvider.credential(
-          idToken: googleAuth.idToken,
-        );
-        UserCredential userCredential = await _auth.signInWithCredential(
-          credential,
-        );
+      await _googleSignIn.initialize(); // Ensure previous sign-in is cleared
+      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate(
+        scopeHint: [
+          'https://www.googleapis.com/auth/userinfo.email',
+          'https://www.googleapis.com/auth/userinfo.profile',
+        ],
+      );
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        idToken: googleAuth.idToken,
+      );
+      UserCredential userCredential = await _auth.signInWithCredential(
+        credential,
+      );
 
-        if (userCredential.additionalUserInfo?.isNewUser == true) {
-          final user = userCredential.user;
-          if (user != null) {
-            await _userRepository.createUser(
-              user.uid,
-              user.displayName,
-              user.email,
-              user.photoURL,
-            );
-          }
+      if (userCredential.additionalUserInfo?.isNewUser == true) {
+        final user = userCredential.user;
+        if (user != null) {
+          await _userRepository.createUser(
+            user.uid,
+            user.displayName,
+            user.email,
+            user.photoURL,
+          );
         }
-        return userCredential;
       }
+      return userCredential;
     } catch (e) {
       debugPrint("Error signing in with Google: $e");
       return null;
+    }
+  }
+
+  Future<UserCredential?> signInWithGitHub() async {
+    try {
+      final GithubAuthProvider githubProvider = GithubAuthProvider();
+      UserCredential userCredential;
+
+      if (PlatformUtils.isDesktop) {
+        userCredential = await _auth.signInWithPopup(githubProvider);
+      } else {
+        userCredential = await _auth.signInWithProvider(githubProvider);
+      }
+
+      if (userCredential.additionalUserInfo?.isNewUser == true) {
+        final user = userCredential.user;
+        if (user != null) {
+          await _userRepository.createUser(
+            user.uid,
+            user.displayName,
+            user.email,
+            user.photoURL,
+          );
+        }
+      }
+      return userCredential;
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'account-exists-with-different-credential') {
+        throw AuthServiceException(
+          'An account already exists with a different credential.',
+        );
+      } else {
+        debugPrint("Error signing in with GitHub: $e");
+        throw AuthServiceException(
+          'Failed to sign in with GitHub: ${e.message}',
+        );
+      }
     }
   }
 

@@ -252,10 +252,9 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
                   return Center(child: Text('Error: ${snapshot.error}'));
                 }
                 final messages = snapshot.data ?? [];
-                final allMessages = messages.reversed.toList();
+                List<ChatMessage> allMessages = messages;
                 if (_streamingAiMessage != null) {
-                  // Insert streaming message at the beginning (top of the reversed list)
-                  allMessages.insert(0, _streamingAiMessage!);
+                  allMessages = [_streamingAiMessage!, ...messages];
                 }
 
                 return ChatMessagesList(messages: allMessages);

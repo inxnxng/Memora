@@ -16,7 +16,7 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
 
-    Future.delayed(const Duration(seconds: 2), () {
+    Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         context.go(AppRoutes.home);
       }
@@ -27,6 +27,9 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDarkMode = theme.brightness == Brightness.dark;
+    final logoPng = isDarkMode
+        ? 'assets/images/login/logo_dark_transparent.png'
+        : 'assets/images/login/logo_light_transparent.png';
 
     return Scaffold(
       body: Container(
@@ -45,7 +48,7 @@ class _SplashScreenState extends State<SplashScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.asset('assets/images/logo.png', width: 150),
+              Image.asset(logoPng, height: 200, width: 200),
               const SizedBox(height: 20),
               const CircularProgressIndicator(),
             ],

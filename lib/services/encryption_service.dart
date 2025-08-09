@@ -16,7 +16,7 @@ class EncryptionService {
     String? keyString = await _secureStorage.read(key: _keyStorageKey);
     String? ivString = await _secureStorage.read(key: _ivStorageKey);
 
-    if (keyString == null || ivString == null) {
+    if (ivString == null) {
       _key = enc.Key.fromSecureRandom(32);
       _iv = enc.IV.fromSecureRandom(16);
       await _secureStorage.write(
@@ -28,7 +28,7 @@ class EncryptionService {
         value: base64.encode(_iv.bytes),
       );
     } else {
-      _key = enc.Key(base64.decode(keyString));
+      _key = enc.Key(base64.decode(keyString!));
       _iv = enc.IV(base64.decode(ivString));
     }
     _encrypter = enc.Encrypter(enc.AES(_key, mode: enc.AESMode.cbc));

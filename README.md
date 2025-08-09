@@ -1,5 +1,5 @@
 # Memora - 당신의 노트를 AI 퀴즈로
-
+![logo.svg](/assets/images/logo_light.svg)
 
 **Memora는 당신의 Notion 노트를 똑똑한 AI 퀴즈로 만들어주는 학습 파트너입니다.**
 

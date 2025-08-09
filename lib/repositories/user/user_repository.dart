@@ -26,6 +26,7 @@ class UserRepository {
         'streakCount': 0,
         'level': ProficiencyLevel.beginner.name,
         'createdAt': FieldValue.serverTimestamp(),
+        'lastLoginAt': FieldValue.serverTimestamp(),
       });
       // Also save to local storage
       await _localStorageService.saveUserName(
@@ -105,6 +106,12 @@ class UserRepository {
 
   Future<Map<String, int>> loadSessionMap(String userId) =>
       _localStorageService.loadSessionMap(userId);
+
+  Future<void> updateUserLastLogin(String userId) async {
+    await _firestore.collection('users').doc(userId).set({
+      'lastLoginAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
 
   Future<void> updateGeminiApiKey(String userId, String apiKey) async {
     await _firestore.collection('users').doc(userId).set({
