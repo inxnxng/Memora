@@ -15,13 +15,23 @@ class WelcomePage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
-            AppStrings.welcomeToMemora,
+            'Memora에 오신 것을',
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          const Text(
+            '환영합니다!',
             style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
           const Text(
-            AppStrings.personalizeExperience,
+            '더 나은 사용을 위해,',
+            style: TextStyle(fontSize: 18, color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+          const Text(
+            '당신의 학습 레벨을 선택해주세요.',
             style: TextStyle(fontSize: 18, color: Colors.grey),
             textAlign: TextAlign.center,
           ),

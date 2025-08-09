@@ -35,10 +35,10 @@ class RankingRepository {
           .limit(limit)
           .snapshots()
           .map((snapshot) {
-        return snapshot.docs.map((doc) {
-          return {'id': doc.id, ...doc.data()};
-        }).toList();
-      });
+            return snapshot.docs.map((doc) {
+              return {'id': doc.id, ...doc.data()};
+            }).toList();
+          });
     } catch (e) {
       // It's better to log the error for debugging purposes.'Error getting top rankings: $e');
       return Stream.value([]);

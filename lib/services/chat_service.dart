@@ -34,4 +34,12 @@ class ChatService {
   Future<Map<String, List<ChatMessage>>> getAllChatHistories() {
     return _chatRepository.getAllChatHistories();
   }
+
+  Future<void> deleteChatSessions(List<String> chatIds) {
+    return _chatRepository.deleteChatSessions(chatIds);
+  }
+
+  Future<void> deleteAllChatSessions() {
+    return _chatRepository.deleteAllChatSessions();
+  }
 }

@@ -22,7 +22,8 @@ class ChatSession {
       pageTitle: data['pageTitle'] ?? '',
       pageContent: data['pageContent'] ?? '',
       databaseName: data['databaseName'] ?? '',
-      lastMessageTimestamp: (data['lastMessageTimestamp'] as Timestamp).toDate(),
+      lastMessageTimestamp: (data['lastMessageTimestamp'] as Timestamp)
+          .toDate(),
     );
   }
 

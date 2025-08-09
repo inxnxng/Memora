@@ -17,4 +17,12 @@ class NotionAuthRepository {
   Future<void> deleteApiKey() {
     return _localStorageService.deleteApiKey(service);
   }
+
+  Future<void> saveApiKeyValidStatus(bool isValid) {
+    return _localStorageService.saveApiKeyValidStatus(service, isValid);
+  }
+
+  Future<bool?> getApiKeyValidStatus() {
+    return _localStorageService.getApiKeyValidStatus(service);
+  }
 }

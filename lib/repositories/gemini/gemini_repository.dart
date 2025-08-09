@@ -19,8 +19,19 @@ class GeminiRepository {
     return apiKey;
   }
 
-  Future<String> generateQuizFromText(String text) async {
+  Stream<String> generateQuizFromText(
+    List<Map<String, String>> messages,
+  ) async* {
     final apiKey = await _getApiKey();
-    return remoteDataSource.generateQuizFromText(text, apiKey);
+    yield* remoteDataSource.generateQuizFromText(messages, apiKey);
+  }
+
+  Future<String> createQuizFromText(String text) async {
+    final apiKey = await _getApiKey();
+    return remoteDataSource.createQuizFromText(text, apiKey);
+  }
+
+  Future<bool> validateApiKey(String apiKey) {
+    return remoteDataSource.validateApiKey(apiKey);
   }
 }

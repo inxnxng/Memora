@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:memora/providers/notion_provider.dart';
 import 'package:memora/widgets/common_app_bar.dart';
+import 'package:memora/models/task_model.dart';
 import 'package:provider/provider.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart'; // New import
 
@@ -24,7 +25,9 @@ class _QuizScreenState extends State<QuizScreen> {
   @override
   void initState() {
     super.initState();
-    _initializeQuizState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeQuizState();
+    });
   }
 
   Future<void> _initializeQuizState() async {
@@ -73,11 +76,7 @@ class _QuizScreenState extends State<QuizScreen> {
       body: notionProvider.arePagesLoading
           ? Center(child: CircularProgressIndicator())
           : notionProvider.pages.isEmpty
-          ? Center(
-              child: Text(
-                'Notion API 연결이 필요합니다. 설정에서 API 키와 데이터베이스 ID를 확인해주세요.',
-              ),
-            )
+          ? Center(child: Text('설정에서 Notion API 키와 데이터베이스 ID를 확인해주세요.'))
           : Column(
               children: [
                 _buildHorizontalPageList(notionProvider.pages),
@@ -248,14 +247,16 @@ class _QuizScreenState extends State<QuizScreen> {
                   context.pop(); // Dismiss loading indicator
 
                   if (mounted) {
+                    final page = NotionPage(
+                      id: pageId,
+                      title: pageTitle,
+                      content: pageContent,
+                    );
+                    final databaseName =
+                        notionProvider.databaseTitle ?? 'Unknown DB';
                     context.push(
-                      '/review/quiz/chat',
-                      extra: {
-                        'pageTitle': pageTitle,
-                        'pageContent': pageContent,
-                        'databaseName':
-                            notionProvider.databaseTitle ?? 'Unknown DB',
-                      },
+                      '/review/quiz/chat?databaseName=$databaseName',
+                      extra: [page],
                     );
                   }
                 } catch (e) {

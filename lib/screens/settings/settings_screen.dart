@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:memora/router/app_routes.dart';
-import 'package:memora/utils/platform_utils.dart';
 import 'package:memora/widgets/common_app_bar.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -41,18 +40,18 @@ class SettingsScreen extends StatelessWidget {
               context.push('${AppRoutes.settings}/${AppRoutes.geminiSettings}');
             },
           ),
-          if (!PlatformUtils.isApple)
-            _buildSettingsItem(
-              context,
-              icon: Icons.notifications_outlined,
-              title: '알림 설정',
-              subtitle: '매일 복습 시간을 설정합니다.',
-              onTap: () {
-                context.push(
-                  '${AppRoutes.settings}/${AppRoutes.notificationSettings}',
-                );
-              },
-            ),
+          // if (!PlatformUtils.isApple)
+          //   _buildSettingsItem(
+          //     context,
+          //     icon: Icons.notifications_outlined,
+          //     title: '알림 설정',
+          //     subtitle: '매일 복습 시간을 설정합니다.',
+          //     onTap: () {
+          //       context.push(
+          //         '${AppRoutes.settings}/${AppRoutes.notificationSettings}',
+          //       );
+          //     },
+          //   ),
           const Divider(),
           _buildSettingsItem(
             context,

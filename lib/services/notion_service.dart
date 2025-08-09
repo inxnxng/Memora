@@ -40,16 +40,38 @@ class NotionService {
 
   // --- API Key Management ---
 
-  Future<void> updateApiToken(String apiToken) {
-    return notionAuthRepository.saveApiKeyWithTimestamp(apiToken);
+  Future<bool> checkApiKeyAvailability() async {
+    final keyData = await notionAuthRepository.getApiKeyWithTimestamp();
+    if (keyData['value'] == null || keyData['value']!.isEmpty) {
+      return false;
+    }
+    final isValid = await notionAuthRepository.getApiKeyValidStatus();
+    return isValid ?? false;
+  }
+
+  Future<bool> validateAndSaveApiKey(String apiToken) async {
+    final isValid = await notionRepository.validateApiKey(apiToken);
+    await notionAuthRepository.saveApiKeyValidStatus(isValid);
+    if (isValid) {
+      await notionAuthRepository.saveApiKeyWithTimestamp(apiToken);
+    }
+    return isValid;
+  }
+
+  Future<void> updateApiToken(String apiToken) async {
+    await validateAndSaveApiKey(apiToken);
   }
 
   Future<Map<String, String?>> getApiKeyWithTimestamp() {
     return notionAuthRepository.getApiKeyWithTimestamp();
   }
 
-  Future<void> saveApiKeyWithTimestamp(String apiToken) {
-    return notionAuthRepository.saveApiKeyWithTimestamp(apiToken);
+  Future<void> saveApiKeyWithTimestamp(String apiToken) async {
+    await validateAndSaveApiKey(apiToken);
+  }
+
+  Future<void> deleteApiKey() {
+    return notionAuthRepository.deleteApiKey();
   }
 
   // --- Database Operations ---

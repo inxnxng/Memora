@@ -27,7 +27,7 @@ class ChatInputField extends StatelessWidget {
               controller: controller,
               focusNode: focusNode,
               decoration: InputDecoration(
-                hintText: '메시지를 입력하세요...',
+                hintText: '메세지를 입력하세요...',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20.0),
                 ),

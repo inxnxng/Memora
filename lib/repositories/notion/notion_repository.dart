@@ -57,4 +57,8 @@ class NotionRepository {
     final apiToken = await _getApiToken();
     return _remoteDataSource.fetchPageBlocks(apiToken, pageId);
   }
+
+  Future<bool> validateApiKey(String apiToken) {
+    return _remoteDataSource.validateApiKey(apiToken);
+  }
 }

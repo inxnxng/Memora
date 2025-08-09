@@ -42,8 +42,9 @@ class LocalStorageService {
   ) async {
     final prefs = await SharedPreferences.getInstance();
     final key = '${StorageKeys.chatHistoryKey}$taskId';
-    final List<String> encodedHistory =
-        messages.map((msg) => json.encode(msg.toLocalMap())).toList();
+    final List<String> encodedHistory = messages
+        .map((msg) => json.encode(msg.toLocalMap()))
+        .toList();
     await prefs.setStringList(key, encodedHistory);
   }
 
@@ -56,8 +57,7 @@ class LocalStorageService {
     if (encodedHistoryList != null && encodedHistoryList.isNotEmpty) {
       try {
         return encodedHistoryList
-            .map((line) =>
-                ChatMessage.fromLocalMap(json.decode(line)))
+            .map((line) => ChatMessage.fromLocalMap(json.decode(line)))
             .toList();
       } catch (e) {
         // If parsing fails, return an empty list, assuming data is corrupt.
@@ -96,6 +96,8 @@ class LocalStorageService {
       return StorageKeys.openAIApiKeyKey;
     } else if (service == "notion") {
       return StorageKeys.notionApiKeyKey;
+    } else if (service == "gemini") {
+      return StorageKeys.geminiApiKeyKey;
     }
     return '';
   }
@@ -105,8 +107,36 @@ class LocalStorageService {
       return StorageKeys.openAIApiKeyTimestampKey;
     } else if (service == "notion") {
       return StorageKeys.notionApiKeyTimestampKey;
+    } else if (service == "gemini") {
+      return StorageKeys.geminiApiKeyTimestampKey;
     }
     return '';
+  }
+
+  String getAppropriateValidStatusKeyName(String service) {
+    if (service == "openai") {
+      return StorageKeys.openAIApiKeyValidStatusKey;
+    } else if (service == "notion") {
+      return StorageKeys.notionApiKeyValidStatusKey;
+    } else if (service == "gemini") {
+      return StorageKeys.geminiApiKeyValidStatusKey;
+    }
+    return '';
+  }
+
+  Future<void> saveApiKeyValidStatus(String keyName, bool isValid) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(getAppropriateValidStatusKeyName(keyName), isValid);
+  }
+
+  Future<bool?> getApiKeyValidStatus(String keyName) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(getAppropriateValidStatusKeyName(keyName));
+  }
+
+  Future<void> deleteApiKeyValidStatus(String keyName) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(getAppropriateValidStatusKeyName(keyName));
   }
 
   Future<void> saveApiKeyWithTimestamp(String keyName, String apiKey) async {
@@ -131,6 +161,7 @@ class LocalStorageService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(getAppropriateKeyName(keyName));
     await prefs.remove(getAppropriateTimeStampName(keyName));
+    await deleteApiKeyValidStatus(keyName);
   }
 
   Future<void> saveUserLevel(String userId, String level) async {
@@ -184,7 +215,11 @@ class LocalStorageService {
     if (lastDateString != null) {
       final lastDate = DateTime.parse(lastDateString);
       final today = DateTime(date.year, date.month, date.day);
-      final lastStudyDay = DateTime(lastDate.year, lastDate.month, lastDate.day);
+      final lastStudyDay = DateTime(
+        lastDate.year,
+        lastDate.month,
+        lastDate.day,
+      );
       final difference = today.difference(lastStudyDay).inDays;
 
       if (difference == 1) {

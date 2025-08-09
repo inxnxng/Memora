@@ -30,7 +30,11 @@ class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
     final success = await notionProvider.fetchCombinedContent();
 
     if (success && mounted) {
-      context.push(AppRoutes.review, extra: notionProvider.combinedPageContent);
+      final databaseName = notionProvider.databaseTitle ?? AppStrings.unknownDb;
+      context.push(
+        '${AppRoutes.review}/${AppRoutes.quiz}/${AppRoutes.quizChat}?databaseName=$databaseName',
+        extra: notionProvider.combinedPageContent,
+      );
     } else if (!success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -66,7 +70,8 @@ class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.history),
-            onPressed: () => context.push('${AppRoutes.review}/${AppRoutes.chatHistory}'),
+            onPressed: () =>
+                context.push('${AppRoutes.review}/${AppRoutes.chatHistory}'),
             tooltip: '채팅 기록',
           ),
         ],
@@ -79,8 +84,10 @@ class _TilReviewSelectionScreenState extends State<TilReviewSelectionScreen> {
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(16.0),
+
                 child: Text(
                   AppStrings.noNotionPagesFound,
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
                   textAlign: TextAlign.center,
                 ),
               ),

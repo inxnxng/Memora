@@ -18,6 +18,7 @@ class _GeminiSettingsScreenState extends State<GeminiSettingsScreen> {
   final TextEditingController _geminiApiKeyController = TextEditingController();
   Map<String, String?> _geminiApiKey = {'value': null, 'timestamp': null};
   bool _isLoading = false;
+  bool? _isValid;
 
   @override
   void initState() {
@@ -31,6 +32,11 @@ class _GeminiSettingsScreenState extends State<GeminiSettingsScreen> {
       _isLoading = true;
     });
     _geminiApiKey = await _geminiService.getApiKeyWithTimestamp();
+    if (_geminiApiKey['value'] != null && _geminiApiKey['value']!.isNotEmpty) {
+      _isValid = await _geminiService.checkApiKeyAvailability();
+    } else {
+      _isValid = null;
+    }
     _geminiApiKeyController.text = ''; // 컨트롤러 지우기
     setState(() {
       _isLoading = false;
@@ -57,13 +63,13 @@ class _GeminiSettingsScreenState extends State<GeminiSettingsScreen> {
       _isLoading = true;
     });
     try {
-      await _geminiService.saveApiKeyWithTimestamp(token);
+      final isValid = await _geminiService.validateAndSaveApiKey(token);
       await _loadKeys();
 
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Gemini Key 저장 완료!')));
+      ).showSnackBar(SnackBar(content: Text(isValid ? 'Gemini Key 저장 및 인증 완료!' : 'Gemini Key가 유효하지 않습니다.')));
       _geminiApiKeyController.clear();
     } catch (e) {
       if (mounted) {
@@ -98,6 +104,7 @@ class _GeminiSettingsScreenState extends State<GeminiSettingsScreen> {
                     label: 'Gemini API Key',
                     currentValue: _geminiApiKey["value"],
                     timestamp: _geminiApiKey['timestamp'],
+                    isValid: _isValid,
                     onSave: _saveGeminiApiKey,
                   ),
                 ],
@@ -207,6 +214,7 @@ class _GeminiSettingsScreenState extends State<GeminiSettingsScreen> {
     required VoidCallback onSave,
     String? currentValue,
     String? timestamp,
+    bool? isValid,
   }) {
     String maskedValue = '';
     if (currentValue != null && currentValue.isNotEmpty) {
@@ -221,9 +229,20 @@ class _GeminiSettingsScreenState extends State<GeminiSettingsScreen> {
         if (maskedValue.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 8.0),
-            child: Text(
-              '현재 키: $maskedValue',
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
+            child: Row(
+              children: [
+                Text(
+                  '현재 키: $maskedValue',
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+                const SizedBox(width: 8),
+                if (isValid != null)
+                  Icon(
+                    isValid ? Icons.check_circle : Icons.error,
+                    color: isValid ? Colors.green : Colors.red,
+                    size: 16,
+                  ),
+              ],
             ),
           ),
         TextField(

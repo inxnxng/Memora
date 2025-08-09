@@ -42,9 +42,7 @@ class ProviderContainer extends StatelessWidget {
         // Foundational Services
         Provider<LocalStorageService>(create: (_) => LocalStorageService()),
         Provider<FirebaseService>(create: (_) => FirebaseService()),
-        Provider<NotificationService>(
-          create: (_) => NotificationService(),
-        ),
+        Provider<NotificationService>(create: (_) => NotificationService()),
 
         // Data Sources
         Provider<NotionRemoteDataSource>(

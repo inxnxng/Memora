@@ -1,6 +1,5 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:memora/providers/notion_provider.dart';
 import 'package:memora/services/notion_service.dart';
@@ -23,6 +22,7 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
       TextEditingController();
   Map<String, String?> _notionApiKey = {'value': null, 'timestamp': null};
   bool _isLoading = false;
+  bool? _isValid;
 
   @override
   void initState() {
@@ -39,6 +39,11 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
       _isLoading = true;
     });
     _notionApiKey = await _notionService.getApiKeyWithTimestamp();
+    if (_notionApiKey['value'] != null && _notionApiKey['value']!.isNotEmpty) {
+      _isValid = await _notionService.checkApiKeyAvailability();
+    } else {
+      _isValid = null;
+    }
     _notionApiTokenController.text = ''; // Clear controller
     setState(() {
       _isLoading = false;
@@ -65,38 +70,7 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
       _isLoading = true;
     });
     try {
-      if (!token.startsWith('ntn_')) {
-        final bool? shouldSave = await showDialog<bool>(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('잘못된 API 키 형식'),
-              content: const Text(
-                'Notion API 키는 보통 "ntn_"으로 시작합니다. 입력하신 키가 올바른지 확인해주세요.\n\n그래도 저장하시겠습니까?',
-              ),
-              actions: <Widget>[
-                TextButton(
-                  child: const Text('취소'),
-                  onPressed: () => context.pop(false),
-                ),
-                TextButton(
-                  child: const Text('그래도 저장'),
-                  onPressed: () => context.pop(true),
-                ),
-              ],
-            );
-          },
-        );
-        if (shouldSave != true) {
-          setState(() {
-            _isLoading = false;
-          });
-          return;
-        }
-      }
-      await _notionService.saveApiKeyWithTimestamp(
-        _notionApiTokenController.text,
-      );
+      final isValid = await _notionService.validateAndSaveApiKey(token);
       await _loadKeys();
 
       if (mounted) {
@@ -104,9 +78,13 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
       }
 
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Notion Key 저장 완료!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isValid ? 'Notion Key 저장 및 인증 완료!' : 'Notion Key가 유효하지 않습니다.',
+          ),
+        ),
+      );
       _notionApiTokenController.clear();
     } catch (e) {
       if (mounted) {
@@ -144,6 +122,7 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
                         label: 'Notion API Token',
                         currentValue: _notionApiKey["value"],
                         timestamp: _notionApiKey['timestamp'],
+                        isValid: _isValid,
                         onSave: _saveNotionApiToken,
                       ),
                       const SizedBox(height: 30),
@@ -353,6 +332,7 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
     required VoidCallback onSave,
     String? currentValue,
     String? timestamp,
+    bool? isValid,
   }) {
     String maskedValue = '';
     if (currentValue != null && currentValue.isNotEmpty) {
@@ -367,9 +347,20 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
         if (maskedValue.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 8.0),
-            child: Text(
-              '현재 값: $maskedValue',
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
+            child: Row(
+              children: [
+                Text(
+                  '현재 키: $maskedValue',
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+                const SizedBox(width: 8),
+                if (isValid != null)
+                  Icon(
+                    isValid ? Icons.check_circle : Icons.error,
+                    color: isValid ? Colors.green : Colors.red,
+                    size: 16,
+                  ),
+              ],
             ),
           ),
         TextField(

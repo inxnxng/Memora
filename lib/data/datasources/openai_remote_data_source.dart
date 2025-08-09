@@ -19,7 +19,7 @@ class OpenAIRemoteDataSource {
   OpenAIRemoteDataSource();
 
   Stream<String> generateTrainingContentStream(
-    String userPrompt,
+    List<Map<String, String>> messages,
     String apiKey,
   ) {
     if (apiKey.isEmpty) {
@@ -39,13 +39,7 @@ class OpenAIRemoteDataSource {
 
     request.body = jsonEncode({
       'model': OpenAIConstants.gpt4oMini,
-      'messages': [
-        {
-          'role': 'system',
-          'content': OpenAIConstants.memoryTrainingAssistantPrompt,
-        },
-        {'role': 'user', 'content': userPrompt},
-      ],
+      'messages': messages,
       'temperature': 0.7,
       'stream': true,
     });
@@ -58,7 +52,7 @@ class OpenAIRemoteDataSource {
             return response.stream
                 .transform(utf8.decoder)
                 .transform(const LineSplitter())
-                .where((line) => line.startsWith('data: בו'))
+                .where((line) => line.startsWith('data: '))
                 .map((line) => line.substring(6))
                 .where((data) => data.trim() != '[DONE]')
                 .map((data) {
@@ -92,7 +86,7 @@ class OpenAIRemoteDataSource {
   }
 
   Future<String> generateTrainingContent(
-    String userPrompt,
+    List<Map<String, String>> messages,
     String apiKey,
   ) async {
     if (apiKey.isEmpty) {
@@ -106,13 +100,7 @@ class OpenAIRemoteDataSource {
       },
       body: jsonEncode({
         'model': OpenAIConstants.gpt4oMini,
-        'messages': [
-          {
-            'role': 'system',
-            'content': OpenAIConstants.memoryTrainingAssistantPrompt,
-          },
-          {'role': 'user', 'content': userPrompt},
-        ],
+        'messages': messages,
         'temperature': 0.7,
       }),
     );
@@ -169,6 +157,17 @@ class OpenAIRemoteDataSource {
         statusCode: response.statusCode,
       );
     }
+  }
+
+  Future<bool> validateApiKey(String apiKey) async {
+    if (apiKey.isEmpty) {
+      return false;
+    }
+    final response = await http.get(
+      Uri.parse('https://api.openai.com/v1/models'),
+      headers: {'Authorization': 'Bearer $apiKey'},
+    );
+    return response.statusCode == 200;
   }
 }
 

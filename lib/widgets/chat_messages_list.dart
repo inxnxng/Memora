@@ -20,6 +20,7 @@ class ChatMessagesList extends StatelessWidget {
       itemBuilder: (context, index) {
         final message = messages[index];
         return GestureDetector(
+          key: ValueKey(message.id),
           onLongPress: () {
             Clipboard.setData(ClipboardData(text: message.content));
             ScaffoldMessenger.of(context).showSnackBar(

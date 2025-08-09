@@ -79,6 +79,25 @@ class FirebaseService {
     return snapshot.docs.map((doc) => ChatSession.fromFirestore(doc)).toList();
   }
 
+  // Method to delete a specific chat session and all its messages.
+  Future<void> deleteChatSession(String chatId) async {
+    if (currentUser == null) return;
+    final chatSessionRef = _firestore
+        .collection('users')
+        .doc(currentUser!.uid)
+        .collection('chats')
+        .doc(chatId);
+
+    // Delete all messages in the subcollection first.
+    final messagesSnapshot = await chatSessionRef.collection('messages').get();
+    for (var doc in messagesSnapshot.docs) {
+      await doc.reference.delete();
+    }
+
+    // Then delete the chat session document itself.
+    await chatSessionRef.delete();
+  }
+
   Future<void> saveTasks(List<Task> tasks) async {
     if (currentUser == null) return;
     final userDoc = _firestore.collection('users').doc(currentUser!.uid);

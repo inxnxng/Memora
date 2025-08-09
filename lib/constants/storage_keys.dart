@@ -3,8 +3,13 @@ class StorageKeys {
   static const String lastTrainingResultKey = 'last_training_result';
   static const String openAIApiKeyKey = 'openai_api_key';
   static const String openAIApiKeyTimestampKey = 'openai_api_key_timestamp';
+  static const String openAIApiKeyValidStatusKey = 'openai_api_key_valid_status';
   static const String notionApiKeyKey = 'notion_api_key';
   static const String notionApiKeyTimestampKey = 'notion_api_key_timestamp';
+  static const String notionApiKeyValidStatusKey = 'notion_api_key_valid_status';
+  static const String geminiApiKeyKey = 'gemini_api_key';
+  static const String geminiApiKeyTimestampKey = 'gemini_api_key_timestamp';
+  static const String geminiApiKeyValidStatusKey = 'gemini_api_key_valid_status';
   static const String lastTrainedDateKey =
       'last_trained_date_'; // Suffix with user ID
   static const String userLevelKey = 'user_level_'; // Suffix with user ID

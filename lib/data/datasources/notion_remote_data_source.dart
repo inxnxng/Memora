@@ -212,4 +212,16 @@ class NotionRemoteDataSource {
     final data = await _handleResponse(response);
     return data['results'];
   }
+
+  Future<bool> validateApiKey(String apiToken) async {
+    final url = Uri.parse('https://api.notion.com/v1/users/me');
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $apiToken',
+        'Notion-Version': _notionApiVersion,
+      },
+    );
+    return response.statusCode == 200;
+  }
 }

@@ -6,6 +6,7 @@
 // **************************************************************************
 
 import 'package:go_router/go_router.dart';
+import 'package:memora/models/task_model.dart';
 import 'package:memora/screens/heatmap/heatmap_screen.dart';
 import 'package:memora/screens/home_screen.dart';
 import 'package:memora/screens/login_screen.dart';
@@ -117,13 +118,10 @@ class AppShellRoutes {
               GoRoute(
                 path: AppRoutes.quizChat,
                 builder: (context, state) {
-                  final extra = state.extra as Map<String, String>;
-                  final pageTitle = extra['pageTitle']!;
-                  final pageContent = extra['pageContent']!;
-                  final databaseName = extra['databaseName']!;
+                  final pages = state.extra as List<NotionPage>;
+                  final databaseName = state.uri.queryParameters['databaseName']!;
                   return NotionQuizChatScreen(
-                    pageTitle: pageTitle,
-                    pageContent: pageContent,
+                    pages: pages,
                     databaseName: databaseName,
                   );
                 },

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:markdown_widget/markdown_widget.dart';
+import 'package:memora/models/task_model.dart';
 import 'package:memora/providers/notion_provider.dart';
 import 'package:memora/providers/task_provider.dart';
 import 'package:memora/widgets/common_app_bar.dart';
@@ -44,14 +45,13 @@ class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
       }
     });
 
-    // 학습 페이지에서 n초 이상 잔류할 경우 complete 가능 상태
-    Timer(const Duration(seconds: 10), () {
-      if (mounted) {
-        setState(() {
-          _showCompleteButton = true;
-        });
-      }
-    });
+    // Timer(const Duration(seconds: 10), () {
+    //   if (mounted) {
+    //     setState(() {
+    //       _showCompleteButton = true;
+    //     });
+    //   }
+    // });
   }
 
   void _completeStudy(BuildContext context) {
@@ -68,10 +68,10 @@ class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
               backgroundColor: Colors.green,
             ),
           );
-          // Optionally, pop the screen or disable the button
+
           if (mounted) {
             setState(() {
-              _showCompleteButton = false; // Prevent multiple submissions
+              _showCompleteButton = false;
             });
           }
         })
@@ -136,13 +136,14 @@ class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
               icon: const Icon(Icons.quiz),
               label: const Text('복습하기'),
               onPressed: () {
+                final page = NotionPage(
+                  id: widget.pageId,
+                  title: widget.pageTitle,
+                  content: _pageContent,
+                );
                 context.push(
-                  '/review/quiz/chat',
-                  extra: {
-                    'pageTitle': widget.pageTitle,
-                    'pageContent': _pageContent,
-                    'databaseName': widget.databaseName,
-                  },
+                  '/review/quiz/chat?databaseName=${widget.databaseName}',
+                  extra: [page],
                 );
               },
               style: ElevatedButton.styleFrom(

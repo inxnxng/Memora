@@ -2,26 +2,28 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:memora/constants/prompt_constants.dart';
 import 'package:memora/models/chat_message.dart';
+import 'package:memora/models/task_model.dart';
 import 'package:memora/providers/task_provider.dart';
+import 'package:memora/providers/user_provider.dart';
 import 'package:memora/repositories/chat/chat_repository.dart';
+import 'package:memora/router/app_routes.dart';
 import 'package:memora/services/chat_service.dart';
+import 'package:memora/services/gemini_service.dart';
 import 'package:memora/services/openai_service.dart';
 import 'package:memora/widgets/chat_input_field.dart';
 import 'package:memora/widgets/chat_messages_list.dart';
 import 'package:memora/widgets/common_app_bar.dart';
-import 'package:memora/providers/user_provider.dart';
 import 'package:provider/provider.dart';
 
 class NotionQuizChatScreen extends StatefulWidget {
-  final String pageTitle;
-  final String pageContent;
+  final List<NotionPage> pages;
   final String databaseName;
 
   const NotionQuizChatScreen({
     super.key,
-    required this.pageTitle,
-    required this.pageContent,
+    required this.pages,
     required this.databaseName,
   });
 
@@ -31,6 +33,7 @@ class NotionQuizChatScreen extends StatefulWidget {
 
 class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
   late final OpenAIService _openAIService;
+  late final GeminiService _geminiService;
   late final ChatService _chatService;
   late final UserProvider _userProvider;
   final TextEditingController _textController = TextEditingController();
@@ -39,20 +42,26 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
   StreamSubscription? _streamSubscription;
   StreamSubscription? _chatHistorySubscription;
 
-  // AI의 실시간 응답을 임시로 저장할 변수
-  ChatMessage? _streamingAiMessage;
-
   late final String _chatId;
+  late final String _pageTitles;
+  late final String _pageContents;
 
   @override
   void initState() {
     super.initState();
-    // Use the robust chatId generation
-    _chatId = ChatRepository.generateChatId([widget.pageTitle]);
+    _pageTitles = widget.pages.map((p) => p.title).join(', ');
+    _pageContents = widget.pages.map((p) => p.content).join('\n\n---\n\n');
+    _chatId = ChatRepository.generateChatId(
+      widget.pages.map((p) => p.id).toList(),
+    );
     _openAIService = Provider.of<OpenAIService>(context, listen: false);
+    _geminiService = Provider.of<GeminiService>(context, listen: false);
     _chatService = Provider.of<ChatService>(context, listen: false);
     _userProvider = Provider.of<UserProvider>(context, listen: false);
-    _startQuizSessionIfNeeded();
+    _initializeChat();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus();
+    });
   }
 
   @override
@@ -65,30 +74,68 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
     super.dispose();
   }
 
-  void _startQuizSessionIfNeeded() {
-    // Listen to the stream to check for history.
-    // This is more robust than using .first.
-    _chatHistorySubscription =
-        _chatService.getMessages(_chatId).listen((messages) {
-      // If messages are empty and we are not already loading a quiz, start one.
-      if (messages.isEmpty && !_isLoading) {
-        _startQuizSession();
+  void _initializeChat() {
+    _chatHistorySubscription = _chatService.getMessages(_chatId).listen((
+      messages,
+    ) {
+      if (messages.isEmpty) {
+        _showWelcomeMessage();
       }
-      // Once we get the first batch of messages, we don't need this subscription anymore.
       _chatHistorySubscription?.cancel();
     });
   }
 
-  void _startQuizSession() {
-    if (_isLoading) return;
-    setState(() {
-      _isLoading = true;
-    });
+  void _showWelcomeMessage() async {
+    final welcomeMessage = ChatMessage(
+      content: PromptConstants.welcomeMessage(_pageTitles),
+      sender: MessageSender.ai,
+      timestamp: DateTime.now(),
+    );
+    await _chatService.sendMessage(
+      _chatId,
+      welcomeMessage,
+      pageTitle: _pageTitles,
+      pageContent: _pageContents,
+      databaseName: widget.databaseName,
+    );
+  }
 
-    final initialPrompt =
-        "Based on the following content from my Notion page '${widget.pageTitle}', please quiz me to help me remember it. Ask me one question at a time. After I answer, please tell me if I am correct or incorrect by starting your response with 'Correct.' or 'Incorrect.'. Then, ask the next question. Ask a total of 3 questions.";
+  Future<void> _checkApiKeysAndSendMessage(String text) async {
+    final hasOpenAIKey = await _openAIService.checkApiKeyAvailability();
+    final hasGeminiKey = await _geminiService.checkApiKeyAvailability();
 
-    _handleAiResponse(initialPrompt, isInitialMessage: true);
+    if (!hasOpenAIKey && !hasGeminiKey) {
+      if (mounted) {
+        _showApiKeyRequiredDialog();
+      }
+    } else {
+      _sendMessage(text);
+    }
+  }
+
+  void _showApiKeyRequiredDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('API 키 필요'),
+        content: const Text(
+          'OpenAI 또는 Gemini API 키가 필요합니다. 설정으로 이동하여 키를 추가해주세요.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.push(AppRoutes.settings);
+            },
+            child: const Text('설정으로 이동'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _sendMessage(String text) async {
@@ -102,42 +149,80 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
       sender: MessageSender.user,
       timestamp: DateTime.now(),
     );
-    // User message is sent to Firebase, the stream will update the UI and local cache
+
     await _chatService.sendMessage(
       _chatId,
       userMessage,
-      pageTitle: widget.pageTitle,
-      pageContent: widget.pageContent,
+      pageTitle: _pageTitles,
+      pageContent: _pageContents,
       databaseName: widget.databaseName,
     );
 
-    _handleAiResponse(text);
+    _handleAiResponse();
   }
 
-  void _handleAiResponse(String prompt, {bool isInitialMessage = false}) {
+  void _handleAiResponse() async {
     setState(() {
       _isLoading = true;
-      // AI 응답 스트리밍 시작을 표시하기 위한 임시 메시지
-      _streamingAiMessage = ChatMessage(
-        content: "...",
-        sender: MessageSender.ai,
-        timestamp: DateTime.now(),
-      );
     });
 
     try {
-      final stream = _openAIService.generateTrainingContentStream(prompt);
+      final hasOpenAIKey = await _openAIService.checkApiKeyAvailability();
+      final hasGeminiKey = await _geminiService.checkApiKeyAvailability();
+
+      Stream<String> stream;
+
+      final history = await _chatService.getMessages(_chatId).first;
+      final userMessages = history
+          .where((m) => m.sender == MessageSender.user)
+          .toList();
+
+      final isFirstUserMessage = userMessages.length == 1;
+
+      List<Map<String, String>> messagesForApi;
+
+      if (isFirstUserMessage) {
+        messagesForApi = [
+          {'role': 'system', 'content': PromptConstants.reviewSystemPrompt},
+          {
+            'role': 'user',
+            'content': PromptConstants.initialUserPrompt(_pageContents),
+          },
+        ];
+      } else {
+        final chatHistory = history
+            .where(
+              (m) => m.content != PromptConstants.welcomeMessage(_pageTitles),
+            )
+            .map(
+              (msg) => {
+                'role': msg.sender == MessageSender.user ? 'user' : 'assistant',
+                'content': msg.content,
+              },
+            )
+            .toList()
+            .reversed
+            .toList();
+
+        messagesForApi = [
+          {'role': 'system', 'content': PromptConstants.reviewSystemPrompt},
+          ...chatHistory,
+        ];
+      }
+
+      if (hasOpenAIKey) {
+        stream = _openAIService.generateTrainingContentStream(messagesForApi);
+      } else if (hasGeminiKey) {
+        stream = _geminiService.generateQuizFromText(messagesForApi);
+      } else {
+        throw Exception("No API Key available.");
+      }
+
       String fullResponse = "";
 
       _streamSubscription = stream.listen(
         (contentChunk) {
           fullResponse += contentChunk;
-          setState(() {
-            // 스트리밍 중인 메시지 내용 업데이트
-            if (_streamingAiMessage != null) {
-              _streamingAiMessage!.content = fullResponse;
-            }
-          });
         },
         onDone: () async {
           final finalResponse = fullResponse.trim();
@@ -153,12 +238,6 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
           if (mounted) {
             setState(() {
               _isLoading = false;
-              _streamingAiMessage = null; // 스트리밍 완료 후 임시 메시지 제거
-            });
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                _focusNode.requestFocus();
-              }
             });
           }
         },
@@ -172,12 +251,6 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
           if (mounted) {
             setState(() {
               _isLoading = false;
-              _streamingAiMessage = null;
-            });
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) {
-                _focusNode.requestFocus();
-              }
             });
           }
         },
@@ -188,11 +261,10 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
         sender: MessageSender.ai,
         timestamp: DateTime.now(),
       );
-      _chatService.sendMessage(_chatId, errorMessage);
+      await _chatService.sendMessage(_chatId, errorMessage);
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _streamingAiMessage = null;
         });
       }
     }
@@ -203,7 +275,7 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
     taskProvider
         .addStudyRecordForToday(
           databaseName: widget.databaseName,
-          title: widget.pageTitle,
+          title: _pageTitles,
         )
         .then((_) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -228,7 +300,7 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CommonAppBar(
-        title: '복습: ${widget.pageTitle}',
+        title: '복습: $_pageTitles',
         actions: [
           IconButton(
             icon: const Icon(Icons.check_circle_outline),
@@ -244,28 +316,23 @@ class _NotionQuizChatScreenState extends State<NotionQuizChatScreen> {
               stream: _chatService.getMessages(_chatId),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting &&
-                    !snapshot.hasData) {
-                  // Now, this should only show briefly as local data loads fast.
+                    (snapshot.data?.isEmpty ?? true)) {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
                   return Center(child: Text('Error: ${snapshot.error}'));
                 }
                 final messages = snapshot.data ?? [];
-                List<ChatMessage> allMessages = messages;
-                if (_streamingAiMessage != null) {
-                  allMessages = [_streamingAiMessage!, ...messages];
-                }
-
-                return ChatMessagesList(messages: allMessages);
+                return ChatMessagesList(messages: messages);
               },
             ),
           ),
           ChatInputField(
             controller: _textController,
             focusNode: _focusNode,
-            onSubmitted: (text) => _sendMessage(text),
-            onSendPressed: () => _sendMessage(_textController.text),
+            onSubmitted: (text) => _checkApiKeysAndSendMessage(text),
+            onSendPressed: () =>
+                _checkApiKeysAndSendMessage(_textController.text),
             isEnabled: !_isLoading,
           ),
         ],

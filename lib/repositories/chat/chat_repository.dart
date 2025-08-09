@@ -120,4 +120,18 @@ class ChatRepository {
     }
     return allHistories;
   }
+
+  /// Deletes a list of chat sessions from Firebase.
+  Future<void> deleteChatSessions(List<String> chatIds) async {
+    for (String chatId in chatIds) {
+      await _firebaseService.deleteChatSession(chatId);
+    }
+  }
+
+  /// Deletes all chat sessions from Firebase.
+  Future<void> deleteAllChatSessions() async {
+    final sessions = await getAllChatSessions();
+    final chatIds = sessions.map((s) => s.chatId).toList();
+    await deleteChatSessions(chatIds);
+  }
 }

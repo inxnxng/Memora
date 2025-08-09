@@ -124,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 datasets: heatmapDatasets,
                 startDate: startDate,
                 endDate: endDate,
-                size: 15,
+                size: 20,
                 fontSize: 0,
                 colorMode: ColorMode.opacity,
                 showText: false,

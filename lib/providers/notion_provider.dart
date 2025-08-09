@@ -233,7 +233,7 @@ class NotionProvider with ChangeNotifier {
         if (content.trim().isNotEmpty) {
           final useGemini = await _geminiService.checkApiKeyAvailability();
           if (useGemini) {
-            final quizJsonString = await _geminiService.generateQuizFromText(
+            final quizJsonString = await _geminiService.createQuizFromText(
               content,
             );
             _currentQuiz = {'quiz': quizJsonString};
@@ -263,7 +263,7 @@ class NotionProvider with ChangeNotifier {
     _databaseId = result['databaseId'];
     _databaseTitle = result['databaseTitle'];
     if (_apiToken == null) {
-      _notionConnectionError = 'Notion API 토큰을 찾을 수 없습니다. 설정에서 추가해주세요.';
+      _notionConnectionError = '설정에서 Notion API 토큰을 추가해주세요.';
     } else {
       _notionConnectionError = null;
     }

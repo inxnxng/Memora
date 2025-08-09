@@ -1,6 +1,5 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:memora/services/openai_service.dart';
 import 'package:memora/widgets/common_app_bar.dart';
@@ -19,6 +18,7 @@ class _OpenaiSettingsScreenState extends State<OpenaiSettingsScreen> {
   final TextEditingController _openaiApiKeyController = TextEditingController();
   Map<String, String?> _openaiApiKey = {'value': null, 'timestamp': null};
   bool _isLoading = false;
+  bool? _isValid;
 
   @override
   void initState() {
@@ -32,6 +32,11 @@ class _OpenaiSettingsScreenState extends State<OpenaiSettingsScreen> {
       _isLoading = true;
     });
     _openaiApiKey = await _openaiService.getApiKeyWithTimestamp();
+    if (_openaiApiKey['value'] != null && _openaiApiKey['value']!.isNotEmpty) {
+      _isValid = await _openaiService.checkApiKeyAvailability();
+    } else {
+      _isValid = null;
+    }
     _openaiApiKeyController.text = ''; // 컨트롤러 지우기
     setState(() {
       _isLoading = false;
@@ -58,42 +63,17 @@ class _OpenaiSettingsScreenState extends State<OpenaiSettingsScreen> {
       _isLoading = true;
     });
     try {
-      if (!token.startsWith('sk-')) {
-        final bool? shouldSave = await showDialog<bool>(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('잘못된 API 키 형식'),
-              content: const Text(
-                'OpenAI API 키는 보통 "sk-"로 시작합니다. 입력하신 키가 올바른지 확인해주세요.\n\n그래도 저장하시겠습니까?',
-              ),
-              actions: <Widget>[
-                TextButton(
-                  child: const Text('취소'),
-                  onPressed: () => context.pop(false),
-                ),
-                TextButton(
-                  child: const Text('그래도 저장'),
-                  onPressed: () => context.pop(true),
-                ),
-              ],
-            );
-          },
-        );
-        if (shouldSave != true) {
-          setState(() {
-            _isLoading = false;
-          });
-          return;
-        }
-      }
-      await _openaiService.saveApiKeyWithTimestamp(token);
+      final isValid = await _openaiService.validateAndSaveApiKey(token);
       await _loadKeys();
 
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('OpenAI Key 저장 완료!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isValid ? 'OpenAI Key 저장 및 인증 완료!' : 'OpenAI Key가 유효하지 않습니다.',
+          ),
+        ),
+      );
       _openaiApiKeyController.clear();
     } catch (e) {
       if (mounted) {
@@ -128,6 +108,7 @@ class _OpenaiSettingsScreenState extends State<OpenaiSettingsScreen> {
                     label: 'OpenAI API Key',
                     currentValue: _openaiApiKey["value"],
                     timestamp: _openaiApiKey['timestamp'],
+                    isValid: _isValid,
                     onSave: _saveOpenAiApiKey,
                   ),
                 ],
@@ -237,6 +218,7 @@ class _OpenaiSettingsScreenState extends State<OpenaiSettingsScreen> {
     required VoidCallback onSave,
     String? currentValue,
     String? timestamp,
+    bool? isValid,
   }) {
     String maskedValue = '';
     if (currentValue != null && currentValue.isNotEmpty) {
@@ -251,9 +233,20 @@ class _OpenaiSettingsScreenState extends State<OpenaiSettingsScreen> {
         if (maskedValue.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 8.0),
-            child: Text(
-              '현재 키: $maskedValue',
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
+            child: Row(
+              children: [
+                Text(
+                  '현재 키: $maskedValue',
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+                const SizedBox(width: 8),
+                if (isValid != null)
+                  Icon(
+                    isValid ? Icons.check_circle : Icons.error,
+                    color: isValid ? Colors.green : Colors.red,
+                    size: 16,
+                  ),
+              ],
             ),
           ),
         TextField(
