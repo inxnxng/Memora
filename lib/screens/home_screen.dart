@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_heatmap_calendar/flutter_heatmap_calendar.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:memora/constants/app_strings.dart';
 import 'package:memora/models/proficiency_level.dart';
@@ -7,6 +7,7 @@ import 'package:memora/providers/notion_provider.dart';
 import 'package:memora/providers/task_provider.dart';
 import 'package:memora/providers/user_provider.dart';
 import 'package:memora/router/app_routes.dart';
+import 'package:memora/widgets/responsive_heatmap.dart';
 import 'package:provider/provider.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -22,8 +23,6 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        // Data is now loaded in providers' initialization
-        // but we can refresh it here if needed, e.g., when returning to the screen.
         context.read<TaskProvider>().loadHeatmapColor();
         context.read<TaskProvider>().fetchHeatmapData();
       }
@@ -32,8 +31,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _getProfileImage(ProficiencyLevel? level) {
     String imageLevel = level?.name.toLowerCase() ?? 'default';
-    // A simple mapping to asset paths.
-    // Consider moving this to the ProficiencyLevel model or a dedicated helper.
     const basePath = 'assets/images/proficiency_levels/';
     const validLevels = {'beginner', 'intermediate', 'advanced', 'master'};
     return validLevels.contains(imageLevel)
@@ -65,7 +62,23 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           },
         ),
-        title: const Text(AppStrings.appName),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text("Mem"),
+            Column(
+              children: [
+                const SizedBox(height: 4),
+                SvgPicture.asset(
+                  'assets/images/icon.svg',
+                  width: 20,
+                  height: 20,
+                ),
+              ],
+            ),
+            Text("ra"),
+          ],
+        ),
         centerTitle: true,
         actions: [
           IconButton(
@@ -113,24 +126,20 @@ class _HomeScreenState extends State<HomeScreen> {
           const Text(
             AppStrings.learningRecord,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 22),
+            style: TextStyle(fontSize: 20),
           ),
           const SizedBox(height: 10),
           if (taskProvider.isLoading)
             const CircularProgressIndicator()
           else
-            IgnorePointer(
-              child: HeatMap(
-                datasets: heatmapDatasets,
-                startDate: startDate,
-                endDate: endDate,
-                size: 20,
-                fontSize: 0,
-                colorMode: ColorMode.opacity,
-                showText: false,
-                scrollable: true,
-                colorsets: {1: taskProvider.heatmapColor},
-                showColorTip: false,
+            Expanded(
+              child: IgnorePointer(
+                child: ResponsiveHeatmap(
+                  datasets: heatmapDatasets,
+                  startDate: startDate,
+                  endDate: endDate,
+                  heatmapColor: taskProvider.heatmapColor,
+                ),
               ),
             ),
         ],

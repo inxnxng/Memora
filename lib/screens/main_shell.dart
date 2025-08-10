@@ -9,9 +9,12 @@ class MainShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final showBottomNavBar = navigationShell.currentIndex < 3;
     return Scaffold(
       body: navigationShell,
-      bottomNavigationBar: CommonBottomNavBar(navigationShell: navigationShell),
+      bottomNavigationBar: showBottomNavBar
+          ? CommonBottomNavBar(navigationShell: navigationShell)
+          : null,
     );
   }
 }

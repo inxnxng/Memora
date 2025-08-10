@@ -34,6 +34,7 @@ GoRouter createRouter(
         AppShellRoutes.profileBranch,
         AppShellRoutes.chatBranch,
         AppShellRoutes.loginBranch,
+        AppShellRoutes.onboardingBranch,
         AppShellRoutes.settingsBranch,
       ],
     ),

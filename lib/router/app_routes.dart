@@ -11,6 +11,7 @@ import 'package:memora/models/notion_route_extra.dart';
 import 'package:memora/screens/heatmap/heatmap_screen.dart';
 import 'package:memora/screens/home_screen.dart';
 import 'package:memora/screens/login_screen.dart';
+import 'package:memora/screens/onboarding/onboarding_screen.dart';
 import 'package:memora/screens/profile/change_level_screen.dart';
 import 'package:memora/screens/profile/profile_screen.dart';
 import 'package:memora/screens/ranking/ranking_screen.dart';
@@ -87,6 +88,14 @@ class AppShellRoutes {
       GoRoute(
         path: AppRoutes.login,
         builder: (context, state) => const LoginScreen(),
+      ),
+    ],
+  );
+  static final StatefulShellBranch onboardingBranch = StatefulShellBranch(
+    routes: [
+      GoRoute(
+        path: AppRoutes.onboarding,
+        builder: (context, state) => const OnboardingScreen(),
       ),
     ],
   );

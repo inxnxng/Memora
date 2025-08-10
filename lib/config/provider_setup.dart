@@ -45,7 +45,8 @@ class ProviderContainer extends StatelessWidget {
         // Foundational Services
         Provider<LocalStorageService>(
           create: (_) => LocalStorageService(),
-          dispose: (context, localStorageService) => localStorageService.dispose(),
+          dispose: (context, localStorageService) =>
+              localStorageService.dispose(),
         ),
         Provider<FirebaseService>(create: (_) => FirebaseService()),
         Provider<NotificationService>(create: (_) => NotificationService()),

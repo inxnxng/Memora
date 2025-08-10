@@ -47,7 +47,6 @@ class UserProvider with ChangeNotifier {
       _user = user;
       if (user != null) {
         _userId = user.uid;
-        _syncFirebaseAuthUser(user);
         loadUserProfile();
       } else {
         _resetState();
@@ -66,26 +65,6 @@ class UserProvider with ChangeNotifier {
     _sessionMap = {};
     _userRank = null;
     _isLoading = false;
-    Future.microtask(() => notifyListeners());
-  }
-
-  Future<void> _syncFirebaseAuthUser(User user) async {
-    _displayName =
-        user.displayName ?? await _userRepository.loadUserName(user.uid);
-    _email = user.email ?? await _userRepository.loadUserEmail(user.uid);
-    _photoURL =
-        user.photoURL ?? await _userRepository.loadUserPhotoUrl(user.uid);
-
-    // Save to local and remote stores if info comes from provider
-    if (user.displayName != null) {
-      await _userRepository.saveUserName(user.uid, user.displayName!);
-    }
-    if (user.email != null) {
-      await _userRepository.saveUserEmail(user.uid, user.email!);
-    }
-    if (user.photoURL != null) {
-      await _userRepository.saveUserPhotoUrl(user.uid, user.photoURL!);
-    }
     Future.microtask(() => notifyListeners());
   }
 

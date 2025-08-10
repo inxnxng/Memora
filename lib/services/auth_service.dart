@@ -58,6 +58,11 @@ class AuthService {
             user.photoURL,
           );
         }
+      } else {
+        final user = userCredential.user;
+        if (user != null) {
+          await _userRepository.updateUserLastLogin(user.uid);
+        }
       }
       return userCredential;
     } catch (e) {
@@ -86,6 +91,11 @@ class AuthService {
             user.email,
             user.photoURL,
           );
+        }
+      } else {
+        final user = userCredential.user;
+        if (user != null) {
+          await _userRepository.updateUserLastLogin(user.uid);
         }
       }
       return userCredential;

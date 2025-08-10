@@ -1,7 +1,7 @@
 name: memora
 description: "Your Smart Learning Partner That Turns Notion Notes into AI-Powered Quizzes"
 
-version: 1.0.1+2
+version: 1.0.2+1
 environment:
   sdk: ^3.8.1
 

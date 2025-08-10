@@ -17,7 +17,6 @@ class _RankingScreenState extends State<RankingScreen> {
   @override
   void initState() {
     super.initState();
-    // 위젯이 빌드될 때 한 번만 랭킹 스트림을 설정합니다.
     _rankingStream = Provider.of<UserProvider>(
       context,
       listen: false,
@@ -35,6 +34,22 @@ class _RankingScreenState extends State<RankingScreen> {
     SharePlus.instance.share(
       ShareParams(text: message, subject: 'Memora 랭킹 공유'),
     );
+  }
+
+  String _maskDisplayName(String? name) {
+    if (name == null || name.isEmpty) {
+      return '이름 없음';
+    }
+    final koreanRegex = RegExp(r'[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]');
+
+    if (koreanRegex.hasMatch(name)) {
+      return name[0] + '*' * (name.length - 1);
+    } else {
+      if (name.length <= 2) {
+        return name;
+      }
+      return name.substring(0, 2) + '*' * (name.length - 2);
+    }
   }
 
   @override
@@ -74,6 +89,7 @@ class _RankingScreenState extends State<RankingScreen> {
                     final user = rankings[index];
                     final rank = index + 1;
                     final isMe = user['displayName'] == myDisplayName;
+                    final displayName = user['displayName'] ?? '이름 없음';
 
                     return ListTile(
                       leading: Text(
@@ -87,7 +103,7 @@ class _RankingScreenState extends State<RankingScreen> {
                         ),
                       ),
                       title: Text(
-                        user['displayName'] ?? '이름 없음',
+                        _maskDisplayName(displayName),
                         style: TextStyle(
                           fontWeight: isMe
                               ? FontWeight.bold

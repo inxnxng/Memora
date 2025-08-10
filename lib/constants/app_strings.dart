@@ -48,7 +48,7 @@ class AppStrings {
   static const String unknownPage = '알 수 없는 페이지';
 
   // Home Screen
-  static const String appName = '🧠 Memora';
+  static const String appName = 'Memora';
   static const String tilReview = 'TIL 복습';
   static const String notionConnected = 'Notion DB 연결됨';
   static const String notionConnectionNeeded = 'Notion 연결 필요';
