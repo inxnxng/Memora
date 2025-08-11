@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -33,13 +35,29 @@ class AuthService {
 
   Future<UserCredential?> signInWithGoogle() async {
     try {
-      await _googleSignIn.initialize(); // Ensure previous sign-in is cleared
-      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate(
-        scopeHint: [
-          'https://www.googleapis.com/auth/userinfo.email',
-          'https://www.googleapis.com/auth/userinfo.profile',
-        ],
-      );
+      final GoogleSignInAccount? googleUser;
+      if (kIsWeb) {
+        // On the web, the GSIButton handles the sign-in flow.
+        // We just need to listen for the result.
+        final completer = Completer<GoogleSignInAccount?>();
+        final subscription = _googleSignIn.onCurrentUserChanged.listen((
+          account,
+        ) {
+          if (account != null) {
+            completer.complete(account);
+          }
+        });
+        googleUser = await completer.future;
+        subscription.cancel();
+      } else {
+        googleUser = await _googleSignIn.signIn();
+      }
+
+      if (googleUser == null) {
+        // User cancelled the sign-in
+        return null;
+      }
+
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;
       final AuthCredential credential = GoogleAuthProvider.credential(
         idToken: googleAuth.idToken,

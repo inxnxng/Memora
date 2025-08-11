@@ -1,6 +1,8 @@
 # Memora - 당신의 노트를 AI 퀴즈로
 ![logo.svg](/assets/images/logo_light.svg)
 
+[https://memora-peach.vercel.app](https://memora-peach.vercel.app) 로 미리 만나보세요!
+
 **Memora는 당신의 Notion 노트를 똑똑한 AI 퀴즈로 만들어주는 학습 파트너입니다.**
 
 매일 쌓아가는 TIL(Today I Learned), 강의 노트, 독서 기록. 그냥 쌓아만 두고 잊어버리고 있지는 않나요? Memora는 당신의 소중한 지식 자산을 가장 효과적인 방법으로 복습하고 완전히 당신의 것으로 만들 수 있도록 돕습니다.
