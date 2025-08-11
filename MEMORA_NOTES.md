@@ -79,8 +79,10 @@ Flutter 빌드 시 `flutter_service_worker.js`가 자동 생성됩니다. 별도
 옵션 A. CLI로 산출물 폴더를 직접 배포
 
 ```bash
-flutter build web --release --pwa-strategy=offline-first
-vercel --prod ./build/web
+flutter clean \
+&& flutter pub get \
+&& flutter build web --release --pwa-strategy=offline-first \
+&& vercel --prod ./build/web
 ```
 
 옵션 B. `vercel.json`으로 SPA 라우팅 및 캐시 헤더 보강

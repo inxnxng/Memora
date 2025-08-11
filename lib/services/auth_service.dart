@@ -35,36 +35,23 @@ class AuthService {
 
   Future<UserCredential?> signInWithGoogle() async {
     try {
-      final GoogleSignInAccount? googleUser;
+      UserCredential userCredential;
+
       if (kIsWeb) {
-        // On the web, the GSIButton handles the sign-in flow.
-        // We just need to listen for the result.
-        final completer = Completer<GoogleSignInAccount?>();
-        final subscription = _googleSignIn.onCurrentUserChanged.listen((
-          account,
-        ) {
-          if (account != null) {
-            completer.complete(account);
-          }
-        });
-        googleUser = await completer.future;
-        subscription.cancel();
+        // For web, use signInWithPopup.
+        final GoogleAuthProvider googleProvider = GoogleAuthProvider();
+        userCredential = await _auth.signInWithPopup(googleProvider);
       } else {
-        googleUser = await _googleSignIn.signIn();
-      }
+        // For mobile, use the google_sign_in package.
+        final GoogleSignInAccount googleUser = await _googleSignIn
+            .authenticate();
 
-      if (googleUser == null) {
-        // User cancelled the sign-in
-        return null;
+        final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+        final AuthCredential credential = GoogleAuthProvider.credential(
+          idToken: googleAuth.idToken,
+        );
+        userCredential = await _auth.signInWithCredential(credential);
       }
-
-      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
-      final AuthCredential credential = GoogleAuthProvider.credential(
-        idToken: googleAuth.idToken,
-      );
-      UserCredential userCredential = await _auth.signInWithCredential(
-        credential,
-      );
 
       if (userCredential.additionalUserInfo?.isNewUser == true) {
         final user = userCredential.user;
@@ -85,6 +72,7 @@ class AuthService {
       return userCredential;
     } catch (e) {
       debugPrint("Error signing in with Google: $e");
+      debugPrint(e.toString());
       return null;
     }
   }

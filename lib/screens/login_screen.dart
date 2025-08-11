@@ -1,8 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:memora/constants/app_strings.dart';
 import 'package:memora/router/app_routes.dart';
 import 'package:memora/services/auth_service.dart';
@@ -32,7 +30,8 @@ class LoginScreen extends StatelessWidget {
 
         context.go(AppRoutes.home);
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint("Error signing in with Google: $e");
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
@@ -53,7 +52,8 @@ class LoginScreen extends StatelessWidget {
 
         context.go(AppRoutes.home);
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint("Error signing in with Google: $e");
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
@@ -105,19 +105,13 @@ class LoginScreen extends StatelessWidget {
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (kIsWeb)
-                  ElevatedButton(
-                    onPressed: () => _signInWithGoogle(context),
-                    child: const Text('Sign in with Google'),
-                  )
-                else
-                  MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    child: InkWell(
-                      onTap: () => _signInWithGoogle(context),
-                      child: SvgPicture.asset(googleButtonAsset, height: 44),
-                    ),
+                MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: InkWell(
+                    onTap: () => _signInWithGoogle(context),
+                    child: SvgPicture.asset(googleButtonAsset, height: 44),
                   ),
+                ),
                 const SizedBox(height: 16),
                 MouseRegion(
                   cursor: SystemMouseCursors.click,

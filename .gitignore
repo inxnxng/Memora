@@ -46,6 +46,11 @@ macos/Pods/
 macos/Runner.xcworkspace/xcuserdata/
 macos/Runner.xcodeproj/xcuserdata/
 
+# android
+android
+android/*
+
+
 # log
 *.log
 
