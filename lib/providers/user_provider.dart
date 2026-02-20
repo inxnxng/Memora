@@ -88,76 +88,46 @@ class UserProvider with ChangeNotifier {
     Future.microtask(() => notifyListeners());
 
     try {
-      await _userRepository.ensureStreakCountExists(_userId!);
-
+      // 1. Fetch from Firestore as the single source of truth.
       final firestoreData = await _userRepository.getUserData(_userId!);
+
       if (firestoreData != null) {
-        if (firestoreData.containsKey('level')) {
-          _userLevel = ProficiencyLevel.fromString(firestoreData['level']);
-        } else {
-          _userLevel = null;
-        }
+        // 2. Populate state from Firestore data.
+        _userLevel = ProficiencyLevel.fromString(firestoreData['level']);
         _displayName = firestoreData['displayName'];
         _email = firestoreData['email'];
         _photoURL = firestoreData['photoURL'];
         _streakCount = firestoreData['streakCount'] ?? 0;
         final preferredAiString = firestoreData['preferredAi'];
-        if (preferredAiString == 'openai') {
-          _preferredAi = AiProvider.openai;
-        } else {
-          _preferredAi = AiProvider.gemini;
-        }
+        _preferredAi = (preferredAiString == 'openai')
+            ? AiProvider.openai
+            : AiProvider.gemini;
+
+        // 3. Asynchronously update the local cache with fresh data from Firestore.
+        // No need to await this, it can happen in the background.
+        _userRepository.saveUserLevel(
+          _userId!,
+          _userLevel ?? ProficiencyLevel.beginner,
+        );
+        _userRepository.saveUserName(_userId!, _displayName ?? '');
+        _userRepository.saveUserEmail(_userId!, _email ?? '');
+        _userRepository.saveUserPhotoUrl(_userId!, _photoURL ?? '');
+        _userRepository.savePreferredAi(_userId!, _preferredAi.name);
       } else {
-        _userLevel = null;
-        _preferredAi = AiProvider.gemini;
+        // If no Firestore document exists, ensure streak count is initialized.
+        await _userRepository.ensureStreakCountExists(_userId!);
+        // Other fields will be populated during onboarding.
       }
 
+      // Sync API keys and get rank as before.
       await _syncApiKeysFromFirestore();
-
-      await Future.wait([
-        if (_userLevel == null)
-          _userRepository.loadUserLevelWithTimestamp(_userId!).then((data) {
-            _userLevel = ProficiencyLevel.fromString(data['level']);
-            _levelTimestamp = data['timestamp'];
-          }).catchError((_) {
-            _userLevel = null;
-            _levelTimestamp = null;
-          }),
-        if (_displayName == null)
-          _userRepository
-              .loadUserName(_userId!)
-              .then((name) => _displayName = name),
-        if (_email == null)
-          _userRepository.loadUserEmail(_userId!).then((email) => _email = email),
-        if (_photoURL == null)
-          _userRepository
-              .loadUserPhotoUrl(_userId!)
-              .then((photoUrl) => _photoURL = photoUrl),
-        _userRepository
-            .loadStreakCount(_userId!)
-            .then((count) => _streakCount = count),
-        _userRepository
-            .loadSessionMap(_userId!)
-            .then((map) => _sessionMap = map),
-        _userRepository.loadPreferredAi(_userId!).then((preferredAi) {
-          if (preferredAi == 'openai') {
-            _preferredAi = AiProvider.openai;
-          } else {
-            _preferredAi = AiProvider.gemini;
-          }
-        }),
-      ]);
-
-      _rankingRepository.getUserRank(_userId!).then((rank) {
-        _userRank = rank;
-        notifyListeners();
-      }).catchError((_) {
-        _userRank = null;
-      });
+      final rank = await _rankingRepository.getUserRank(_userId!);
+      _userRank = rank;
     } catch (e) {
       if (kDebugMode) {
         print("An unexpected error occurred while loading user profile: $e");
       }
+      _resetState(); // Reset state on error to avoid inconsistent data
     } finally {
       _isLoading = false;
       Future.microtask(() => notifyListeners());
