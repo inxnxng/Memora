@@ -10,17 +10,20 @@ import 'package:memora/providers/task_provider.dart';
 import 'package:memora/router/app_routes.dart';
 import 'package:memora/widgets/common_app_bar.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class NotionPageViewerScreen extends StatefulWidget {
   final String pageId;
   final String pageTitle;
   final String databaseName;
+  final String? url;
 
   const NotionPageViewerScreen({
     super.key,
     required this.pageId,
     required this.pageTitle,
     required this.databaseName,
+    this.url,
   });
 
   @override
@@ -87,6 +90,18 @@ class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
         });
   }
 
+  Future<void> _launchUrl() async {
+    if (widget.url == null) return;
+    final Uri url = Uri.parse(widget.url!);
+    if (!await launchUrl(url)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not launch Notion link')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -132,32 +147,49 @@ class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
         },
       ),
       persistentFooterButtons: [
-        if (_pageContent.isNotEmpty)
-          Center(
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.quiz),
-              label: const Text('복습하기'),
-              onPressed: () {
-                final page = NotionPage(
-                  id: widget.pageId,
-                  title: widget.pageTitle,
-                  content: _pageContent,
-                );
-                final routeExtra = NotionRouteExtra(
-                  pages: [page],
-                  databaseName: widget.databaseName,
-                );
-                context.push(AppRoutes.chat, extra: routeExtra);
-              },
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 30,
-                  vertical: 15,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (widget.url != null)
+              OutlinedButton.icon(
+                icon: const Icon(Icons.link),
+                label: const Text('노션 보러 가기'),
+                onPressed: _launchUrl,
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 15,
+                  ),
                 ),
-                textStyle: const TextStyle(fontSize: 16),
               ),
-            ),
-          ),
+            if (widget.url != null) const SizedBox(width: 12),
+            if (_pageContent.isNotEmpty)
+              ElevatedButton.icon(
+                icon: const Icon(Icons.quiz_sharp),
+                label: const Text('복습하기'),
+                onPressed: () {
+                  final page = NotionPage(
+                    id: widget.pageId,
+                    title: widget.pageTitle,
+                    content: _pageContent,
+                    url: widget.url,
+                  );
+                  final routeExtra = NotionRouteExtra(
+                    pages: [page],
+                    databaseName: widget.databaseName,
+                  );
+                  context.push(AppRoutes.chat, extra: routeExtra);
+                },
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 30,
+                    vertical: 15,
+                  ),
+                  textStyle: const TextStyle(fontSize: 16),
+                ),
+              ),
+          ],
+        ),
       ],
     );
   }

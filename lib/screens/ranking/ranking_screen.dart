@@ -55,9 +55,9 @@ class _RankingScreenState extends State<RankingScreen> {
   @override
   Widget build(BuildContext context) {
     final userProvider = context.watch<UserProvider>();
-    final myRank = userProvider.userRank;
     final myStreak = userProvider.streakCount;
-    final myDisplayName = userProvider.displayName;
+    final myUserId = userProvider.userId;
+    int? myRank;
 
     return Scaffold(
       appBar: const CommonAppBar(title: '전체 랭킹'),
@@ -75,11 +75,14 @@ class _RankingScreenState extends State<RankingScreen> {
           }
 
           final rankings = snapshot.data!;
+          final myRankIndex =
+              rankings.indexWhere((user) => user['id'] == myUserId);
+          myRank = myRankIndex != -1 ? myRankIndex + 1 : null;
 
           return Column(
             children: [
               // 현재 내 랭킹 정보 카드
-              _buildMyRankingCard(myRank, myStreak, myDisplayName),
+              _buildMyRankingCard(myRank, myStreak),
               const Divider(height: 1),
               // 전체 랭킹 목록
               Expanded(
@@ -88,7 +91,7 @@ class _RankingScreenState extends State<RankingScreen> {
                   itemBuilder: (context, index) {
                     final user = rankings[index];
                     final rank = index + 1;
-                    final isMe = user['displayName'] == myDisplayName;
+                    final isMe = user['id'] == myUserId;
                     final displayName = user['displayName'] ?? '이름 없음';
 
                     return ListTile(
@@ -103,11 +106,10 @@ class _RankingScreenState extends State<RankingScreen> {
                         ),
                       ),
                       title: Text(
-                        _maskDisplayName(displayName),
+                        isMe ? (user['displayName'] ?? '나') : _maskDisplayName(displayName),
                         style: TextStyle(
-                          fontWeight: isMe
-                              ? FontWeight.bold
-                              : FontWeight.normal,
+                          fontWeight:
+                              isMe ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
                       trailing: Text(
@@ -118,9 +120,9 @@ class _RankingScreenState extends State<RankingScreen> {
                         ),
                       ),
                       tileColor: isMe
-                          ? Theme.of(
-                              context,
-                            ).primaryColor.withAlpha((255 * 0.1).round())
+                          ? Theme.of(context)
+                              .primaryColor
+                              .withAlpha((255 * 0.1).round())
                           : null,
                     );
                   },
@@ -139,7 +141,7 @@ class _RankingScreenState extends State<RankingScreen> {
   }
 
   /// 현재 사용자의 랭킹 정보를 보여주는 카드 위젯
-  Widget _buildMyRankingCard(int? rank, int streak, String? displayName) {
+  Widget _buildMyRankingCard(int? rank, int streak) {
     return Card(
       margin: const EdgeInsets.all(12.0),
       elevation: 4,

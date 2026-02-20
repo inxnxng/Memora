@@ -2,7 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:memora/providers/notion_provider.dart';
-import 'package:memora/services/notion_service.dart';
+import 'package:memora/providers/user_provider.dart';
 import 'package:memora/widgets/common_app_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -15,38 +15,17 @@ class NotionSettingsScreen extends StatefulWidget {
 }
 
 class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
-  late final NotionService _notionService;
   final TextEditingController _notionApiTokenController =
       TextEditingController();
   final TextEditingController _notionDatabaseSearchController =
       TextEditingController();
-  Map<String, String?> _notionApiKey = {'value': null, 'timestamp': null};
-  bool _isLoading = false;
-  bool? _isValid;
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    _notionService = Provider.of<NotionService>(context, listen: false);
-    _loadKeys();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<NotionProvider>(context, listen: false).initialize();
-    });
-  }
-
-  Future<void> _loadKeys() async {
-    setState(() {
-      _isLoading = true;
-    });
-    _notionApiKey = await _notionService.getApiKeyWithTimestamp();
-    if (_notionApiKey['value'] != null && _notionApiKey['value']!.isNotEmpty) {
-      _isValid = await _notionService.checkApiKeyAvailability();
-    } else {
-      _isValid = null;
-    }
-    _notionApiTokenController.text = ''; // Clear controller
-    setState(() {
-      _isLoading = false;
     });
   }
 
@@ -58,6 +37,8 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
 
   Future<void> _saveNotionApiToken() async {
     final token = _notionApiTokenController.text.trim();
+    final notionProvider = Provider.of<NotionProvider>(context, listen: false);
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
 
     if (token.isEmpty) {
       ScaffoldMessenger.of(
@@ -67,24 +48,28 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
     }
 
     setState(() {
-      _isLoading = true;
+      _isSaving = true;
     });
-    try {
-      final isValid = await _notionService.validateAndSaveApiKey(token);
-      await _loadKeys();
 
-      if (mounted) {
-        await Provider.of<NotionProvider>(context, listen: false).initialize();
+    try {
+      await notionProvider.setApiToken(token);
+
+      if (notionProvider.apiToken != null) {
+        // Sync to Firestore if the token is valid and saved
+        await userProvider.syncAllApiKeysToFirestore();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Notion Key 저장 및 인증 완료!')),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Notion Key가 유효하지 않습니다.')),
+          );
+        }
       }
 
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            isValid ? 'Notion Key 저장 및 인증 완료!' : 'Notion Key가 유효하지 않습니다.',
-          ),
-        ),
-      );
       _notionApiTokenController.clear();
     } catch (e) {
       if (mounted) {
@@ -95,7 +80,7 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
     } finally {
       if (mounted) {
         setState(() {
-          _isLoading = false;
+          _isSaving = false;
         });
       }
     }
@@ -107,7 +92,7 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
       builder: (context, notionProvider, child) {
         return Scaffold(
           appBar: const CommonAppBar(title: 'Notion 연동 관리'),
-          body: _isLoading
+          body: notionProvider.isLoading
               ? const Center(child: CircularProgressIndicator())
               : SingleChildScrollView(
                   padding: const EdgeInsets.all(16.0),
@@ -120,9 +105,9 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
                       _buildKeyInput(
                         controller: _notionApiTokenController,
                         label: 'Notion API Token',
-                        currentValue: _notionApiKey["value"],
-                        timestamp: _notionApiKey['timestamp'],
-                        isValid: _isValid,
+                        currentValue: notionProvider.apiToken,
+                        timestamp: notionProvider.apiTokenTimestamp,
+                        isValid: notionProvider.apiToken != null,
                         onSave: _saveNotionApiToken,
                       ),
                       const SizedBox(height: 30),
@@ -212,7 +197,7 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
                   icon: Icons.link,
                   text: "Notion의 ",
                   linkText: "내 연동 페이지로 이동",
-                  url: "https://www.notion.so/my-integrations",
+                  url: "https://www.notion.so/profile/integrations/internal",
                   linkColor: linkColor,
                 ),
                 _buildStep(
@@ -370,7 +355,7 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
           decoration: InputDecoration(
             hintText: 'ntn... 형태의 API 키를 입력하세요',
             border: const OutlineInputBorder(),
-            suffixIcon: _isLoading
+            suffixIcon: _isSaving
                 ? const Padding(
                     padding: EdgeInsets.all(8.0),
                     child: CircularProgressIndicator(strokeWidth: 2),

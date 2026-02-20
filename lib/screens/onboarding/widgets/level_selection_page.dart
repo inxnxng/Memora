@@ -15,13 +15,33 @@ class LevelSelectionPage extends StatefulWidget {
 
 class _LevelSelectionPageState extends State<LevelSelectionPage> {
   ProficiencyLevel? _selectedLevel;
+  bool _isLoading = false;
 
   void _saveLevelAndContinue() async {
     if (_selectedLevel != null) {
-      final userProvider = context.read<UserProvider>();
-      await userProvider.saveUserLevel(_selectedLevel!);
-      if (mounted) {
-        context.go(AppRoutes.home);
+      setState(() {
+        _isLoading = true;
+      });
+      try {
+        final userProvider = context.read<UserProvider>();
+        await userProvider.saveUserLevel(_selectedLevel!);
+        if (mounted) {
+          // Redirect logic in GoRouter should handle this,
+          // but we also call context.go for double assurance.
+          context.go(AppRoutes.home);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('저장 중 오류가 발생했습니다: $e')));
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
     }
   }
@@ -45,11 +65,22 @@ class _LevelSelectionPageState extends State<LevelSelectionPage> {
           ),
           const SizedBox(height: 50),
           ElevatedButton(
-            onPressed: _selectedLevel == null ? null : _saveLevelAndContinue,
+            onPressed: (_selectedLevel == null || _isLoading)
+                ? null
+                : _saveLevelAndContinue,
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
-            child: const Text(AppStrings.saveAndContinue),
+            child: _isLoading
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text(AppStrings.saveAndContinue),
           ),
         ],
       ),

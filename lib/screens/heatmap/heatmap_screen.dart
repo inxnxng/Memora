@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_heatmap_calendar/flutter_heatmap_calendar.dart';
 import 'package:memora/constants/app_strings.dart';
 import 'package:memora/providers/task_provider.dart';
 import 'package:memora/widgets/common_app_bar.dart';
+import 'package:memora/widgets/responsive_heatmap.dart';
 import 'package:provider/provider.dart';
 
 class HeatmapScreen extends StatefulWidget {
@@ -60,30 +60,12 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            if (taskProvider.heatmapStartDate == null ||
-                taskProvider.heatmapEndDate == null) {
-              return const SizedBox(
-                height: 150,
-                child: Center(child: CircularProgressIndicator()),
-              );
-            }
-            final double width = constraints.maxWidth;
-            final double tileSize = width / 20;
-
-            return HeatMap(
-              datasets: heatmapDatasets,
-              startDate: taskProvider.heatmapStartDate!,
-              endDate: taskProvider.heatmapEndDate!,
-              size: tileSize,
-              colorMode: ColorMode.opacity,
-              showText: false,
-              scrollable: true,
-              colorsets: {1: taskProvider.heatmapColor},
-            );
-          },
+        padding: const EdgeInsets.all(8.0),
+        child: ResponsiveHeatmap(
+          datasets: heatmapDatasets,
+          startDate: taskProvider.heatmapStartDate,
+          endDate: taskProvider.heatmapEndDate,
+          heatmapColor: taskProvider.heatmapColor,
         ),
       ),
     );

@@ -58,4 +58,8 @@ enum ProficiencyLevel {
     }
     return null;
   }
+
+  // get all levels as a string list
+  static List<String> get allLevels =>
+      ProficiencyLevel.values.map((level) => level.name).toList();
 }

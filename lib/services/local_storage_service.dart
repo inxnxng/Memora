@@ -59,6 +59,16 @@ class LocalStorageService {
     return prefs.getString('${StorageKeys.userPhotoUrlKey}$userId');
   }
 
+  Future<void> savePreferredAi(String userId, String preferredAi) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('${StorageKeys.preferredAiKey}$userId', preferredAi);
+  }
+
+  Future<String?> loadPreferredAi(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('${StorageKeys.preferredAiKey}$userId');
+  }
+
   /// Saves a list of ChatMessage objects to local storage.
   Future<void> saveChatHistory(
     String chatId,
@@ -91,6 +101,12 @@ class LocalStorageService {
       databaseName: databaseName ?? '',
     );
     await prefs.setString(key, json.encode(chatSession.toMap()));
+  }
+
+  Future<bool> chatSessionExists(String chatId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = '${StorageKeys.chatSessionKey}$chatId';
+    return prefs.containsKey(key);
   }
 
   Stream<List<ChatMessage>> loadChatHistory(String chatId) async* {

@@ -36,7 +36,9 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
   void _toggleSelectionMode() {
     setState(() {
       _isSelectionMode = !_isSelectionMode;
-      _selectedChatIds.clear();
+      if (!_isSelectionMode) {
+        _selectedChatIds.clear();
+      }
     });
   }
 
@@ -77,22 +79,56 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
     if (confirmed == true) {
       try {
         await chatService.deleteChatSessions(_selectedChatIds.toList());
+        _selectedChatIds.clear();
         _loadChatSessions();
-        _toggleSelectionMode();
+        if (_isSelectionMode) {
+          _toggleSelectionMode();
+        }
       } catch (e) {
-        // Handle error
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('삭제 중 오류가 발생했습니다: $e')),
+          );
+        }
       }
     }
   }
 
   Future<void> _deleteAllSessions() async {
     final chatService = Provider.of<ChatService>(context, listen: false);
-    try {
-      await chatService.deleteAllChatSessions();
-      _loadChatSessions();
-      _toggleSelectionMode();
-    } catch (e) {
-      // Handle error
+
+    final bool? confirmed = await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('전체 삭제'),
+        content: const Text('모든 채팅 기록을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('전체 삭제'),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await chatService.deleteAllChatSessions();
+        _selectedChatIds.clear();
+        _isSelectionMode = false;
+        _loadChatSessions();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('삭제 중 오류가 발생했습니다: $e')),
+          );
+        }
+      }
     }
   }
 
@@ -114,36 +150,14 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
         actions: [
           if (_isSelectionMode)
             IconButton(
-              icon: const Icon(Icons.delete_sweep),
-              onPressed: () => showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('전체 삭제'),
-                  content: const Text('모든 채팅 기록을 삭제하시겠습니까?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('취소'),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                        _deleteAllSessions();
-                      },
-                      child: const Text('삭제'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          if (_isSelectionMode)
-            IconButton(
-              icon: const Icon(Icons.delete),
-              onPressed: _deleteSelectedSessions,
+              icon: const Icon(Icons.delete_sweep_outlined),
+              onPressed: _deleteAllSessions,
+              tooltip: '전체 삭제',
             ),
           IconButton(
-            icon: Icon(_isSelectionMode ? Icons.close : Icons.edit),
+            icon: Icon(_isSelectionMode ? Icons.close : Icons.edit_note),
             onPressed: _toggleSelectionMode,
+            tooltip: _isSelectionMode ? '선택 취소' : '기록 선택',
           ),
         ],
       ),
@@ -161,6 +175,9 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
           }
 
           final sessions = snapshot.data!;
+          sessions.sort(
+            (a, b) => b.lastMessageTimestamp.compareTo(a.lastMessageTimestamp),
+          );
 
           return ListView.builder(
             itemCount: sessions.length,
@@ -170,6 +187,9 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
 
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                color: isSelected
+                    ? Theme.of(context).primaryColor.withOpacity(0.1)
+                    : null,
                 child: ListTile(
                   leading: _isSelectionMode
                       ? Checkbox(
@@ -180,7 +200,7 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                             }
                           },
                         )
-                      : null,
+                      : const Icon(Icons.chat_bubble_outline),
                   title: Text(
                     session.pageTitle,
                     style: const TextStyle(fontWeight: FontWeight.bold),
@@ -194,12 +214,18 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                   ),
                   trailing: _isSelectionMode
                       ? null
-                      : const Icon(Icons.arrow_forward_ios),
+                      : const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
                     if (_isSelectionMode) {
                       _onSessionSelected(session.chatId, !isSelected);
                     } else {
                       _navigateToChat(session);
+                    }
+                  },
+                  onLongPress: () {
+                    if (!_isSelectionMode) {
+                      _toggleSelectionMode();
+                      _onSessionSelected(session.chatId, true);
                     }
                   },
                 ),
@@ -208,6 +234,13 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
           );
         },
       ),
+      floatingActionButton: _isSelectionMode && _selectedChatIds.isNotEmpty
+          ? FloatingActionButton(
+              onPressed: _deleteSelectedSessions,
+              tooltip: '선택 항목 삭제',
+              child: const Icon(Icons.delete_outline),
+            )
+          : null,
     );
   }
 }

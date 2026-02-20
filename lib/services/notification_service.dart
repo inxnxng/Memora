@@ -3,14 +3,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-// import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:memora/utils/platform_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationService {
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
-  // final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
-  //     FlutterLocalNotificationsPlugin();
+
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -36,46 +34,18 @@ class NotificationService {
       }
       _firebaseMessaging.onTokenRefresh.listen(_saveTokenToDatabase);
     }
-
-    // Local notifications for foreground messages (Android-only)
-    // if (PlatformUtils.isAndroid) {
-    //   const AndroidInitializationSettings initializationSettingsAndroid =
-    //       AndroidInitializationSettings('@mipmap/ic_launcher');
-    //   const InitializationSettings initializationSettings =
-    //       InitializationSettings(android: initializationSettingsAndroid);
-    //   await _flutterLocalNotificationsPlugin.initialize(initializationSettings);
-
-    //   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-    //     RemoteNotification? notification = message.notification;
-    //     AndroidNotification? android = message.notification?.android;
-    //     if (notification != null && android != null) {
-    //       _flutterLocalNotificationsPlugin.show(
-    //         notification.hashCode,
-    //         notification.title,
-    //         notification.body,
-    //         NotificationDetails(
-    //           android: AndroidNotificationDetails(
-    //             'high_importance_channel',
-    //             'High Importance Notifications',
-    //             channelDescription:
-    //                 'This channel is used for important notifications.',
-    //             importance: Importance.max,
-    //             priority: Priority.high,
-    //             icon: '@mipmap/ic_launcher',
-    //           ),
-    //         ),
-    //       );
-    //     }
-    //   });
-    // }
   }
 
   Future<void> _saveTokenToDatabase(String token) async {
-    User? user = _auth.currentUser;
-    if (user != null) {
-      await _firestore.collection('users').doc(user.uid).set({
-        'fcmToken': token,
-      }, SetOptions(merge: true));
+    try {
+      User? user = _auth.currentUser;
+      if (user != null) {
+        await _firestore.collection('users').doc(user.uid).set({
+          'fcmToken': token,
+        }, SetOptions(merge: true));
+      }
+    } catch (e) {
+      debugPrint('Error saving FCM token to Firestore: $e');
     }
   }
 
@@ -85,13 +55,17 @@ class NotificationService {
     await prefs.setInt('notification_hour', time.hour);
     await prefs.setInt('notification_minute', time.minute);
 
-    User? user = _auth.currentUser;
-    if (user != null) {
-      await _firestore.collection('users').doc(user.uid).set({
-        'notificationEnabled': isEnabled,
-        'notificationHour': time.hour,
-        'notificationMinute': time.minute,
-      }, SetOptions(merge: true));
+    try {
+      User? user = _auth.currentUser;
+      if (user != null) {
+        await _firestore.collection('users').doc(user.uid).set({
+          'notificationEnabled': isEnabled,
+          'notificationHour': time.hour,
+          'notificationMinute': time.minute,
+        }, SetOptions(merge: true));
+      }
+    } catch (e) {
+      debugPrint('Error saving notification settings to Firestore: $e');
     }
   }
 

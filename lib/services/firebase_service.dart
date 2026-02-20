@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:memora/models/task_model.dart';
 import 'package:memora/models/user_model.dart';
 
@@ -71,14 +72,19 @@ class FirebaseService {
   }
 
   Future<List<AppUser>> getRanking() async {
-    final snapshot = await _firestore
-        .collection('users')
-        .orderBy('progress', descending: true)
-        .limit(100)
-        .get();
-    return snapshot.docs
-        .map((doc) => AppUser.fromMap(doc.id, doc.data()))
-        .toList();
+    try {
+      final snapshot = await _firestore
+          .collection('users')
+          .orderBy('progress', descending: true)
+          .limit(100)
+          .get();
+      return snapshot.docs
+          .map((doc) => AppUser.fromMap(doc.id, doc.data()))
+          .toList();
+    } catch (e) {
+      debugPrint('Error getting ranking in FirebaseService: $e');
+      return [];
+    }
   }
 
   Future<AppUser?> getCurrentUser() async {

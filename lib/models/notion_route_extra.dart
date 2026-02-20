@@ -8,6 +8,7 @@ class NotionRouteExtra {
   final NotionDatabase? database;
   final String? pageId;
   final String? pageTitle;
+  final String? url;
   final String? chatId; // New: For existing chat sessions
   final bool isExistingChat; // New: To indicate if it's an existing chat
 
@@ -18,6 +19,7 @@ class NotionRouteExtra {
     this.database,
     this.pageId,
     this.pageTitle,
+    this.url,
     this.chatId,
     this.isExistingChat = false, // Default to false
   });

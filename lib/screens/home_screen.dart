@@ -30,12 +30,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _getProfileImage(ProficiencyLevel? level) {
-    String imageLevel = level?.name.toLowerCase() ?? 'default';
+    String imageLevel =
+        level?.name.toLowerCase() ??
+        ProficiencyLevel.beginner.name.toLowerCase();
     const basePath = 'assets/images/proficiency_levels/';
-    const validLevels = {'beginner', 'intermediate', 'advanced', 'master'};
-    return validLevels.contains(imageLevel)
-        ? '$basePath$imageLevel.png'
-        : '${basePath}default.png';
+    return '$basePath$imageLevel.png';
   }
 
   @override

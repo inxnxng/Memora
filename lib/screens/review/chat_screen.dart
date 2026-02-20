@@ -47,12 +47,13 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _textController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
 
-  late final Stream<List<ChatMessage>> _chatMessagesStream;
-  late Future<void> _initFuture; // Changed to late, not late final
+  Stream<List<ChatMessage>>? _chatMessagesStream;
+  late Future<void> _initFuture;
 
   late String _chatId;
   late String _pageTitles;
   late String _pageContents;
+  bool _welcomeMessageSent = false;
 
   @override
   void initState() {
@@ -71,22 +72,19 @@ class _ChatScreenState extends State<ChatScreen> {
       _chatId = widget.chatId!;
       _pageTitles = widget.pageTitle!;
       final pageIds = widget.chatId!.split('-');
-      final contents = <String>[];
-      for (final id in pageIds) {
-        final fetchedPage = await _notionService.fetchPageById(id);
-        if (fetchedPage != null) {
-          contents.add(fetchedPage.content);
-        }
-      }
+      final contents = await Future.wait(
+        pageIds.map((id) => _notionService.renderNotionDbAsMarkdown(id)),
+      );
       _pageContents = contents.join('\n\n---\n\n');
     } else {
-      _pageTitles = widget.pages!.map((p) => p.title).join(', ');
-      _pageContents = widget.pages!.map((p) => p.content).join('\n\n---\n\n');
-      _chatId = ChatRepository.generateChatId(
-        widget.pages!.map((p) => p.id).toList(),
-      );
+      _pageTitles = widget.pages?.map((p) => p.title).join(', ') ?? '';
+      _pageContents =
+          widget.pages?.map((p) => p.content).join('\n\n---\n\n') ?? '';
+      _chatId = (widget.pages != null && widget.pages!.isNotEmpty)
+          ? ChatRepository.generateChatId(
+              widget.pages!.map((p) => p.id).toList())
+          : DateTime.now().millisecondsSinceEpoch.toString();
     }
-
     _chatMessagesStream = _chatService.getMessages(_chatId);
   }
 
@@ -104,7 +102,14 @@ class _ChatScreenState extends State<ChatScreen> {
 
     if (!hasOpenAIKey && !hasGeminiKey) {
       if (mounted) {
-        _showApiKeyRequiredDialog();
+        context.push(AppRoutes.settings).then((_) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('API 키가 필요합니다. 설정 페이지로 이동합니다.'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        });
       }
     } else {
       await _sendMessage(text);
@@ -112,31 +117,6 @@ class _ChatScreenState extends State<ChatScreen> {
         _focusNode.requestFocus();
       }
     }
-  }
-
-  void _showApiKeyRequiredDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('API 키 필요'),
-        content: const Text(
-          'OpenAI 또는 Gemini API 키가 필요합니다. 설정으로 이동하여 키를 추가해주세요.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('취소'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              context.push(AppRoutes.settings);
-            },
-            child: const Text('설정으로 이동'),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _sendMessage(String text) async {
@@ -167,8 +147,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
       Stream<String> stream;
 
-      List<Map<String, String>> messagesForApi = _chatService.buildPromptForAI(
-        await _chatService.getMessages(_chatId).first,
+      final history = await _chatService.getMessages(_chatId).first;
+      final messagesForApi = _chatService.buildPromptForAI(
+        history,
         _pageContents,
         _pageTitles,
       );
@@ -221,26 +202,25 @@ class _ChatScreenState extends State<ChatScreen> {
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
     taskProvider
         .addStudyRecordForToday(
-          databaseName: widget.databaseName,
-          title: _pageTitles,
-        )
+      databaseName: widget.databaseName,
+      title: _pageTitles,
+    )
         .then((_) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('오늘의 학습이 기록되었습니다!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          context.pop();
-        })
-        .catchError((error) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('학습 기록에 실패했습니다: $error'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('오늘의 학습이 기록되었습니다!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      context.pop();
+    }).catchError((error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('학습 기록에 실패했습니다: $error'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    });
   }
 
   @override
@@ -273,6 +253,32 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: StreamBuilder<List<ChatMessage>>(
                       stream: _chatMessagesStream,
                       builder: (context, snapshot) {
+                        if (!widget.isExistingChat &&
+                            !_welcomeMessageSent &&
+                            snapshot.connectionState ==
+                                ConnectionState.active) {
+                          _welcomeMessageSent = true;
+                          final messages = snapshot.data ?? [];
+                          if (messages
+                              .where((m) => m.sender == MessageSender.system)
+                              .isEmpty) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              final welcomeMessage = ChatMessage(
+                                content:
+                                    PromptConstants.welcomeMessage(_pageTitles),
+                                sender: MessageSender.system,
+                                timestamp: DateTime.now(),
+                              );
+                              _chatService.sendMessage(
+                                _chatId,
+                                welcomeMessage,
+                                pageTitle: _pageTitles,
+                                databaseName: widget.databaseName,
+                              );
+                            });
+                          }
+                        }
+
                         if (snapshot.connectionState ==
                                 ConnectionState.waiting &&
                             (snapshot.data?.isEmpty ?? true)) {
@@ -286,18 +292,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           );
                         }
                         final messages = snapshot.data ?? [];
-                        List<ChatMessage> displayMessages = messages;
-                        if (displayMessages.isEmpty) {
-                          displayMessages = [
-                            ChatMessage(
-                              content: PromptConstants.welcomeMessage(
-                                _pageTitles,
-                              ),
-                              sender: MessageSender.system,
-                              timestamp: DateTime.now(),
-                            ),
-                          ];
-                        }
+
                         return Column(
                           children: [
                             Expanded(
@@ -305,16 +300,15 @@ class _ChatScreenState extends State<ChatScreen> {
                                 onTap: () => _focusNode.unfocus(),
                                 behavior: HitTestBehavior.translucent,
                                 child: ChatMessagesList(
-                                  messages: displayMessages,
+                                  messages: messages,
                                 ),
                               ),
                             ),
                             ChatInputField(
                               controller: _textController,
                               focusNode: _focusNode,
-                              onSubmitted: (text) =>
-                                  _checkApiKeysAndSendMessage(text),
-                              onSendPressed: () => _checkApiKeysAndSendMessage(
+                              onSendPressed: () =>
+                                  _checkApiKeysAndSendMessage(
                                 _textController.text,
                               ),
                             ),

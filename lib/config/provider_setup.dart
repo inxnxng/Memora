@@ -162,6 +162,7 @@ class ProviderContainer extends StatelessWidget {
           create: (context) => UserProvider(
             userRepository: context.read<UserRepository>(),
             rankingRepository: context.read<RankingRepository>(),
+            localStorageService: context.read<LocalStorageService>(),
           ),
         ),
         ChangeNotifierProvider<NotionProvider>(

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class ChatInputField extends StatelessWidget {
   final TextEditingController controller;
   final FocusNode? focusNode;
-  final ValueChanged<String> onSubmitted;
   final VoidCallback onSendPressed;
   final bool isEnabled;
 
@@ -11,7 +11,6 @@ class ChatInputField extends StatelessWidget {
     super.key,
     required this.controller,
     this.focusNode,
-    required this.onSubmitted,
     required this.onSendPressed,
     this.isEnabled = true,
   });
@@ -24,21 +23,40 @@ class ChatInputField extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Expanded(
-            child: TextField(
-              controller: controller,
-              focusNode: focusNode,
-              textInputAction: TextInputAction.newline,
-              keyboardType: TextInputType.multiline,
-              maxLines: 5,
-              minLines: 1,
-              decoration: InputDecoration(
-                hintText: '메세지를 입력하세요.',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20.0),
+            child: Focus(
+              onKey: (FocusNode node, RawKeyEvent event) {
+                if (event is RawKeyDownEvent) {
+                  if (event.logicalKey == LogicalKeyboardKey.enter &&
+                      !event.isShiftPressed) {
+                    // Handle Enter key press to send message
+                    onSendPressed();
+                    return KeyEventResult.handled; // Consume the event
+                  }
+                }
+                return KeyEventResult.ignored; // Let other keys be handled by the TextField
+              },
+              child: TextField(
+                style: const TextStyle(fontSize: 16.0),
+                cursorColor: Theme.of(context).primaryColor,
+                autofocus: true,
+                controller: controller,
+                focusNode: focusNode,
+                textInputAction: TextInputAction.newline,
+                keyboardType: TextInputType.multiline,
+                maxLines: 5,
+                minLines: 1,
+                decoration: InputDecoration(
+                  hintText: '메세지를 입력하세요. (Shift+Enter로 줄바꿈)',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(20.0),
+                  ),
                 ),
+                onTap: () => focusNode?.requestFocus(),
+                readOnly: !isEnabled,
+                autocorrect: false,
+                enableSuggestions: false,
+                enabled: isEnabled,
               ),
-              onSubmitted: isEnabled ? onSubmitted : null,
-              enabled: isEnabled,
             ),
           ),
           const SizedBox(width: 8.0),
@@ -47,6 +65,7 @@ class ChatInputField extends StatelessWidget {
             backgroundColor: isEnabled
                 ? Theme.of(context).colorScheme.primary
                 : Colors.grey,
+            elevation: 1,
             child: const Icon(Icons.send),
           ),
         ],

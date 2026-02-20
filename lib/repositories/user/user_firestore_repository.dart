@@ -35,4 +35,20 @@ class UserFirestoreRepository {
     if (docRef == null) throw Exception('User not logged in');
     await docRef.update({key: FieldValue.delete()});
   }
+
+  Future<void> saveEncryptedApiKeys(String uid, Map<String, String> encryptedKeys) async {
+    await _firestore.collection('users').doc(uid).set({
+      'encryptedApiKeys': encryptedKeys,
+      'apiKeysUpdatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  Future<Map<String, String>> loadEncryptedApiKeys(String uid) async {
+    final snapshot = await _firestore.collection('users').doc(uid).get();
+    final data = snapshot.data();
+    if (data == null || !data.containsKey('encryptedApiKeys')) {
+      return {};
+    }
+    return Map<String, String>.from(data['encryptedApiKeys']);
+  }
 }

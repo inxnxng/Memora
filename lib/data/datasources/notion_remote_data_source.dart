@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -49,15 +50,17 @@ class NotionRemoteDataSource {
       body['start_cursor'] = startCursor;
     }
 
-    final response = await http.post(
-      url,
-      headers: {
-        'Authorization': 'Bearer $apiToken',
-        'Notion-Version': _notionApiVersion,
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode(body),
-    );
+    final response = await http
+        .post(
+          url,
+          headers: {
+            'Authorization': 'Bearer $apiToken',
+            'Notion-Version': _notionApiVersion,
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode(body),
+        )
+        .timeout(const Duration(seconds: 10));
     return _handleResponse(response);
   }
 
@@ -66,25 +69,29 @@ class NotionRemoteDataSource {
     String databaseId,
   ) async {
     final url = Uri.parse('https://api.notion.com/v1/databases/$databaseId');
-    final response = await http.get(
-      url,
-      headers: {
-        'Authorization': 'Bearer $apiToken',
-        'Notion-Version': _notionApiVersion,
-      },
-    );
+    final response = await http
+        .get(
+          url,
+          headers: {
+            'Authorization': 'Bearer $apiToken',
+            'Notion-Version': _notionApiVersion,
+          },
+        )
+        .timeout(const Duration(seconds: 10));
     return _handleResponse(response);
   }
 
   Future<String> getPageContent(String apiToken, String pageId) async {
     final url = Uri.parse('https://api.notion.com/v1/blocks/$pageId/children');
-    final response = await http.get(
-      url,
-      headers: {
-        'Authorization': 'Bearer $apiToken',
-        'Notion-Version': _notionApiVersion,
-      },
-    );
+    final response = await http
+        .get(
+          url,
+          headers: {
+            'Authorization': 'Bearer $apiToken',
+            'Notion-Version': _notionApiVersion,
+          },
+        )
+        .timeout(const Duration(seconds: 10));
 
     if (response.statusCode == 200) {
       final data = json.decode(utf8.decode(response.bodyBytes));
@@ -116,18 +123,20 @@ class NotionRemoteDataSource {
     String? query,
   }) async {
     final url = Uri.parse('https://api.notion.com/v1/search');
-    final response = await http.post(
-      url,
-      headers: {
-        'Authorization': 'Bearer $apiToken',
-        'Notion-Version': _notionApiVersion,
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'query': query,
-        'filter': {'property': 'object', 'value': 'database'},
-      }),
-    );
+    final response = await http
+        .post(
+          url,
+          headers: {
+            'Authorization': 'Bearer $apiToken',
+            'Notion-Version': _notionApiVersion,
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'query': query,
+            'filter': {'property': 'object', 'value': 'database'},
+          }),
+        )
+        .timeout(const Duration(seconds: 10));
     return _handleResponse(response);
   }
 
@@ -136,18 +145,20 @@ class NotionRemoteDataSource {
     String? query,
   }) async {
     final url = Uri.parse('https://api.notion.com/v1/search');
-    final response = await http.post(
-      url,
-      headers: {
-        'Authorization': 'Bearer $apiToken',
-        'Notion-Version': _notionApiVersion,
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'query': query,
-        'filter': {'property': 'object', 'value': 'page'},
-      }),
-    );
+    final response = await http
+        .post(
+          url,
+          headers: {
+            'Authorization': 'Bearer $apiToken',
+            'Notion-Version': _notionApiVersion,
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'query': query,
+            'filter': {'property': 'object', 'value': 'page'},
+          }),
+        )
+        .timeout(const Duration(seconds: 10));
     return _handleResponse(response);
   }
 
@@ -158,19 +169,21 @@ class NotionRemoteDataSource {
     final url = Uri.parse(
       'https://api.notion.com/v1/databases/$databaseId/query',
     );
-    final response = await http.post(
-      url,
-      headers: {
-        'Authorization': 'Bearer $apiToken',
-        'Notion-Version': _notionApiVersion,
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'sorts': [
-          {'timestamp': 'created_time', 'direction': 'ascending'},
-        ],
-      }),
-    );
+    final response = await http
+        .post(
+          url,
+          headers: {
+            'Authorization': 'Bearer $apiToken',
+            'Notion-Version': _notionApiVersion,
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'sorts': [
+              {'timestamp': 'created_time', 'direction': 'ascending'},
+            ],
+          }),
+        )
+        .timeout(const Duration(seconds: 10));
     return _handleResponse(response);
   }
 
@@ -181,28 +194,30 @@ class NotionRemoteDataSource {
     final url = Uri.parse(
       'https://api.notion.com/v1/databases/$databaseId/query',
     );
-    final response = await http.post(
-      url,
-      headers: {
-        'Authorization': 'Bearer $apiToken',
-        'Notion-Version': _notionApiVersion,
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'filter': {
-          'and': [
-            {
-              'property': 'Question',
-              'text': {'is_not_empty': true},
+    final response = await http
+        .post(
+          url,
+          headers: {
+            'Authorization': 'Bearer $apiToken',
+            'Notion-Version': _notionApiVersion,
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'filter': {
+              'and': [
+                {
+                  'property': 'Question',
+                  'text': {'is_not_empty': true},
+                },
+                {
+                  'property': 'Answer',
+                  'text': {'is_not_empty': true},
+                },
+              ],
             },
-            {
-              'property': 'Answer',
-              'text': {'is_not_empty': true},
-            },
-          ],
-        },
-      }),
-    );
+          }),
+        )
+        .timeout(const Duration(seconds: 10));
 
     if (response.statusCode == 200) {
       final results =
@@ -230,25 +245,42 @@ class NotionRemoteDataSource {
     final url = Uri.parse(
       'https://api.notion.com/v1/blocks/$pageId/children?page_size=100',
     );
-    final response = await http.get(
-      url,
-      headers: {
-        'Authorization': 'Bearer $apiToken',
-        'Notion-Version': _notionApiVersion,
-      },
-    );
+    final response = await http
+        .get(
+          url,
+          headers: {
+            'Authorization': 'Bearer $apiToken',
+            'Notion-Version': _notionApiVersion,
+          },
+        )
+        .timeout(const Duration(seconds: 10));
     return _handleResponse(response);
   }
 
   Future<bool> validateApiKey(String apiToken) async {
     final url = Uri.parse('https://api.notion.com/v1/users/me');
-    final response = await http.get(
-      url,
-      headers: {
-        'Authorization': 'Bearer $apiToken',
-        'Notion-Version': _notionApiVersion,
-      },
-    );
-    return response.statusCode == 200;
+    print("Validating Notion API key...");
+    try {
+      final response = await http
+          .get(
+            url,
+            headers: {
+              'Authorization': 'Bearer $apiToken',
+              'Notion-Version': _notionApiVersion,
+              'Content-Type': 'application/json',
+            },
+          )
+          .timeout(const Duration(seconds: 10));
+      print(response.body);
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        return false;
+      }
+    } on TimeoutException {
+      return false;
+    } catch (e) {
+      return false;
+    }
   }
 }

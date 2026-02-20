@@ -3,8 +3,8 @@ import 'package:flutter_heatmap_calendar/flutter_heatmap_calendar.dart';
 
 class ResponsiveHeatmap extends StatelessWidget {
   final Map<DateTime, int>? datasets;
-  final DateTime startDate;
-  final DateTime endDate;
+  final DateTime? startDate;
+  final DateTime? endDate;
   final Color heatmapColor;
 
   const ResponsiveHeatmap({
@@ -17,37 +17,47 @@ class ResponsiveHeatmap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final numberOfDays = endDate.difference(startDate).inDays;
-    final numberOfWeeks = (numberOfDays / 7).ceil() + 1;
+    if (startDate == null || endDate == null) {
+      return const SizedBox(
+        height: 150,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth.isInfinite ||
-            constraints.maxHeight.isInfinite) {
-          return const Center(
-            child: Text("Heatmap cannot be rendered in an unbounded space."),
-          );
-        }
+        final double screenWidth = constraints.maxWidth;
 
-        final double cellWidth = (constraints.maxWidth / numberOfWeeks) - 8;
-        final double cellHeight = (constraints.maxHeight / 7) - 2;
+        // Calculate appropriate tile size
+        // We want about 15-20 weeks to show at once if possible on mobile,
+        // but more on wider screens.
+        double tileSize = (screenWidth - 32) / 12; // 18 weeks view as default
 
-        final double cellSize = [
-          cellWidth,
-          cellHeight,
-        ].reduce((a, b) => a < b ? a : b);
+        // Minimum tile size for readability
+        if (tileSize < 18) tileSize = 12;
+        // Maximum tile size to keep it looking like a heatmap
+        if (tileSize > 30) tileSize = 25;
 
-        return HeatMap(
-          datasets: datasets,
-          startDate: startDate,
-          endDate: endDate,
-          size: cellSize > 0 ? cellSize : 0,
-          fontSize: 0,
-          colorMode: ColorMode.opacity,
-          showText: false,
-          scrollable: true,
-          colorsets: {1: heatmapColor},
-          showColorTip: false,
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          // Reverse scroll direction so the most recent dates (end) are visible first
+          reverse: true,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+            child: HeatMap(
+              datasets: datasets,
+              startDate: startDate!,
+              endDate: endDate!,
+              size: tileSize,
+              colorMode: ColorMode.opacity,
+              showText: false,
+              scrollable:
+                  false, // We use our own SingleChildScrollView for better control
+              colorsets: {1: heatmapColor},
+              showColorTip: false,
+            ),
+          ),
         );
       },
     );

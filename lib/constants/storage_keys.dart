@@ -26,6 +26,7 @@ class StorageKeys {
   static const String userEmailKey = 'user_email_'; // Suffix with user ID
   static const String userPhotoUrlKey =
       'user_photo_url_'; // Suffix with user ID
+  static const String preferredAiKey = 'preferred_ai_'; // Suffix with user ID
   static const String heatmapColorKey = 'heatmap_color';
   static const String defaultHeatmapColor = 'GitHub Green';
   static const String studyRecords = 'study_records';

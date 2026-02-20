@@ -19,6 +19,7 @@ import 'package:memora/screens/review/chat_history_screen.dart';
 import 'package:memora/screens/review/chat_screen.dart';
 import 'package:memora/screens/review/notion_page_viewer_screen.dart';
 import 'package:memora/screens/review/review_selection_screen.dart';
+import 'package:memora/screens/settings/ai_model_settings_screen.dart';
 import 'package:memora/screens/settings/gemini_settings_screen.dart';
 import 'package:memora/screens/settings/heatmap_color_settings_screen.dart';
 import 'package:memora/screens/settings/notion_settings_screen.dart';
@@ -48,6 +49,7 @@ class AppRoutes {
   static const String notionSettings = 'notion';
   static const String openaiSettings = 'openai';
   static const String geminiSettings = 'gemini';
+  static const String aiModelSettings = 'ai-model';
 
   static GoRoute get splashRoute =>
       GoRoute(path: splash, builder: (context, state) => const SplashScreen());
@@ -66,12 +68,14 @@ class AppShellRoutes {
               final routeExtra = state.extra as NotionRouteExtra;
               final pageId = routeExtra.pageId ?? '';
               final pageTitle = routeExtra.pageTitle ?? '';
+              final url = routeExtra.url;
               final databaseName =
                   routeExtra.databaseName ?? AppStrings.unknownDb;
               return NotionPageViewerScreen(
                 pageId: pageId,
                 pageTitle: pageTitle,
                 databaseName: databaseName,
+                url: url,
               );
             },
           ),
@@ -182,6 +186,10 @@ class AppShellRoutes {
           GoRoute(
             path: AppRoutes.geminiSettings,
             builder: (context, state) => const GeminiSettingsScreen(),
+          ),
+          GoRoute(
+            path: AppRoutes.aiModelSettings,
+            builder: (context, state) => const AiModelSettingsScreen(),
           ),
         ],
       ),

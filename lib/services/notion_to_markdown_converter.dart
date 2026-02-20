@@ -59,6 +59,9 @@ class NotionToMarkdownConverter {
   String _getRichText(List<dynamic> richText) {
     final buffer = StringBuffer();
     for (final textItem in richText) {
+      // Handle cases where 'text' might be null (e.g., for mentions)
+      if (textItem['text'] == null) continue;
+
       var text = textItem['text']['content'];
       final annotations = textItem['annotations'];
       if (annotations['bold']) {

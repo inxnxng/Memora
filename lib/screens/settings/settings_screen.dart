@@ -22,6 +22,16 @@ class SettingsScreen extends StatelessWidget {
               context.push('${AppRoutes.settings}/${AppRoutes.notionSettings}');
             },
           ),
+          const Divider(),
+          _buildSettingsItem(
+            context,
+            icon: Icons.psychology,
+            title: 'AI 모델 선택',
+            subtitle: '퀴즈 생성에 사용할 AI 모델을 선택합니다.',
+            onTap: () {
+              context.push('${AppRoutes.settings}/${AppRoutes.aiModelSettings}');
+            },
+          ),
           _buildSettingsItem(
             context,
             icon: Icons.lightbulb_outline,
@@ -40,18 +50,6 @@ class SettingsScreen extends StatelessWidget {
               context.push('${AppRoutes.settings}/${AppRoutes.geminiSettings}');
             },
           ),
-          // if (!PlatformUtils.isApple)
-          //   _buildSettingsItem(
-          //     context,
-          //     icon: Icons.notifications_outlined,
-          //     title: '알림 설정',
-          //     subtitle: '매일 복습 시간을 설정합니다.',
-          //     onTap: () {
-          //       context.push(
-          //         '${AppRoutes.settings}/${AppRoutes.notificationSettings}',
-          //       );
-          //     },
-          //   ),
           const Divider(),
           _buildSettingsItem(
             context,

@@ -51,6 +51,7 @@ class _ReviewSelectionScreenState extends State<ReviewSelectionScreen> {
     BuildContext context,
     String pageId,
     String pageTitle,
+    String? url,
   ) {
     final notionProvider = context.read<NotionProvider>();
     final databaseName = notionProvider.databaseTitle;
@@ -59,6 +60,7 @@ class _ReviewSelectionScreenState extends State<ReviewSelectionScreen> {
       databaseName: databaseName,
       pageId: pageId,
       pageTitle: pageTitle,
+      url: url,
     );
     context.push('${AppRoutes.review}/${AppRoutes.notionPage}', extra: extra);
   }
@@ -105,6 +107,7 @@ class _ReviewSelectionScreenState extends State<ReviewSelectionScreen> {
                   pageId,
                 );
                 final title = page.title;
+                final url = page.url;
                 final emoji = '📄';
 
                 return Card(
@@ -124,7 +127,7 @@ class _ReviewSelectionScreenState extends State<ReviewSelectionScreen> {
                       top: 4,
                       bottom: 4,
                     ),
-                    onTap: () => _navigateToPageViewer(context, pageId, title),
+                    onTap: () => _navigateToPageViewer(context, pageId, title, url),
                     selected: isSelected,
                     selectedTileColor: theme.primaryColor.withAlpha(20),
                     leading: Checkbox(

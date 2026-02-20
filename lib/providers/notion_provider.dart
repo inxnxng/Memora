@@ -1,13 +1,13 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/widgets.dart';
-import 'dart:convert';
 import 'package:memora/models/notion_database.dart';
 import 'package:memora/models/notion_page.dart';
+import 'package:memora/models/quiz_question.dart';
 import 'package:memora/services/gemini_service.dart';
 import 'package:memora/services/notion_service.dart';
 import 'package:memora/services/openai_service.dart';
-import 'package:memora/models/quiz_question.dart';
 
 class NotionProvider with ChangeNotifier {
   final NotionService _notionService;
@@ -96,7 +96,7 @@ class NotionProvider with ChangeNotifier {
       for (var pageMeta in selectedPagesMeta) {
         final pageId = pageMeta.id;
         final title = pageMeta.title;
-        final content = await getPageContent(pageId);
+        final content = await renderNotionDbAsMarkdown(pageId);
         selectedPages.add(
           NotionPage(id: pageId, title: title, content: content),
         );
@@ -170,6 +170,7 @@ class NotionProvider with ChangeNotifier {
   }
 
   Future<void> searchNotionDatabases({String? query}) async {
+    await initialize();
     if (_apiToken == null) {
       _notionConnectionError = 'Notion API 토큰이 설정되지 않았습니다.';
       Future.microtask(() => notifyListeners());
@@ -221,6 +222,8 @@ class NotionProvider with ChangeNotifier {
     Future.microtask(() => notifyListeners());
     await _notionService.updateApiToken(apiToken);
     await initialize();
+    _isLoading = false;
+    Future.microtask(() => notifyListeners());
   }
 
   Future<void> fetchNewQuiz() async {

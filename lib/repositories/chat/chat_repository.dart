@@ -23,24 +23,31 @@ class ChatRepository {
     String? pageTitle,
     String? databaseName,
   }) async {
-    final existingMessages = await _localStorageService
-        .loadChatHistory(chatId)
-        .first;
+    final existingMessages =
+        await _localStorageService.loadChatHistory(chatId).first;
     final updatedMessages = [message, ...existingMessages];
     await _localStorageService.saveChatHistory(chatId, updatedMessages);
 
-    if (pageTitle != null) {
-      await _localStorageService.saveChatSession(
-        chatId,
-        pageTitle,
-        message.timestamp,
-        databaseName,
-      );
+    // Only create a session on the first user message.
+    if (pageTitle != null && message.sender == MessageSender.user) {
+      final sessionExists = await _localStorageService.chatSessionExists(chatId);
+      if (!sessionExists) {
+        await _localStorageService.saveChatSession(
+          chatId,
+          pageTitle,
+          message.timestamp,
+          databaseName,
+        );
+      }
     }
   }
 
   Stream<List<ChatMessage>> getChatMessages(String chatId) {
-    return _localStorageService.loadChatHistory(chatId).map((messages) {
+    var stream = _localStorageService.loadChatHistory(chatId);
+    if (!stream.isBroadcast) {
+      stream = stream.asBroadcastStream();
+    }
+    return stream.map((messages) {
       messages.sort((a, b) => b.timestamp.compareTo(a.timestamp));
       return messages;
     });
