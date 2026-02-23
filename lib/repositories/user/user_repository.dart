@@ -26,6 +26,8 @@ class UserRepository {
           'email': email,
           'photoURL': photoUrl,
           'streakCount': 0,
+          'totalSessionCount': 0,
+          'rankingScore': 0,
           'level': ProficiencyLevel.beginner.name,
           'createdAt': FieldValue.serverTimestamp(),
           'lastLoginAt': FieldValue.serverTimestamp(),
@@ -148,6 +150,44 @@ class UserRepository {
   Future<Map<String, int>> loadSessionMap(String userId) =>
       _localStorageService.loadSessionMap(userId);
 
+  /// 학습 횟수 1회당 10pt, 스트릭 1일당 20pt로 랭킹 점수 계산 후 Firestore에 반영
+  Future<void> updateRankingScore(
+    String userId,
+    int totalSessionCount,
+    int streakCount,
+  ) async {
+    final rankingScore = totalSessionCount * 10 + streakCount * 20;
+    try {
+      await _firestore.collection('users').doc(userId).set({
+        'totalSessionCount': totalSessionCount,
+        'rankingScore': rankingScore,
+        'streakCount': streakCount,
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Error updating ranking score in Firestore: $e');
+    }
+  }
+
+  /// Firestore에 rankingScore가 없으면 0으로 초기화 (기존 유저 호환)
+  Future<void> ensureRankingScoreExists(String userId) async {
+    try {
+      final userRef = _firestore.collection('users').doc(userId);
+      final doc = await userRef.get();
+      if (doc.exists) {
+        final data = doc.data();
+        if (data != null && !data.containsKey('rankingScore')) {
+          await userRef.set({
+            'totalSessionCount': data['totalSessionCount'] ?? 0,
+            'rankingScore': data['rankingScore'] ?? 0,
+            'streakCount': data['streakCount'] ?? 0,
+          }, SetOptions(merge: true));
+        }
+      }
+    } catch (e) {
+      debugPrint('Error ensuring ranking score exists in Firestore: $e');
+    }
+  }
+
   Future<void> updateUserLastLogin(String userId) async {
     try {
       await _firestore.collection('users').doc(userId).set({
@@ -214,8 +254,16 @@ class UserRepository {
 
       if (doc.exists) {
         final data = doc.data();
-        if (data != null && !data.containsKey('streakCount')) {
-          await userRef.update({'streakCount': 0});
+        if (data != null) {
+          final updates = <String, dynamic>{};
+          if (!data.containsKey('streakCount')) updates['streakCount'] = 0;
+          if (!data.containsKey('rankingScore')) {
+            updates['totalSessionCount'] = data['totalSessionCount'] ?? 0;
+            updates['rankingScore'] = 0;
+          }
+          if (updates.isNotEmpty) {
+            await userRef.set(updates, SetOptions(merge: true));
+          }
         }
       }
     } catch (e) {

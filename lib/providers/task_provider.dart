@@ -127,11 +127,20 @@ class TaskProvider with ChangeNotifier {
   Future<void> addStudyRecordForToday({
     String? databaseName,
     required String title,
+    String? pageId,
+    String? url,
   }) async {
     await _taskService.addStudyRecordForToday(
       databaseName: databaseName,
       title: title,
+      pageId: pageId,
+      url: url,
     );
     await fetchHeatmapData();
+  }
+
+  /// 학습 기록에 한 번이라도 등록된 pageId 집합 (TIL 복습 목록 완료 표시용)
+  Future<Set<String>> getCompletedPageIds() async {
+    return await _taskService.getCompletedPageIds();
   }
 }

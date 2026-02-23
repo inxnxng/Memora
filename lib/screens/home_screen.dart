@@ -4,32 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:memora/constants/app_strings.dart';
 import 'package:memora/models/proficiency_level.dart';
 import 'package:memora/providers/notion_provider.dart';
-import 'package:memora/providers/task_provider.dart';
 import 'package:memora/providers/user_provider.dart';
 import 'package:memora/router/app_routes.dart';
-import 'package:memora/widgets/responsive_heatmap.dart';
 import 'package:provider/provider.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-  @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        context.read<TaskProvider>().loadHeatmapColor();
-        context.read<TaskProvider>().fetchHeatmapData();
-      }
-    });
-  }
-
-  String _getProfileImage(ProficiencyLevel? level) {
+  static String _getProfileImage(ProficiencyLevel? level) {
     String imageLevel =
         level?.name.toLowerCase() ??
         ProficiencyLevel.beginner.name.toLowerCase();
@@ -81,23 +63,25 @@ class _HomeScreenState extends State<HomeScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () {
-              context
-                  .push(AppRoutes.settings)
-                  .then((_) => context.read<TaskProvider>().loadHeatmapColor());
-            },
+            icon: const Icon(Icons.emoji_events_outlined),
+            onPressed: () => context.push(AppRoutes.ranking),
+            tooltip: '랭킹',
           ),
         ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(child: _buildHeatmapButton(context)),
-            const SizedBox(height: 20),
-            Expanded(child: _buildTilReviewButton(context)),
+            Expanded(
+              flex: 1,
+              child: SizedBox.expand(child: _buildHeatmapButton(context)),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              flex: 1,
+              child: SizedBox.expand(child: _buildTilReviewButton(context)),
+            ),
           ],
         ),
       ),
@@ -105,77 +89,96 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHeatmapButton(BuildContext context) {
-    final taskProvider = context.watch<TaskProvider>();
-    final heatmapDatasets = taskProvider.heatmapData.map(
-      (date, records) => MapEntry(date, records.length),
-    );
-    final endDate = DateTime.now();
-    final startDate = endDate.subtract(const Duration(days: 10 * 7));
-
-    return ElevatedButton(
-      onPressed: () => context.push(AppRoutes.heatmap),
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const Text(
-            AppStrings.learningRecord,
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 20),
-          ),
-          const SizedBox(height: 10),
-          if (taskProvider.isLoading)
-            const CircularProgressIndicator()
-          else
-            Expanded(
-              child: IgnorePointer(
-                child: ResponsiveHeatmap(
-                  datasets: heatmapDatasets,
-                  startDate: startDate,
-                  endDate: endDate,
-                  heatmapColor: taskProvider.heatmapColor,
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: theme.colorScheme.surfaceContainerLow,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.push(AppRoutes.heatmap),
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.calendar_view_month_rounded,
+                size: 44,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                AppStrings.learningRecord,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
-        ],
+              const SizedBox(height: 6),
+              Text(
+                '탭하여 최근 학습 현황 보기',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildTilReviewButton(BuildContext context) {
+    final theme = Theme.of(context);
     final notionProvider = context.watch<NotionProvider>();
-    return ElevatedButton(
-      onPressed: () {
-        if (notionProvider.isConnected) {
-          context.push(AppRoutes.review);
-        } else {
-          context.push('${AppRoutes.settings}/${AppRoutes.notionSettings}');
-        }
-      },
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 32),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.article, size: 48),
-          const SizedBox(height: 10),
-          const Text(AppStrings.tilReview, style: TextStyle(fontSize: 28)),
-          const SizedBox(height: 5),
-          Text(
-            notionProvider.notionConnectionError ??
-                (notionProvider.isConnected
-                    ? (notionProvider.databaseTitle ??
-                          AppStrings.notionConnected)
-                    : AppStrings.notionConnectionNeeded),
-            style: const TextStyle(fontSize: 14, color: Colors.grey),
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: theme.colorScheme.surfaceContainerLow,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () {
+          if (notionProvider.isConnected) {
+            context.push(AppRoutes.review);
+          } else {
+            context.push('${AppRoutes.settings}/${AppRoutes.notionSettings}');
+          }
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.article_rounded,
+                size: 44,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                AppStrings.tilReview,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                notionProvider.notionConnectionError ??
+                    (notionProvider.isConnected
+                        ? (notionProvider.databaseTitle ??
+                            AppStrings.notionConnected)
+                        : AppStrings.notionConnectionNeeded),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

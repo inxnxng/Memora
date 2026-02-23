@@ -24,21 +24,20 @@ class CommonBottomNavBar extends StatelessWidget {
           activeIcon: Icon(Icons.article),
           label: 'TIL 복습',
         ),
-
         BottomNavigationBarItem(
           icon: Icon(Icons.home_outlined),
           activeIcon: Icon(Icons.home),
           label: '홈',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.emoji_events_outlined),
-          activeIcon: Icon(Icons.emoji_events),
-          label: '랭킹',
+          icon: Icon(Icons.settings_outlined),
+          activeIcon: Icon(Icons.settings),
+          label: '설정',
         ),
       ],
       type: BottomNavigationBarType.fixed,
-      selectedItemColor: Colors.black,
-      unselectedItemColor: Colors.grey,
+      selectedItemColor: Theme.of(context).colorScheme.primary,
+      unselectedItemColor: Theme.of(context).colorScheme.onSurfaceVariant,
       showUnselectedLabels: true,
     );
   }

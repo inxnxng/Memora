@@ -104,7 +104,7 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
                       const SizedBox(height: 16),
                       _buildKeyInput(
                         controller: _notionApiTokenController,
-                        label: 'Notion API Token',
+                        label: 'Notion 연동 토큰',
                         currentValue: notionProvider.apiToken,
                         timestamp: notionProvider.apiTokenTimestamp,
                         isValid: notionProvider.apiToken != null,
@@ -112,9 +112,12 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
                       ),
                       const SizedBox(height: 30),
                       _buildSectionTitle('데이터베이스 연결'),
-                      const Text(
-                        'API 키를 저장하고 데이터베이스에 연결 권한을 부여한 후, 아래에서 데이터베이스를 검색하고 선택하세요.',
-                        style: TextStyle(color: Colors.grey),
+                      Text(
+                        '연동 토큰을 저장한 뒤, 사용할 노션 페이지에 이 연동을 연결해 주세요. 아래에서 데이터베이스를 검색해 선택할 수 있습니다.',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontSize: 14,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       TextField(
@@ -175,7 +178,7 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
       clipBehavior: Clip.antiAlias,
       child: ExpansionTile(
         title: Text(
-          'API 키 발급 및 연동 방법',
+          'Notion API 키 발급 및 연동 방법',
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.bold,
           ),
@@ -202,20 +205,20 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
                 ),
                 _buildStep(
                   icon: Icons.add_circle_outline,
-                  text: "'+ 새 연동 만들기'를 클릭하여 연동을 생성합니다.",
+                  text: "‘새 연동 만들기’를 클릭해 연동을 생성하세요.",
                 ),
                 _buildStep(
                   icon: Icons.copy,
-                  text: "생성된 '내부 연동 토큰'을 복사하여 아래에 붙여넣으세요.",
+                  text: "생성된 ‘내부 연동 토큰’을 복사해 아래 입력란에 붙여넣으세요.",
                 ),
                 const Divider(height: 24),
                 _buildStep(
                   icon: Icons.add_link,
-                  text: "연동할 Notion 페이지 우측 상단 '...' 메뉴에서 '+ 연결 추가'를 선택하세요.",
+                  text: "연동할 노션 페이지 우측 상단 ⋮ 메뉴에서 ‘연결 추가’를 선택하세요.",
                 ),
                 _buildStep(
                   icon: Icons.search,
-                  text: "검색창에서 방금 만든 연동을 찾아 선택하여 권한을 부여합니다.",
+                  text: "검색창에서 방금 만든 연동을 찾아 선택한 뒤 권한을 부여하세요.",
                 ),
               ],
             ),
@@ -353,7 +356,7 @@ class _NotionSettingsScreenState extends State<NotionSettingsScreen> {
           obscureText: true,
           onSubmitted: (_) => onSave(),
           decoration: InputDecoration(
-            hintText: 'ntn... 형태의 API 키를 입력하세요',
+            hintText: 'ntn... 형태의 연동 토큰을 입력하세요',
             border: const OutlineInputBorder(),
             suffixIcon: _isSaving
                 ? const Padding(

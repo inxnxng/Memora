@@ -60,8 +60,18 @@ class _LevelSelectionPageState extends State<LevelSelectionPage> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 30),
-          ...ProficiencyLevel.values.map(
-            (level) => _buildLevelOption(context, level),
+          RadioGroup<ProficiencyLevel>(
+            groupValue: _selectedLevel,
+            onChanged: (ProficiencyLevel? value) {
+              setState(() {
+                _selectedLevel = value;
+              });
+            },
+            child: Column(
+              children: ProficiencyLevel.values
+                  .map((level) => _buildLevelOption(context, level))
+                  .toList(),
+            ),
           ),
           const SizedBox(height: 50),
           ElevatedButton(
@@ -104,12 +114,6 @@ class _LevelSelectionPageState extends State<LevelSelectionPage> {
         title: Text(level.displayName),
         subtitle: Text(AppStrings.dailyGoal(level.dailyGoal)),
         value: level,
-        groupValue: _selectedLevel,
-        onChanged: (value) {
-          setState(() {
-            _selectedLevel = value;
-          });
-        },
         activeColor: Theme.of(context).primaryColor,
       ),
     );

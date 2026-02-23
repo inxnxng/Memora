@@ -22,17 +22,20 @@ class ProfileScreen extends StatelessWidget {
           }
           return SingleChildScrollView(
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   ProfileCard(userProvider: userProvider),
-                  const SizedBox(height: 20),
-                  RankingCard(userRank: userProvider.userRank),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 28),
+                  RankingCard(
+                    userRank: userProvider.userRank,
+                    rankingScore: userProvider.rankingScore,
+                  ),
+                  const SizedBox(height: 28),
                   const EditProfileCard(),
-                  const SizedBox(height: 40),
-                  const LogoutButton(),
+                  const SizedBox(height: 32),
+                  const Center(child: LogoutButton()),
                 ],
               ),
             ),

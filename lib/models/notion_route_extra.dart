@@ -11,6 +11,8 @@ class NotionRouteExtra {
   final String? url;
   final String? chatId; // New: For existing chat sessions
   final bool isExistingChat; // New: To indicate if it's an existing chat
+  /// 학습 현황에서 들어온 경우 등, 이미 학습 완료된 페이지로 간주하고 완료 상태로 표시
+  final bool alreadyCompleted;
 
   NotionRouteExtra({
     this.databaseName,
@@ -21,6 +23,7 @@ class NotionRouteExtra {
     this.pageTitle,
     this.url,
     this.chatId,
-    this.isExistingChat = false, // Default to false
+    this.isExistingChat = false,
+    this.alreadyCompleted = false,
   });
 }

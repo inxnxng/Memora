@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class NotionApiException implements Exception {
@@ -259,7 +260,7 @@ class NotionRemoteDataSource {
 
   Future<bool> validateApiKey(String apiToken) async {
     final url = Uri.parse('https://api.notion.com/v1/users/me');
-    print("Validating Notion API key...");
+    debugPrint("Validating Notion API key...");
     try {
       final response = await http
           .get(
@@ -271,7 +272,7 @@ class NotionRemoteDataSource {
             },
           )
           .timeout(const Duration(seconds: 10));
-      print(response.body);
+      debugPrint(response.body);
       if (response.statusCode == 200) {
         return true;
       } else {

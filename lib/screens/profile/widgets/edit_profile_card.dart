@@ -57,13 +57,46 @@ class _EditProfileCardState extends State<EditProfileCard> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: Text(level.displayName),
-          content: Text(level.description),
+          title: Row(
+            children: [
+              Icon(level.icon, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 8),
+              Text(level.displayName),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  level.description,
+                  style: const TextStyle(fontSize: 15),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  '기준',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  level.criteriaDescription,
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.5,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
           actions: [
             TextButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-              },
+              onPressed: () => Navigator.of(dialogContext).pop(),
               child: const Text(AppStrings.close),
             ),
           ],
@@ -74,53 +107,71 @@ class _EditProfileCardState extends State<EditProfileCard> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: theme.colorScheme.surfaceContainerLow,
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
+            Text(
               AppStrings.editProfile,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: AppStrings.nameLabel,
-                border: OutlineInputBorder(),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 16),
-            const Text(
-              AppStrings.proficiency,
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                labelText: AppStrings.nameLabel,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: theme.colorScheme.surface,
+              ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 20),
+            Text(
+              AppStrings.proficiency,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
             Wrap(
               spacing: 8.0,
-              runSpacing: 4.0,
+              runSpacing: 8.0,
               children: _levels.map((level) {
-                return ChoiceChip(
+                final isSelected = _selectedLevel == level;
+                return FilterChip(
                   label: Text(level.displayName),
-                  selected: _selectedLevel == level,
+                  selected: isSelected,
                   onSelected: (selected) {
                     setState(() {
                       _selectedLevel = level;
                     });
                     _showLevelDescription(level);
                   },
+                  selectedColor: theme.colorScheme.primaryContainer,
+                  checkmarkColor: theme.colorScheme.primary,
                 );
               }).toList(),
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
+            const SizedBox(height: 20),
+            FilledButton(
               onPressed: _saveProfile,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: const Text(AppStrings.save),
             ),

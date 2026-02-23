@@ -1,12 +1,11 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:memora/exceptions/auth_exception.dart';
+import 'package:memora/firebase_options.dart';
 import 'package:memora/repositories/user/user_repository.dart';
-import 'package:memora/screens/login_screen.dart';
-import 'package:memora/utils/platform_utils.dart';
-
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -15,7 +14,21 @@ class AuthService {
   final UserRepository _userRepository;
 
   AuthService({required UserRepository userRepository})
-    : _userRepository = userRepository;
+      : _userRepository = userRepository;
+
+  /// Google Sign-In 7.x: initialize with client ID (iOS/macOS also need GIDClientID in Info.plist).
+  static Future<void> _ensureGoogleSignInInitialized() async {
+    if (kIsWeb) return;
+    final GoogleSignIn signIn = GoogleSignIn.instance;
+    if (!signIn.supportsAuthenticate()) return;
+    final String? clientId = (defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.macOS)
+        ? DefaultFirebaseOptions.ios.iosClientId
+        : DefaultFirebaseOptions.android.androidClientId;
+    if (clientId != null && clientId.isNotEmpty) {
+      await signIn.initialize(clientId: clientId, serverClientId: null);
+    }
+  }
 
   Future<UserCredential?> signInWithEmail(String email, String password) async {
     try {
@@ -38,15 +51,15 @@ class AuthService {
       UserCredential userCredential;
 
       if (kIsWeb) {
-        // For web, use signInWithPopup.
         final GoogleAuthProvider googleProvider = GoogleAuthProvider();
         userCredential = await _auth.signInWithPopup(googleProvider);
       } else {
-        // For mobile, use the google_sign_in package.
-        final GoogleSignInAccount googleUser = await _googleSignIn
-            .authenticate();
-
-        final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+        await _ensureGoogleSignInInitialized();
+        final GoogleSignInAccount googleUser =
+            await _googleSignIn.authenticate();
+        if (googleUser == null) return null;
+        final GoogleSignInAuthentication googleAuth =
+            googleUser.authentication;
         final AuthCredential credential = GoogleAuthProvider.credential(
           idToken: googleAuth.idToken,
         );
@@ -81,8 +94,8 @@ class AuthService {
     try {
       final GithubAuthProvider githubProvider = GithubAuthProvider();
       UserCredential userCredential;
-
-      if (PlatformUtils.isDesktop) {
+      // signInWithPopup is web-only; on macOS/Windows use signInWithProvider (opens browser).
+      if (kIsWeb) {
         userCredential = await _auth.signInWithPopup(githubProvider);
       } else {
         userCredential = await _auth.signInWithProvider(githubProvider);

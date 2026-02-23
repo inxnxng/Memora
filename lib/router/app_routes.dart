@@ -65,17 +65,21 @@ class AppShellRoutes {
           GoRoute(
             path: AppRoutes.notionPage,
             builder: (context, state) {
-              final routeExtra = state.extra as NotionRouteExtra;
-              final pageId = routeExtra.pageId ?? '';
-              final pageTitle = routeExtra.pageTitle ?? '';
-              final url = routeExtra.url;
+              final routeExtra = state.extra is NotionRouteExtra
+                  ? state.extra! as NotionRouteExtra
+                  : null;
+              final pageId = routeExtra?.pageId ?? '';
+              final pageTitle = routeExtra?.pageTitle ?? '';
+              final url = routeExtra?.url;
               final databaseName =
-                  routeExtra.databaseName ?? AppStrings.unknownDb;
+                  routeExtra?.databaseName ?? AppStrings.unknownDb;
+              final alreadyCompleted = routeExtra?.alreadyCompleted ?? false;
               return NotionPageViewerScreen(
                 pageId: pageId,
                 pageTitle: pageTitle,
                 databaseName: databaseName,
                 url: url,
+                alreadyCompleted: alreadyCompleted,
               );
             },
           ),
@@ -109,10 +113,15 @@ class AppShellRoutes {
       GoRoute(
         path: AppRoutes.chat,
         builder: (context, state) {
-          final routeExtra = state.extra as NotionRouteExtra;
+          final routeExtra = state.extra is NotionRouteExtra
+              ? state.extra! as NotionRouteExtra
+              : null;
           return ChatScreen(
-            pages: routeExtra.pages ?? [],
-            databaseName: routeExtra.databaseName ?? AppStrings.unknownDb,
+            pages: routeExtra?.pages,
+            databaseName: routeExtra?.databaseName ?? AppStrings.unknownDb,
+            chatId: routeExtra?.chatId,
+            pageTitle: routeExtra?.pageTitle,
+            isExistingChat: routeExtra?.isExistingChat ?? false,
           );
         },
       ),

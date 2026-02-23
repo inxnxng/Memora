@@ -35,15 +35,23 @@ class TaskService {
   Future<void> addStudyRecordForToday({
     String? databaseName,
     required String title,
+    String? pageId,
+    String? url,
   }) async {
     await _repository.addStudyRecord(
       DateTime.now(),
       databaseName: databaseName,
       title: title,
+      pageId: pageId,
+      url: url,
     );
   }
 
   Future<Map<DateTime, List<Map<String, dynamic>>>> getHeatmapData() async {
     return await _repository.getStudyRecords();
+  }
+
+  Future<Set<String>> getCompletedPageIds() async {
+    return await _repository.getCompletedPageIds();
   }
 }

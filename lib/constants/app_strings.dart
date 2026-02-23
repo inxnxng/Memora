@@ -6,11 +6,20 @@ class AppStrings {
   static const String proficiency = '숙련도';
   static const String notSet = '미설정';
 
-  // Ranking Card
+  // Ranking
   static const String rankingInfo = '랭킹 정보';
-  static const String myCurrentRank = '현재 나의 랭킹';
+  static const String myCurrentRank = '내 랭킹';
   static const String noRank = '랭킹 없음';
-  static const String checkFullRanking = '전체 랭킹 확인하기';
+  static const String checkFullRanking = '전체 랭킹 보기';
+  static const String rankingTitle = '랭킹';
+  static const String myScore = '내 점수';
+  static const String points = 'pt';
+  static const String nextTier = '다음 티어까지';
+  static const String streakDays = '일 연속';
+  static const String shareRanking = '랭킹 공유';
+  static const String rankLoadFailed = '랭킹을 불러오는 데 실패했습니다.';
+  static const String noRankingData = '랭킹 정보가 없습니다.';
+  static const String studyMoreToRank = '학습을 이어가면 순위에 반영돼요.';
 
   // Edit Profile Card
   static const String editProfile = '프로필 수정';
@@ -62,4 +71,7 @@ class AppStrings {
   static String databasePrefix(String name) => 'DB: $name';
   static String formattedDate(int year, int month, int day) =>
       '$year년 $month월 $day일';
+
+  // App intro (web)
+  static const String appIntroUrl = 'https://inxnxng.notion.site/memora';
 }

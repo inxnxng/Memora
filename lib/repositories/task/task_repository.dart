@@ -45,15 +45,23 @@ class TaskRepository {
     DateTime date, {
     String? databaseName,
     required String title,
+    String? pageId,
+    String? url,
   }) async {
     await _localStorageService.addStudyRecord(
       date,
       databaseName: databaseName,
       title: title,
+      pageId: pageId,
+      url: url,
     );
   }
 
   Future<Map<DateTime, List<Map<String, dynamic>>>> getStudyRecords() async {
     return await _localStorageService.getStudyRecords();
+  }
+
+  Future<Set<String>> getCompletedPageIds() async {
+    return await _localStorageService.getCompletedPageIds();
   }
 }

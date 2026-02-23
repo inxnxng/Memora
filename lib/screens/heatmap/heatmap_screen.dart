@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:memora/constants/app_strings.dart';
+import 'package:memora/models/notion_route_extra.dart';
 import 'package:memora/providers/task_provider.dart';
+import 'package:memora/router/app_routes.dart';
 import 'package:memora/widgets/common_app_bar.dart';
 import 'package:memora/widgets/responsive_heatmap.dart';
 import 'package:provider/provider.dart';
+
+/// 최근 히트맵 표시 기간(일). 12주 = 84일.
+const int _recentHeatmapDays = 12 * 7;
 
 class HeatmapScreen extends StatefulWidget {
   const HeatmapScreen({super.key});
@@ -24,6 +30,13 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
   @override
   Widget build(BuildContext context) {
     final taskProvider = context.watch<TaskProvider>();
+    final endDate = DateTime.now();
+    final startDate = endDate.subtract(const Duration(days: _recentHeatmapDays));
+    final recentData = _filterRecentHeatmapData(
+      taskProvider.heatmapData,
+      startDate,
+      endDate,
+    );
 
     return Scaffold(
       appBar: const CommonAppBar(title: AppStrings.heatmapTitle),
@@ -37,22 +50,48 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 16),
-            _buildHeatmapCard(taskProvider),
+            _buildHeatmapCard(
+              taskProvider: taskProvider,
+              recentData: recentData,
+              startDate: startDate,
+              endDate: endDate,
+            ),
             const SizedBox(height: 24),
             Text(
               AppStrings.detailedLearningRecord,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 16),
-            _buildSessionList(taskProvider.heatmapData),
+            _buildSessionList(recentData),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHeatmapCard(TaskProvider taskProvider) {
-    final heatmapDatasets = taskProvider.heatmapData.map(
+  static Map<DateTime, List<Map<String, dynamic>>> _filterRecentHeatmapData(
+    Map<DateTime, List<Map<String, dynamic>>> fullData,
+    DateTime startDate,
+    DateTime endDate,
+  ) {
+    final normalizedStart = DateTime(startDate.year, startDate.month, startDate.day);
+    final normalizedEnd = DateTime(endDate.year, endDate.month, endDate.day);
+    return Map.fromEntries(
+      fullData.entries.where((e) {
+        final d = e.key;
+        final norm = DateTime(d.year, d.month, d.day);
+        return !norm.isBefore(normalizedStart) && !norm.isAfter(normalizedEnd);
+      }),
+    );
+  }
+
+  Widget _buildHeatmapCard({
+    required TaskProvider taskProvider,
+    required Map<DateTime, List<Map<String, dynamic>>> recentData,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) {
+    final heatmapDatasets = recentData.map(
       (date, records) => MapEntry(date, records.length),
     );
 
@@ -63,9 +102,10 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
         padding: const EdgeInsets.all(8.0),
         child: ResponsiveHeatmap(
           datasets: heatmapDatasets,
-          startDate: taskProvider.heatmapStartDate,
-          endDate: taskProvider.heatmapEndDate,
+          startDate: startDate,
+          endDate: endDate,
           heatmapColor: taskProvider.heatmapColor,
+          borderRadius: 0,
         ),
       ),
     );
@@ -118,16 +158,45 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
             children: records.map((record) {
               final dbName = record['databaseName'] as String? ?? '';
               final title = record['title'] as String? ?? '';
+              final pageId = record['pageId'] as String?;
+              final url = record['url'] as String?;
 
               if (dbName.isEmpty && title.isEmpty) {
                 return const SizedBox.shrink();
               }
+
+              final canOpenPage =
+                  pageId != null && pageId.isNotEmpty;
 
               return ListTile(
                 title: Text(title.isEmpty ? "" : title),
                 subtitle: Text(
                   dbName.isEmpty ? "" : AppStrings.databasePrefix(dbName),
                 ),
+                trailing: canOpenPage
+                    ? Icon(
+                        Icons.arrow_forward_ios,
+                        size: 14,
+                        color: Theme.of(context).colorScheme.primary,
+                      )
+                    : null,
+                onTap: canOpenPage
+                    ? () {
+                        final extra = NotionRouteExtra(
+                          databaseName: dbName.isNotEmpty
+                              ? dbName
+                              : AppStrings.unknownDb,
+                          pageId: pageId,
+                          pageTitle: title,
+                          url: url,
+                          alreadyCompleted: true,
+                        );
+                        context.push(
+                          '${AppRoutes.review}/${AppRoutes.notionPage}',
+                          extra: extra,
+                        );
+                      }
+                    : null,
               );
             }).toList(),
           ),

@@ -6,13 +6,13 @@ class RankingRepository {
 
   RankingRepository(this._firestore);
 
-  /// Fetches the user's rank based on their streak count.
+  /// Fetches the user's rank based on ranking score.
   /// Returns the rank (1-based) or -1 if not found or an error occurs.
   Future<int> getUserRank(String userId) async {
     try {
       final querySnapshot = await _firestore
           .collection('users')
-          .orderBy('streakCount', descending: true)
+          .orderBy('rankingScore', descending: true)
           .get();
 
       final userDocs = querySnapshot.docs;
@@ -20,7 +20,6 @@ class RankingRepository {
 
       return userIndex != -1 ? userIndex + 1 : -1;
     } catch (e) {
-      // Return -1 if there's a permission error (which happens with user-only read rules)
       debugPrint('Error getting user rank: $e');
       return -1;
     }
@@ -30,7 +29,7 @@ class RankingRepository {
     try {
       return _firestore
           .collection('users')
-          .orderBy('streakCount', descending: true)
+          .orderBy('rankingScore', descending: true)
           .limit(limit)
           .snapshots()
           .map((snapshot) {

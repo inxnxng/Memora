@@ -6,6 +6,8 @@ class ResponsiveHeatmap extends StatelessWidget {
   final DateTime? startDate;
   final DateTime? endDate;
   final Color heatmapColor;
+  /// Border radius of each cell. Use 0 for square cells.
+  final double borderRadius;
 
   const ResponsiveHeatmap({
     super.key,
@@ -13,7 +15,13 @@ class ResponsiveHeatmap extends StatelessWidget {
     required this.startDate,
     required this.endDate,
     required this.heatmapColor,
+    this.borderRadius = 0,
   });
+
+  static const double _cellMargin = 4.0;
+  static const double _horizontalPadding = 32.0;
+  static const double _verticalPadding = 24.0;
+  static const int _daysPerRow = 7;
 
   @override
   Widget build(BuildContext context) {
@@ -24,38 +32,79 @@ class ResponsiveHeatmap extends StatelessWidget {
       );
     }
 
+    final media = MediaQuery.of(context);
+    final viewWidth = media.size.width;
+    final viewHeight = media.size.height;
+
     return LayoutBuilder(
       builder: (context, constraints) {
-        final double screenWidth = constraints.maxWidth;
+        final double maxWidth = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : viewWidth;
+        // Use a fraction of viewport height so heatmap never overflows the screen
+        final double maxHeatmapHeight = viewHeight * 0.4;
+        final int totalDays =
+            endDate!.difference(startDate!).inDays + 1;
+        final int weeks = (totalDays / _daysPerRow).ceil().clamp(1, 52);
 
-        // Calculate appropriate tile size
-        // We want about 15-20 weeks to show at once if possible on mobile,
-        // but more on wider screens.
-        double tileSize = (screenWidth - 32) / 12; // 18 weeks view as default
+        // Tile size from width: 7 days per row
+        double tileSizeFromWidth =
+            (maxWidth - _horizontalPadding) / _daysPerRow;
+        // Tile size from height: fit all rows in allocated height
+        double tileSizeFromHeight =
+            (maxHeatmapHeight - _verticalPadding) / weeks - _cellMargin;
 
-        // Minimum tile size for readability
-        if (tileSize < 18) tileSize = 12;
-        // Maximum tile size to keep it looking like a heatmap
-        if (tileSize > 30) tileSize = 25;
+        double tileSize = (tileSizeFromWidth < tileSizeFromHeight
+                ? tileSizeFromWidth
+                : tileSizeFromHeight)
+            .clamp(10.0, 28.0);
 
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          physics: const BouncingScrollPhysics(),
-          // Reverse scroll direction so the most recent dates (end) are visible first
-          reverse: true,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-            child: HeatMap(
-              datasets: datasets,
-              startDate: startDate!,
-              endDate: endDate!,
-              size: tileSize,
-              colorMode: ColorMode.opacity,
-              showText: false,
-              scrollable:
-                  false, // We use our own SingleChildScrollView for better control
-              colorsets: {1: heatmapColor},
-              showColorTip: false,
+        // 좌측 요일 라벨(Sun, Mon 등) 너비 추정 후 클리핑으로 숨김
+        const double weekLabelWidth = 32.0;
+
+        return ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: viewHeight * 0.45,
+            maxWidth: maxWidth,
+          ),
+          child: SizedBox(
+            width: maxWidth,
+            child: ClipRect(
+              clipBehavior: Clip.hardEdge,
+              child: OverflowBox(
+                alignment: Alignment.centerRight,
+                maxWidth: maxWidth + weekLabelWidth,
+                child: Transform.translate(
+                  offset: Offset(-weekLabelWidth, 0),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    reverse: true,
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.vertical,
+                      physics: const BouncingScrollPhysics(),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 8.0,
+                          horizontal: 4.0,
+                        ),
+                        child: HeatMap(
+                          datasets: datasets,
+                          startDate: startDate!,
+                          endDate: endDate!,
+                          size: tileSize,
+                          colorMode: ColorMode.opacity,
+                          showText: false,
+                          scrollable: false,
+                          colorsets: {1: heatmapColor},
+                          showColorTip: false,
+                          borderRadius: borderRadius,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         );

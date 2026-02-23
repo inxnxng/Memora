@@ -9,40 +9,63 @@ class ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: theme.colorScheme.surfaceContainerLow,
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
-            if (userProvider.photoURL != null)
-              CircleAvatar(
-                radius: 50,
-                backgroundImage: NetworkImage(userProvider.photoURL!),
-              ),
+            CircleAvatar(
+              radius: 44,
+              backgroundColor: theme.colorScheme.primaryContainer,
+              backgroundImage: userProvider.photoURL != null && userProvider.photoURL!.isNotEmpty
+                  ? NetworkImage(userProvider.photoURL!)
+                  : null,
+              child: userProvider.photoURL == null || userProvider.photoURL!.isEmpty
+                  ? Icon(Icons.person, size: 40, color: theme.colorScheme.onPrimaryContainer)
+                  : null,
+            ),
             const SizedBox(height: 16),
             Text(
               userProvider.displayName ?? AppStrings.noName,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
-            if (userProvider.email != null)
+            if (userProvider.email != null && userProvider.email!.isNotEmpty) ...[
+              const SizedBox(height: 4),
               Text(
                 userProvider.email!,
-                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
               ),
-            const SizedBox(height: 16),
+            ],
+            const SizedBox(height: 20),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 _buildProfileStat(
+                  context,
                   '${userProvider.streakCount}',
                   AppStrings.streak,
+                  Icons.local_fire_department_outlined,
+                ),
+                Container(
+                  width: 1,
+                  height: 36,
+                  color: theme.colorScheme.outlineVariant,
                 ),
                 _buildProfileStat(
+                  context,
                   userProvider.userLevel?.displayName ?? AppStrings.notSet,
                   AppStrings.proficiency,
+                  Icons.trending_up_outlined,
                 ),
               ],
             ),
@@ -52,14 +75,22 @@ class ProfileCard extends StatelessWidget {
     );
   }
 
-  Widget _buildProfileStat(String value, String label) {
+  Widget _buildProfileStat(BuildContext context, String value, String label, IconData icon) {
+    final theme = Theme.of(context);
     return Column(
       children: [
+        Icon(icon, size: 20, color: theme.colorScheme.primary),
+        const SizedBox(height: 6),
         Text(
           value,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
-        Text(label, style: const TextStyle(fontSize: 14)),
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
       ],
     );
   }

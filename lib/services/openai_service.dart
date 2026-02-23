@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:memora/repositories/openai/openai_auth_repository.dart';
 import 'package:memora/repositories/openai/openai_repository.dart';
 
@@ -15,11 +16,14 @@ class OpenAIService {
 
   Future<bool> checkApiKeyAvailability() async {
     final keyData = await _openAIAuthRepository.getApiKeyWithTimestamp();
-    if (keyData['value'] == null || keyData['value']!.isEmpty) {
-      return false;
-    }
+    final hasValue = keyData['value'] != null && keyData['value']!.isNotEmpty;
     final isValid = await _openAIAuthRepository.getApiKeyValidStatus();
-    return isValid ?? false;
+    final result = hasValue && (isValid ?? false);
+    debugPrint(
+      '[OpenAIService] checkApiKeyAvailability: hasKey=$hasValue '
+      'validStatus=$isValid (raw) => result=$result',
+    );
+    return result;
   }
 
   Future<Map<String, String?>> getApiKeyWithTimestamp() {
@@ -28,15 +32,27 @@ class OpenAIService {
 
   Future<bool> validateAndSaveApiKey(String apiKey) async {
     final isValid = await _openAIRepository.validateApiKey(apiKey);
-    await _openAIAuthRepository.saveApiKeyValidStatus(isValid);
     if (isValid) {
+      await _openAIAuthRepository.saveApiKeyValidStatus(true);
       await _openAIAuthRepository.saveApiKeyWithTimestamp(apiKey);
     }
     return isValid;
   }
 
+  /// API 사용 중 키 오류가 났을 때 호출. 저장된 유효 상태를 무효로 표시합니다.
+  Future<void> markKeyInvalid() async {
+    await _openAIAuthRepository.saveApiKeyValidStatus(false);
+  }
+
   Future<void> saveApiKeyWithTimestamp(String apiKey) async {
     await validateAndSaveApiKey(apiKey);
+  }
+
+  /// 검증 없이 키만 저장. 유효하지 않은 키를 사용자가 '그래도 저장'할 때 사용.
+  Future<void> saveApiKeyWithoutValidation(String apiKey) async {
+    await _openAIAuthRepository.saveApiKeyValidStatus(false);
+    await _openAIAuthRepository.saveApiKeyWithTimestamp(apiKey);
+    debugPrint('[OpenAIService] 키 저장 완료 (검증 없음, valid=false)');
   }
 
   Future<void> deleteApiKey() {

@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:memora/providers/user_provider.dart';
 import 'package:memora/services/gemini_service.dart';
 import 'package:memora/widgets/common_app_bar.dart';
 import 'package:provider/provider.dart';
@@ -18,19 +19,20 @@ class _GeminiSettingsScreenState extends State<GeminiSettingsScreen> {
   final TextEditingController _geminiApiKeyController = TextEditingController();
   Map<String, String?> _geminiApiKey = {'value': null, 'timestamp': null};
   bool _isLoading = false;
+  bool _isSaving = false;
   bool? _isValid;
 
   @override
   void initState() {
     super.initState();
     _geminiService = Provider.of<GeminiService>(context, listen: false);
-    _loadKeys();
+    _loadKeys(isInitialLoad: true);
   }
 
-  Future<void> _loadKeys() async {
-    setState(() {
-      _isLoading = true;
-    });
+  Future<void> _loadKeys({bool isInitialLoad = false}) async {
+    if (isInitialLoad) {
+      setState(() => _isLoading = true);
+    }
     _geminiApiKey = await _geminiService.getApiKeyWithTimestamp();
     if (_geminiApiKey['value'] != null && _geminiApiKey['value']!.isNotEmpty) {
       _isValid = await _geminiService.checkApiKeyAvailability();
@@ -38,9 +40,11 @@ class _GeminiSettingsScreenState extends State<GeminiSettingsScreen> {
       _isValid = null;
     }
     _geminiApiKeyController.text = ''; // 컨트롤러 지우기
-    setState(() {
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   String _formatTimestamp(String? timestamp) {
@@ -53,41 +57,92 @@ class _GeminiSettingsScreenState extends State<GeminiSettingsScreen> {
     final token = _geminiApiKeyController.text.trim();
 
     if (token.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Gemini API 키를 입력해주세요.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gemini API 키를 입력해주세요.')),
+      );
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isSaving = true);
     try {
       final isValid = await _geminiService.validateAndSaveApiKey(token);
-      await _loadKeys();
+      await _loadKeys(isInitialLoad: false);
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            isValid ? 'Gemini Key 저장 및 인증 완료!' : 'Gemini Key가 유효하지 않습니다.',
-          ),
-        ),
-      );
-      _geminiApiKeyController.clear();
+      if (isValid) {
+        await Provider.of<UserProvider>(context, listen: false)
+            .syncAllApiKeysToFirestore();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gemini API 키 저장 및 인증이 완료되었습니다.')),
+        );
+        _geminiApiKeyController.clear();
+      } else {
+        _showInvalidKeyDialog(token: token);
+      }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gemini Key 저장 실패: ${e.toString()}')),
-        );
+        _showInvalidKeyDialog(message: '연결에 실패했습니다. 네트워크를 확인한 뒤 다시 시도해 주세요.');
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isSaving = false);
       }
     }
+  }
+
+  void _showInvalidKeyDialog({String? message, String? token}) {
+    final offerSaveAnyway = (message == null && token != null && token.isNotEmpty);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('API 키 검사 실패'),
+        content: Text(
+          message ??
+              '입력한 API 키가 유효하지 않습니다.\nGoogle AI Studio에서 키를 확인한 뒤 다시 입력해 주세요.\n\n그래도 저장하시겠습니까?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('취소'),
+          ),
+          if (offerSaveAnyway)
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                setState(() => _isSaving = true);
+                try {
+                  await _geminiService.saveApiKeyWithoutValidation(token);
+                  await Provider.of<UserProvider>(context, listen: false)
+                      .syncAllApiKeysToFirestore();
+                  if (!mounted) return;
+                  await _loadKeys(isInitialLoad: false);
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Gemini API 키가 저장되었습니다. (검증되지 않음)')),
+                  );
+                  _geminiApiKeyController.clear();
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('저장 실패: $e')),
+                    );
+                  }
+                } finally {
+                  if (mounted) setState(() => _isSaving = false);
+                }
+              },
+              child: const Text('그래도 저장'),
+            )
+          else
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('확인'),
+            ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -105,7 +160,7 @@ class _GeminiSettingsScreenState extends State<GeminiSettingsScreen> {
                   const SizedBox(height: 16),
                   _buildKeyInput(
                     controller: _geminiApiKeyController,
-                    label: 'Gemini API Key',
+                    label: 'Gemini API 키',
                     currentValue: _geminiApiKey["value"],
                     timestamp: _geminiApiKey['timestamp'],
                     isValid: _isValid,
@@ -152,17 +207,17 @@ class _GeminiSettingsScreenState extends State<GeminiSettingsScreen> {
                 _buildStep(
                   icon: Icons.link,
                   text: "Google AI Studio의 ",
-                  linkText: "API Keys 페이지로 이동",
+                  linkText: "API 키 페이지로 이동",
                   url: "https://aistudio.google.com/app/apikey",
                   linkColor: linkColor,
                 ),
                 _buildStep(
                   icon: Icons.add_circle_outline,
-                  text: "'Create API key'를 클릭하여 새 키를 생성합니다.",
+                  text: "‘API 키 만들기’를 클릭해 새 키를 생성하세요.",
                 ),
                 _buildStep(
                   icon: Icons.copy,
-                  text: "생성된 API 키를 복사하여 아래에 붙여넣으세요.",
+                  text: "생성된 API 키를 복사해 아래 입력란에 붙여넣으세요.",
                 ),
               ],
             ),
@@ -256,14 +311,18 @@ class _GeminiSettingsScreenState extends State<GeminiSettingsScreen> {
           decoration: InputDecoration(
             hintText: 'API 키를 입력하세요',
             border: const OutlineInputBorder(),
-            suffixIcon: _isLoading
+            suffixIcon: (_isLoading || _isSaving)
                 ? const Padding(
                     padding: EdgeInsets.all(8.0),
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
                   )
                 : IconButton(
                     icon: const Icon(Icons.save),
-                    onPressed: onSave,
+                    onPressed: _isSaving ? null : onSave,
                     tooltip: '저장',
                   ),
           ),

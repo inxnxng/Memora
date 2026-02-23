@@ -37,19 +37,30 @@ class ChatMessage {
 
   // For Local Storage (JSON serializable)
   factory ChatMessage.fromLocalMap(Map<String, dynamic> map) {
+    final senderStr = map['sender'] as String?;
+    final sender = senderStr == 'user'
+        ? MessageSender.user
+        : senderStr == 'system'
+            ? MessageSender.system
+            : MessageSender.ai;
     return ChatMessage(
       id: map['id'] as String?,
       content: map['content'] as String,
-      sender: map['sender'] == 'user' ? MessageSender.user : MessageSender.ai,
+      sender: sender,
       timestamp: DateTime.parse(map['timestamp'] as String),
     );
   }
 
   Map<String, dynamic> toLocalMap() {
+    final senderStr = sender == MessageSender.user
+        ? 'user'
+        : sender == MessageSender.system
+            ? 'system'
+            : 'ai';
     return {
       'id': id,
       'content': content,
-      'sender': sender == MessageSender.user ? 'user' : 'ai',
+      'sender': senderStr,
       'timestamp': timestamp.toIso8601String(),
     };
   }

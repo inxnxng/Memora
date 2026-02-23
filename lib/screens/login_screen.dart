@@ -2,18 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:memora/constants/app_strings.dart';
+import 'package:memora/exceptions/auth_exception.dart';
 import 'package:memora/router/app_routes.dart';
 import 'package:memora/services/auth_service.dart';
 import 'package:provider/provider.dart';
-
-/// A custom exception for authentication errors.
-class AuthServiceException implements Exception {
-  final String message;
-  AuthServiceException(this.message);
-
-  @override
-  String toString() => message;
-}
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});

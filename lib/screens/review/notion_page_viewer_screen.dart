@@ -17,6 +17,8 @@ class NotionPageViewerScreen extends StatefulWidget {
   final String pageTitle;
   final String databaseName;
   final String? url;
+  /// 학습 현황에서 들어온 경우 true. 스크롤 없이 완료 상태로 표시
+  final bool alreadyCompleted;
 
   const NotionPageViewerScreen({
     super.key,
@@ -24,6 +26,7 @@ class NotionPageViewerScreen extends StatefulWidget {
     required this.pageTitle,
     required this.databaseName,
     this.url,
+    this.alreadyCompleted = false,
   });
 
   @override
@@ -33,6 +36,8 @@ class NotionPageViewerScreen extends StatefulWidget {
 class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
   late Future<String> _markdownFuture;
   bool _showCompleteButton = false;
+  bool _hasScrolledToBottom = false;
+  bool _hasAutoCompleted = false;
   String _pageContent = '';
   final TocController _tocController = TocController();
   final ScrollController _scrollController = ScrollController();
@@ -40,6 +45,11 @@ class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.alreadyCompleted) {
+      _showCompleteButton = true;
+      _hasScrolledToBottom = true;
+      _hasAutoCompleted = true;
+    }
     final notionProvider = Provider.of<NotionProvider>(context, listen: false);
     _markdownFuture = notionProvider.renderNotionDbAsMarkdown(widget.pageId);
     _markdownFuture.then((content) {
@@ -49,36 +59,69 @@ class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
         });
       }
     });
-    _scrollController.addListener(() {
-      if (_scrollController.position.pixels >=
-          _scrollController.position.maxScrollExtent) {
-        setState(() {
-          _showCompleteButton = true;
-        });
-      }
-    });
+    _scrollController.addListener(_onScroll);
   }
 
-  void _completeStudy(BuildContext context) {
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final atBottom = _scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 8;
+    if (atBottom && mounted) {
+      setState(() {
+        _showCompleteButton = true;
+        _hasScrolledToBottom = true;
+      });
+      _autoCompleteIfReachedBottom();
+    }
+  }
+
+  void _autoCompleteIfReachedBottom() {
+    if (_hasAutoCompleted || !_showCompleteButton) return;
+    _hasAutoCompleted = true;
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
     taskProvider
         .addStudyRecordForToday(
           databaseName: widget.databaseName,
           title: widget.pageTitle,
+          pageId: widget.pageId,
+          url: widget.url,
         )
         .then((_) {
+          if (mounted) {
+            setState(() {});
+          }
+        })
+        .catchError((_) {});
+  }
+
+  void _completeStudy(BuildContext context) {
+    if (_hasAutoCompleted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('이미 학습 완료로 기록되었습니다.')),
+      );
+      return;
+    }
+    final taskProvider = Provider.of<TaskProvider>(context, listen: false);
+    taskProvider
+        .addStudyRecordForToday(
+          databaseName: widget.databaseName,
+          title: widget.pageTitle,
+          pageId: widget.pageId,
+          url: widget.url,
+        )
+        .then((_) {
+          if (mounted) {
+            setState(() {
+              _hasAutoCompleted = true;
+              _showCompleteButton = true;
+            });
+          }
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('오늘의 학습이 기록되었습니다!'),
               backgroundColor: Colors.green,
             ),
           );
-
-          if (mounted) {
-            setState(() {
-              _showCompleteButton = false;
-            });
-          }
         })
         .catchError((error) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -106,7 +149,7 @@ class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: CommonAppBar(
-        title: widget.pageTitle,
+        title: '복습 페이지',
         actions: [
           if (_showCompleteButton)
             IconButton(
@@ -137,10 +180,22 @@ class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
             return SingleChildScrollView(
               controller: _scrollController,
               padding: const EdgeInsets.all(16.0),
-              child: MarkdownWidget(
-                data: snapshot.data!,
-                shrinkWrap: true,
-                tocController: _tocController,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.pageTitle,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 16),
+                  MarkdownWidget(
+                    data: snapshot.data!,
+                    shrinkWrap: true,
+                    tocController: _tocController,
+                  ),
+                ],
               ),
             );
           }
@@ -166,20 +221,24 @@ class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
             if (_pageContent.isNotEmpty)
               ElevatedButton.icon(
                 icon: const Icon(Icons.quiz_sharp),
-                label: const Text('복습하기'),
-                onPressed: () {
-                  final page = NotionPage(
-                    id: widget.pageId,
-                    title: widget.pageTitle,
-                    content: _pageContent,
-                    url: widget.url,
-                  );
-                  final routeExtra = NotionRouteExtra(
-                    pages: [page],
-                    databaseName: widget.databaseName,
-                  );
-                  context.push(AppRoutes.chat, extra: routeExtra);
-                },
+                label: Text(_hasScrolledToBottom
+                    ? '복습하기'
+                    : '내용 끝까지 스크롤 후 복습하기'),
+                onPressed: _hasScrolledToBottom
+                    ? () {
+                        final page = NotionPage(
+                          id: widget.pageId,
+                          title: widget.pageTitle,
+                          content: _pageContent,
+                          url: widget.url,
+                        );
+                        final routeExtra = NotionRouteExtra(
+                          pages: [page],
+                          databaseName: widget.databaseName,
+                        );
+                        context.push(AppRoutes.chat, extra: routeExtra);
+                      }
+                    : null,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 30,

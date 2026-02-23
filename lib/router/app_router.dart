@@ -24,18 +24,17 @@ GoRouter createRouter(
         return MainShell(navigationShell: navigationShell);
       },
       branches: [
-        // 하단 바
+        // 하단 바: TIL 복습, 홈, 설정
         AppShellRoutes.reviewBranch,
         AppShellRoutes.homeBranch,
+        AppShellRoutes.settingsBranch,
+        // 그 외
         AppShellRoutes.rankingBranch,
-
-        // 기본 경로
         AppShellRoutes.heatmapBranch,
         AppShellRoutes.profileBranch,
         AppShellRoutes.chatBranch,
         AppShellRoutes.loginBranch,
         AppShellRoutes.onboardingBranch,
-        AppShellRoutes.settingsBranch,
       ],
     ),
   ];

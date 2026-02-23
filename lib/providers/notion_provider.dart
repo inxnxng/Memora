@@ -210,6 +210,8 @@ class NotionProvider with ChangeNotifier {
       _databaseId = result['databaseId'];
       _databaseTitle = result['databaseTitle'];
       _notionConnectionError = null;
+      // DB가 바뀌었으므로 TIL 복습용 페이지 목록을 새 DB 기준으로 갱신
+      await fetchNotionPages();
     } catch (e) {
       _notionConnectionError = 'Failed to connect to database: ${e.toString()}';
     }

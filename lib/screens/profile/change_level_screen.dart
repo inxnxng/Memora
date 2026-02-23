@@ -25,6 +25,7 @@ class _ChangeLevelScreenState extends State<ChangeLevelScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -33,7 +34,7 @@ class _ChangeLevelScreenState extends State<ChangeLevelScreen> {
         ),
         title: const Text('학습 레벨 변경'),
         elevation: 0,
-        backgroundColor: Colors.transparent,
+        backgroundColor: theme.scaffoldBackgroundColor,
       ),
       body: SafeArea(
         child: Padding(
@@ -41,15 +42,19 @@ class _ChangeLevelScreenState extends State<ChangeLevelScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
+              Text(
                 '학습 레벨을 선택해주세요',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
-              const Text(
+              Text(
                 '자신에게 맞는 학습량을 선택하여 꾸준히 기억력을 훈련하세요.',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 40),
@@ -97,6 +102,7 @@ class _ChangeLevelScreenState extends State<ChangeLevelScreen> {
             setState(() {
               _selectedLevel = level;
             });
+            _showLevelCriteriaDialog(level);
           },
           borderRadius: BorderRadius.circular(15),
           child: Padding(
@@ -149,6 +155,59 @@ class _ChangeLevelScreenState extends State<ChangeLevelScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  void _showLevelCriteriaDialog(ProficiencyLevel level) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(level.icon, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 8),
+              Text(level.displayName),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  level.description,
+                  style: const TextStyle(fontSize: 15),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  '기준',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  level.criteriaDescription,
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.5,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('닫기'),
+            ),
+          ],
+        );
+      },
     );
   }
 

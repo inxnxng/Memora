@@ -1,9 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:memora/models/ai_provider.dart';
 import 'package:memora/models/proficiency_level.dart';
 import 'package:memora/repositories/ranking/ranking_repository.dart';
 import 'package:memora/repositories/user/user_repository.dart';
-import 'package:memora/screens/settings/ai_model_settings_screen.dart';
 import 'package:memora/services/encryption_service.dart';
 import 'package:memora/services/local_storage_service.dart';
 
@@ -20,6 +20,8 @@ class UserProvider with ChangeNotifier {
   int _streakCount = 0;
   Map<String, int> _sessionMap = {};
   int? _userRank;
+  int _rankingScore = 0;
+  int _totalSessionCount = 0;
   bool _isLoading = true;
   String? _userId;
   User? _user;
@@ -33,6 +35,8 @@ class UserProvider with ChangeNotifier {
   int get streakCount => _streakCount;
   Map<String, int> get sessionMap => _sessionMap;
   int? get userRank => _userRank;
+  int get rankingScore => _rankingScore;
+  int get totalSessionCount => _totalSessionCount;
   bool get isLoading => _isLoading;
   String? get userId => _userId;
   User? get user => _user;
@@ -72,6 +76,8 @@ class UserProvider with ChangeNotifier {
     _streakCount = 0;
     _sessionMap = {};
     _userRank = null;
+    _rankingScore = 0;
+    _totalSessionCount = 0;
     _isLoading = false;
     _preferredAi = AiProvider.gemini;
     Future.microtask(() => notifyListeners());
@@ -98,6 +104,9 @@ class UserProvider with ChangeNotifier {
         _email = firestoreData['email'];
         _photoURL = firestoreData['photoURL'];
         _streakCount = firestoreData['streakCount'] ?? 0;
+        _rankingScore = (firestoreData['rankingScore'] as num?)?.toInt() ?? 0;
+        _totalSessionCount =
+            (firestoreData['totalSessionCount'] as num?)?.toInt() ?? 0;
         final preferredAiString = firestoreData['preferredAi'];
         _preferredAi = (preferredAiString == 'openai')
             ? AiProvider.openai
@@ -117,6 +126,19 @@ class UserProvider with ChangeNotifier {
         // If no Firestore document exists, ensure streak count is initialized.
         await _userRepository.ensureStreakCountExists(_userId!);
         // Other fields will be populated during onboarding.
+      }
+
+      // 기존 유저: Firestore에 rankingScore가 없으면 로컬 세션 합계로 동기화
+      final data = firestoreData;
+      if (data != null &&
+          data['rankingScore'] == null &&
+          _userId != null) {
+        final sessionMap = await _userRepository.loadSessionMap(_userId!);
+        final total = sessionMap.values.fold<int>(0, (a, b) => a + b);
+        final streak = data['streakCount'] as int? ?? 0;
+        await _userRepository.updateRankingScore(_userId!, total, streak);
+        _rankingScore = total * 10 + streak * 20;
+        _totalSessionCount = total;
       }
 
       // Sync API keys and get rank as before.
@@ -164,6 +186,8 @@ class UserProvider with ChangeNotifier {
               serviceName,
               decryptedValue,
             );
+            // Firebase에 저장된 키는 저장 시점에 검증된 것으로 간주하여 유효 상태로 표시
+            await _localStorageService.saveApiKeyValidStatus(serviceName, true);
           }
         }
       }
@@ -234,6 +258,14 @@ class UserProvider with ChangeNotifier {
     final now = DateTime.now();
     await _userRepository.recordSession(_userId!, now);
     await _userRepository.incrementStreak(_userId!, now);
+    final sessionMap = await _userRepository.loadSessionMap(_userId!);
+    final totalSessionCount = sessionMap.values.fold<int>(0, (a, b) => a + b);
+    final streakCount = await _userRepository.loadStreakCount(_userId!);
+    await _userRepository.updateRankingScore(
+      _userId!,
+      totalSessionCount,
+      streakCount,
+    );
     await loadUserProfile();
   }
 

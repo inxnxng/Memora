@@ -9,12 +9,29 @@ class ChatRepository {
 
   ChatRepository(this._localStorageService);
 
+  /// 채팅 ID 생성 (정렬된 pageId를 '-'로 연결)
   static String generateChatId(List<String> pageIds) {
     if (pageIds.isEmpty) {
       return '';
     }
     pageIds.sort();
     return pageIds.join('-');
+  }
+
+  /// generateChatId로 만든 문자열에서 pageId 목록 복원.
+  /// Notion UUID는 xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (하이픈 4개)이므로
+  /// split('-') 시 5개 세그먼트가 한 UUID. 여러 UUID면 5개씩 묶어서 복원.
+  static List<String> parsePageIdsFromChatId(String chatId) {
+    if (chatId.isEmpty) return [];
+    final segments = chatId.split('-');
+    if (segments.length % 5 != 0) {
+      return [chatId];
+    }
+    final List<String> pageIds = [];
+    for (int i = 0; i < segments.length; i += 5) {
+      pageIds.add(segments.sublist(i, i + 5).join('-'));
+    }
+    return pageIds;
   }
 
   Future<void> addChatMessage(

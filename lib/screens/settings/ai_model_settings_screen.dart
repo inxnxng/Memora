@@ -1,20 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:memora/models/ai_provider.dart';
 import 'package:memora/providers/user_provider.dart';
 import 'package:memora/widgets/common_app_bar.dart';
 import 'package:provider/provider.dart';
-
-enum AiProvider { gemini, openai }
-
-extension AiProviderExtension on AiProvider {
-  String get name {
-    switch (this) {
-      case AiProvider.gemini:
-        return 'Gemini';
-      case AiProvider.openai:
-        return 'OpenAI';
-    }
-  }
-}
 
 class AiModelSettingsScreen extends StatelessWidget {
   const AiModelSettingsScreen({super.key});
@@ -34,7 +22,8 @@ class AiModelSettingsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               DropdownButtonFormField<AiProvider>(
-                value: userProvider.preferredAi,
+                key: ValueKey<AiProvider>(userProvider.preferredAi),
+                initialValue: userProvider.preferredAi,
                 onChanged: (AiProvider? newValue) {
                   if (newValue != null) {
                     userProvider.setPreferredAi(newValue);

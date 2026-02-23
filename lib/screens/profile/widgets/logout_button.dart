@@ -8,15 +8,22 @@ class LogoutButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ElevatedButton(
+    final theme = Theme.of(context);
+    return TextButton(
       onPressed: () async {
         await context.read<AuthService>().signOut();
       },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.redAccent,
-        padding: const EdgeInsets.symmetric(vertical: 16),
+      style: TextButton.styleFrom(
+        foregroundColor: theme.colorScheme.onSurfaceVariant,
+        padding: const EdgeInsets.symmetric(vertical: 12),
       ),
-      child: const Text(AppStrings.logout),
+      child: Text(
+        AppStrings.logout,
+        style: TextStyle(
+          fontSize: 14,
+          color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.8),
+        ),
+      ),
     );
   }
 }

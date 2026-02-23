@@ -385,6 +385,8 @@ class LocalStorageService {
     DateTime date, {
     String? databaseName,
     required String title,
+    String? pageId,
+    String? url,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final records = prefs.getStringList(StorageKeys.studyRecords) ?? [];
@@ -392,6 +394,8 @@ class LocalStorageService {
       'date': date.toIso8601String().substring(0, 10), // YYYY-MM-DD
       'databaseName': databaseName,
       'title': title,
+      if (pageId != null && pageId.isNotEmpty) 'pageId': pageId,
+      if (url != null && url.isNotEmpty) 'url': url,
     };
     records.add(json.encode(record));
     await prefs.setStringList(StorageKeys.studyRecords, records);
@@ -418,6 +422,8 @@ class LocalStorageService {
           heatmapData[dayOnly]!.add({
             'databaseName': record['databaseName'] ?? '',
             'title': record['title'] ?? '',
+            'pageId': record['pageId'],
+            'url': record['url'],
           });
         }
       } catch (e) {
@@ -433,5 +439,20 @@ class LocalStorageService {
       }
     }
     return heatmapData;
+  }
+
+  /// 학습 기록에 한 번이라도 등록된 pageId 집합 (TIL 복습 목록에서 완료 표시용)
+  Future<Set<String>> getCompletedPageIds() async {
+    final heatmapData = await getStudyRecords();
+    final Set<String> ids = {};
+    for (final records in heatmapData.values) {
+      for (final record in records) {
+        final pageId = record['pageId'];
+        if (pageId != null && pageId is String && pageId.isNotEmpty) {
+          ids.add(pageId);
+        }
+      }
+    }
+    return ids;
   }
 }
