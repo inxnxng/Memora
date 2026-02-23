@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -e
 
+if [ -f ".env.local" ]; then
+    echo "Loading environment variables from .env file..."
+    export $(grep -v '^#' .env.local | xargs)
+    echo "GLOBAL_SECRET = $GLOBAL_SECRET"
+fi
+echo ""
+
 echo "Building Flutter web (locally)..."
 flutter clean
 flutter pub get
