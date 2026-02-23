@@ -33,7 +33,8 @@ class NotionRemoteDataSource {
     final base = _proxyBaseUrl;
     if (base == null) throw StateError('_callViaProxy is for web only');
     final url = Uri.parse('$base/api/notion-proxy');
-    final response = await http
+    // Just return the response directly. No need to create a new one.
+    return await http
         .post(
           url,
           headers: {
@@ -41,29 +42,25 @@ class NotionRemoteDataSource {
             'Notion-Version': _notionApiVersion,
             'Content-Type': 'application/json',
           },
-          body: jsonEncode({
-            'path': path,
-            'method': method,
-            if (body != null) 'body': body,
-          }),
+          body: jsonEncode({'path': path, 'method': method, 'body': ?body}),
         )
         .timeout(const Duration(seconds: 10));
-    return http.Response(response.body, response.statusCode);
   }
 
   Future<Map<String, dynamic>> _handleResponse(http.Response response) async {
+    // Decode with utf8 to prevent character corruption.
+    final body = utf8.decode(response.bodyBytes);
+
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      // body 사용 시 bodyBytes→utf8.encode 경로를 타지 않아, 특수문자로 인한 예외 방지.
-      final body = response.body;
       return json.decode(body) as Map<String, dynamic>;
     } else if (response.statusCode == 404) {
       throw NotionApiException(
-        'Notion resource not found: ${response.body}',
+        'Notion resource not found: $body',
         statusCode: response.statusCode,
       );
     } else {
       throw NotionApiException(
-        'Failed to load data from Notion: ${response.body}',
+        'Failed to load data from Notion: $body',
         statusCode: response.statusCode,
       );
     }
@@ -153,7 +150,8 @@ class NotionRemoteDataSource {
     }
 
     if (response.statusCode == 200) {
-      final data = json.decode(response.body) as Map<String, dynamic>;
+      final body = utf8.decode(response.bodyBytes);
+      final data = json.decode(body) as Map<String, dynamic>;
       final blocks = data['results'] as List;
       final contentBuffer = StringBuffer();
 
@@ -170,8 +168,9 @@ class NotionRemoteDataSource {
       }
       return contentBuffer.toString();
     } else {
+      final body = utf8.decode(response.bodyBytes);
       throw NotionApiException(
-        'Failed to load page content: ${response.body}',
+        'Failed to load page content: $body',
         statusCode: response.statusCode,
       );
     }
@@ -320,9 +319,9 @@ class NotionRemoteDataSource {
     }
 
     if (response.statusCode == 200) {
+      final body = utf8.decode(response.bodyBytes);
       final results =
-          (json.decode(response.body) as Map<String, dynamic>)['results']
-              as List;
+          (json.decode(body) as Map<String, dynamic>)['results'] as List;
       return results.map((page) {
         final properties = page['properties'];
         final question =
@@ -332,8 +331,9 @@ class NotionRemoteDataSource {
         return {'question': question, 'answer': answer};
       }).toList();
     } else {
+      final body = utf8.decode(response.bodyBytes);
       throw NotionApiException(
-        'Failed to load quiz data from Notion: ${response.body}',
+        'Failed to load quiz data from Notion: $body',
         statusCode: response.statusCode,
       );
     }
@@ -385,7 +385,6 @@ class NotionRemoteDataSource {
             )
             .timeout(const Duration(seconds: 10));
       }
-      debugPrint(response.body);
       return response.statusCode == 200;
     } on TimeoutException {
       return false;

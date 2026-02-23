@@ -99,7 +99,12 @@ class NotionProvider with ChangeNotifier {
         final title = pageMeta.title;
         final content = await renderNotionDbAsMarkdown(pageId);
         selectedPages.add(
-          NotionPage(id: pageId, title: title, content: content),
+          NotionPage(
+            id: pageId,
+            title: title,
+            content: content,
+            createdTime: pageMeta.createdTime,
+          ),
         );
       }
       _combinedPageContent = selectedPages;
@@ -288,8 +293,9 @@ class NotionProvider with ChangeNotifier {
   /// UI에 표시할 때 특수문자/긴 JSON으로 인한 렌더 오류를 막기 위해 짧고 안전한 문구만 반환.
   static String _safeSearchErrorMessage(String raw) {
     if (raw.contains('401')) return '데이터베이스 검색 오류: API 토큰을 확인해주세요.';
-    if (raw.contains('403'))
+    if (raw.contains('403')) {
       return '데이터베이스 검색 오류: 연동에 페이지/데이터베이스 접근 권한을 부여해 주세요.';
+    }
     if (raw.contains('Invalid argument') || raw.contains('"object":')) {
       return '데이터베이스 검색 오류: 응답 처리 중 오류가 발생했습니다. 다시 시도해 주세요.';
     }

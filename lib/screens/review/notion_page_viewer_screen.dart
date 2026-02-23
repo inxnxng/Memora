@@ -233,6 +233,7 @@ class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
                           title: widget.pageTitle,
                           content: _pageContent,
                           url: widget.url,
+                          createdTime: DateTime.now(),
                         );
                         final routeExtra = NotionRouteExtra(
                           pages: [page],

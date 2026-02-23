@@ -3,12 +3,14 @@ class NotionPage {
   final String title;
   final String content;
   final String? url;
+  final DateTime createdTime;
 
   NotionPage({
     required this.id,
     required this.title,
     required this.content,
     this.url,
+    required this.createdTime,
   });
 
   factory NotionPage.fromMap(Map<String, dynamic> map) {
@@ -31,12 +33,14 @@ class NotionPage {
 
     final content = '';
     final url = map['url'] as String?;
+    final createdTime = DateTime.parse(map['created_time'] as String);
 
     return NotionPage(
       id: map['id'] as String,
       title: title,
       content: content,
       url: url,
+      createdTime: createdTime,
     );
   }
 }

@@ -113,7 +113,12 @@ class NotionService {
   Future<NotionPage?> fetchPageById(String pageId) async {
     try {
       final content = await getPageContent(pageId);
-      return NotionPage(id: pageId, title: "Fetched Page", content: content);
+      return NotionPage(
+        id: pageId,
+        title: "Fetched Page",
+        content: content,
+        createdTime: DateTime.now(),
+      );
     } catch (e) {
       return null;
     }

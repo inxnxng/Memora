@@ -4,7 +4,7 @@ set -e
 echo "Building Flutter web (locally)..."
 flutter clean
 flutter pub get
-flutter build web --release --pwa-strategy=offline-first
+flutter build web --release --pwa-strategy=offline-first --dart-define=GLOBAL_SECRET=$GLOBAL_SECRET
 
 echo "Preparing deploy folder..."
 DEPLOY_DIR=".deploy"

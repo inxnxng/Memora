@@ -75,9 +75,12 @@ class _ReviewSelectionScreenState extends State<ReviewSelectionScreen> {
     final notionProvider = context.watch<NotionProvider>();
 
     final searchQuery = _searchController.text.trim().toLowerCase();
+    final sortedPages = List<NotionPage>.from(notionProvider.pages)
+      ..sort((a, b) => b.createdTime.compareTo(a.createdTime));
+
     final filteredPages = searchQuery.isEmpty
-        ? notionProvider.pages
-        : notionProvider.pages
+        ? sortedPages
+        : sortedPages
               .where((p) => p.title.toLowerCase().contains(searchQuery))
               .toList();
     final totalPages = (filteredPages.length / _pageSize).ceil().clamp(1, 999);

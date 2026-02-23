@@ -3,7 +3,6 @@ import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:encrypt/encrypt.dart' as enc;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class EncryptionService {
   final String _uid;
@@ -16,16 +15,10 @@ class EncryptionService {
   }
 
   void _init() {
-    // Combine UID with a global secret from .env for key derivation
-    String globalSecret;
-    try {
-      globalSecret =
-          dotenv.env['ENCRYPTION_SECRET'] ??
-          'fallback_memora_secret_key_32chars';
-    } catch (e) {
-      // If dotenv is not initialized (e.g., .env file is missing), use a fallback.
-      globalSecret = 'fallback_memora_secret_key_32chars';
-    }
+    String globalSecret = const String.fromEnvironment(
+      'GLOBAL_SECRET',
+      defaultValue: 'fallback_memora_secret_key_32chars',
+    );
 
     // Create a 32-byte key using SHA-256
     final keySeed = '$_uid$globalSecret';

@@ -8,13 +8,7 @@ import 'package:memora/firebase_options.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  try {
-    await dotenv.load(fileName: ".env");
-  } catch (e) {
-    debugPrint(
-      "Warning: .env file not found or failed to load. Using fallbacks.",
-    );
-  }
+  await dotenv.load(fileName: ".env");
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
