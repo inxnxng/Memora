@@ -57,9 +57,9 @@ class _GeminiSettingsScreenState extends State<GeminiSettingsScreen> {
     final token = _geminiApiKeyController.text.trim();
 
     if (token.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gemini API 키를 입력해주세요.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Gemini API 키를 입력해주세요.')));
       return;
     }
 
@@ -70,8 +70,10 @@ class _GeminiSettingsScreenState extends State<GeminiSettingsScreen> {
 
       if (!mounted) return;
       if (isValid) {
-        await Provider.of<UserProvider>(context, listen: false)
-            .syncAllApiKeysToFirestore();
+        await Provider.of<UserProvider>(
+          context,
+          listen: false,
+        ).syncAllApiKeysToFirestore();
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Gemini API 키 저장 및 인증이 완료되었습니다.')),
@@ -92,7 +94,8 @@ class _GeminiSettingsScreenState extends State<GeminiSettingsScreen> {
   }
 
   void _showInvalidKeyDialog({String? message, String? token}) {
-    final offerSaveAnyway = (message == null && token != null && token.isNotEmpty);
+    final offerSaveAnyway =
+        (message == null && token != null && token.isNotEmpty);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -113,21 +116,24 @@ class _GeminiSettingsScreenState extends State<GeminiSettingsScreen> {
                 setState(() => _isSaving = true);
                 try {
                   await _geminiService.saveApiKeyWithoutValidation(token);
-                  await Provider.of<UserProvider>(context, listen: false)
-                      .syncAllApiKeysToFirestore();
+                  await Provider.of<UserProvider>(
+                    context,
+                    listen: false,
+                  ).syncAllApiKeysToFirestore();
                   if (!mounted) return;
                   await _loadKeys(isInitialLoad: false);
                   if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                        content: Text('Gemini API 키가 저장되었습니다. (검증되지 않음)')),
+                      content: Text('Gemini API 키가 저장되었습니다. (검증되지 않음)'),
+                    ),
                   );
                   _geminiApiKeyController.clear();
                 } catch (e) {
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('저장 실패: $e')),
-                    );
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('저장 실패: $e')));
                   }
                 } finally {
                   if (mounted) setState(() => _isSaving = false);

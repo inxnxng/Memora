@@ -31,7 +31,9 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
   Widget build(BuildContext context) {
     final taskProvider = context.watch<TaskProvider>();
     final endDate = DateTime.now();
-    final startDate = endDate.subtract(const Duration(days: _recentHeatmapDays));
+    final startDate = endDate.subtract(
+      const Duration(days: _recentHeatmapDays),
+    );
     final recentData = _filterRecentHeatmapData(
       taskProvider.heatmapData,
       startDate,
@@ -74,7 +76,11 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
     DateTime startDate,
     DateTime endDate,
   ) {
-    final normalizedStart = DateTime(startDate.year, startDate.month, startDate.day);
+    final normalizedStart = DateTime(
+      startDate.year,
+      startDate.month,
+      startDate.day,
+    );
     final normalizedEnd = DateTime(endDate.year, endDate.month, endDate.day);
     return Map.fromEntries(
       fullData.entries.where((e) {
@@ -165,8 +171,7 @@ class _HeatmapScreenState extends State<HeatmapScreen> {
                 return const SizedBox.shrink();
               }
 
-              final canOpenPage =
-                  pageId != null && pageId.isNotEmpty;
+              final canOpenPage = pageId != null && pageId.isNotEmpty;
 
               return ListTile(
                 title: Text(title.isEmpty ? "" : title),

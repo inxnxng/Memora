@@ -112,7 +112,7 @@ class UserRepository {
 
   Future<String?> loadUserPhotoUrl(String userId) =>
       _localStorageService.loadUserPhotoUrl(userId);
-  
+
   Future<void> savePreferredAi(String userId, String preferredAi) async {
     await _localStorageService.savePreferredAi(userId, preferredAi);
     try {

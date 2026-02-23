@@ -41,8 +41,8 @@ class ChatMessage {
     final sender = senderStr == 'user'
         ? MessageSender.user
         : senderStr == 'system'
-            ? MessageSender.system
-            : MessageSender.ai;
+        ? MessageSender.system
+        : MessageSender.ai;
     return ChatMessage(
       id: map['id'] as String?,
       content: map['content'] as String,
@@ -55,8 +55,8 @@ class ChatMessage {
     final senderStr = sender == MessageSender.user
         ? 'user'
         : sender == MessageSender.system
-            ? 'system'
-            : 'ai';
+        ? 'system'
+        : 'ai';
     return {
       'id': id,
       'content': content,

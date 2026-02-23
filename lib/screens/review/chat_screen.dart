@@ -85,14 +85,17 @@ class _ChatScreenState extends State<ChatScreen> {
             widget.pages?.map((p) => p.content).join('\n\n---\n\n') ?? '';
         _chatId = (widget.pages != null && widget.pages!.isNotEmpty)
             ? ChatRepository.generateChatId(
-                widget.pages!.map((p) => p.id).toList())
+                widget.pages!.map((p) => p.id).toList(),
+              )
             : DateTime.now().millisecondsSinceEpoch.toString();
       }
       _chatMessagesStream = _chatService.getMessages(_chatId);
 
       // 선호 AI 모델에 맞는 API 키만 검사
       final preferred = _userProvider.preferredAi;
-      debugPrint('[ChatScreen] _initAsyncData: 선호 AI preferred=${preferred.name}');
+      debugPrint(
+        '[ChatScreen] _initAsyncData: 선호 AI preferred=${preferred.name}',
+      );
       final preferredKeyValid = preferred == AiProvider.openai
           ? await _openAIService.checkApiKeyAvailability()
           : await _geminiService.checkApiKeyAvailability();
@@ -161,11 +164,15 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _checkApiKeysAndSendMessage(String text) async {
     final preferred = _userProvider.preferredAi;
-    debugPrint('[ChatScreen] _checkApiKeysAndSendMessage: preferred=${preferred.name}');
+    debugPrint(
+      '[ChatScreen] _checkApiKeysAndSendMessage: preferred=${preferred.name}',
+    );
     final preferredKeyValid = preferred == AiProvider.openai
         ? await _openAIService.checkApiKeyAvailability()
         : await _geminiService.checkApiKeyAvailability();
-    debugPrint('[ChatScreen] _checkApiKeysAndSendMessage: preferredKeyValid=$preferredKeyValid');
+    debugPrint(
+      '[ChatScreen] _checkApiKeysAndSendMessage: preferredKeyValid=$preferredKeyValid',
+    );
 
     if (!preferredKeyValid) {
       debugPrint('[ChatScreen] _checkApiKeysAndSendMessage: 키 없음/무효 → 설정으로 유도');
@@ -195,8 +202,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     // 첫 사용자 메시지인 경우: 환영 메시지를 먼저 저장한 뒤 사용자 메시지 저장 (채팅 기록·세션은 이때부터 생성)
     final history = await _chatService.getMessages(_chatId).first;
-    final hasUserMessage =
-        history.any((m) => m.sender == MessageSender.user);
+    final hasUserMessage = history.any((m) => m.sender == MessageSender.user);
     if (!hasUserMessage && !widget.isExistingChat) {
       final welcomeMessage = ChatMessage(
         content: PromptConstants.welcomeMessage(_pageTitles),
@@ -246,9 +252,7 @@ class _ChatScreenState extends State<ChatScreen> {
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: const Text('API 키 오류'),
-        content: const Text(
-          '등록된 API 키가 유효하지 않습니다.\n설정에서 유효한 키를 다시 등록해 주세요.',
-        ),
+        content: const Text('등록된 API 키가 유효하지 않습니다.\n설정에서 유효한 키를 다시 등록해 주세요.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -329,7 +333,9 @@ class _ChatScreenState extends State<ChatScreen> {
         // 기존 채팅: 스트리밍 없이 한 번에 응답 수신
         String fullResponse;
         if (preferred == AiProvider.openai && hasOpenAIKey) {
-          fullResponse = await _openAIService.generateTrainingContent(messagesForApi);
+          fullResponse = await _openAIService.generateTrainingContent(
+            messagesForApi,
+          );
         } else if (preferred == AiProvider.gemini && hasGeminiKey) {
           final stream = _geminiService.generateQuizFromText(messagesForApi);
           fullResponse = await stream.fold<String>('', (a, b) => a + b);
@@ -366,9 +372,7 @@ class _ChatScreenState extends State<ChatScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(title),
-        content: SingleChildScrollView(
-          child: Text(detail),
-        ),
+        content: SingleChildScrollView(child: Text(detail)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
@@ -383,25 +387,26 @@ class _ChatScreenState extends State<ChatScreen> {
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
     taskProvider
         .addStudyRecordForToday(
-      databaseName: widget.databaseName,
-      title: _pageTitles,
-    )
+          databaseName: widget.databaseName,
+          title: _pageTitles,
+        )
         .then((_) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('오늘의 학습이 기록되었습니다!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      context.pop();
-    }).catchError((error) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('학습 기록에 실패했습니다: $error'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('오늘의 학습이 기록되었습니다!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          context.pop();
+        })
+        .catchError((error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('학습 기록에 실패했습니다: $error'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        });
   }
 
   @override
@@ -468,7 +473,11 @@ class _ChatScreenState extends State<ChatScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.error_outline, size: 48, color: Theme.of(context).colorScheme.error),
+                    Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                     const SizedBox(height: 16),
                     Text(
                       _initError!,
@@ -493,11 +502,19 @@ class _ChatScreenState extends State<ChatScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.error_outline, size: 48, color: Theme.of(context).colorScheme.error),
+                    Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                     const SizedBox(height: 16),
                     Text('오류가 발생했습니다.', textAlign: TextAlign.center),
                     const SizedBox(height: 8),
-                    Text('${snapshot.error}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 12)),
+                    Text(
+                      '${snapshot.error}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 12),
+                    ),
                     const SizedBox(height: 24),
                     FilledButton.icon(
                       onPressed: () => context.pop(),
@@ -524,26 +541,28 @@ class _ChatScreenState extends State<ChatScreen> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.key_off,
-                                size: 20,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onErrorContainer
-                                    .withValues(alpha: 0.8)),
+                            Icon(
+                              Icons.key_off,
+                              size: 20,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onErrorContainer
+                                  .withValues(alpha: 0.8),
+                            ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 '선호하신 ${_userProvider.preferredAi.name} API 키를 등록해 주세요.',
                                 style: TextStyle(
-                                  color: Theme.of(context)
-                                      .colorScheme.onErrorContainer,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onErrorContainer,
                                   fontSize: 13,
                                 ),
                               ),
                             ),
                             TextButton(
-                              onPressed: () =>
-                                  context.push(AppRoutes.settings),
+                              onPressed: () => context.push(AppRoutes.settings),
                               child: const Text('설정으로 이동'),
                             ),
                           ],
@@ -572,9 +591,11 @@ class _ChatScreenState extends State<ChatScreen> {
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.error_outline,
-                                      size: 40,
-                                      color: Theme.of(context).colorScheme.error),
+                                  Icon(
+                                    Icons.error_outline,
+                                    size: 40,
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
                                   const SizedBox(height: 12),
                                   const Text('메시지를 불러오지 못했습니다.'),
                                   const SizedBox(height: 8),
@@ -590,13 +611,13 @@ class _ChatScreenState extends State<ChatScreen> {
                         }
                         final storedMessages = snapshot.data ?? [];
                         // 새 채팅이고 저장된 메시지가 없을 때만 UI에 환영 메시지 표시 (저장하지 않음)
-                        final messages = (!widget.isExistingChat &&
-                                storedMessages.isEmpty)
+                        final messages =
+                            (!widget.isExistingChat && storedMessages.isEmpty)
                             ? [
                                 ChatMessage(
-                                  content:
-                                      PromptConstants.welcomeMessage(
-                                          _pageTitles),
+                                  content: PromptConstants.welcomeMessage(
+                                    _pageTitles,
+                                  ),
                                   sender: MessageSender.system,
                                   timestamp: DateTime.now(),
                                 ),
@@ -609,9 +630,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               child: GestureDetector(
                                 onTap: () => _focusNode.unfocus(),
                                 behavior: HitTestBehavior.translucent,
-                                child: ChatMessagesList(
-                                  messages: messages,
-                                ),
+                                child: ChatMessagesList(messages: messages),
                               ),
                             ),
                             ChatInputField(
@@ -619,12 +638,13 @@ class _ChatScreenState extends State<ChatScreen> {
                               focusNode: _focusNode,
                               onSendPressed: _apiKeyValid
                                   ? () => _checkApiKeysAndSendMessage(
-                                        _textController.text,
-                                      )
+                                      _textController.text,
+                                    )
                                   : () {
                                       context.push(AppRoutes.settings);
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
                                         SnackBar(
                                           content: Text(
                                             '선호하신 ${_userProvider.preferredAi.name} API 키를 설정에서 등록해 주세요.',

@@ -61,8 +61,9 @@ class ChatInputField extends StatelessWidget {
                   decoration: InputDecoration(
                     hintText: '메시지를 입력하세요 (Shift+Enter: 줄바꿈)',
                     hintStyle: theme.textTheme.bodyLarge?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant
-                          .withValues(alpha: 0.7),
+                      color: theme.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.7,
+                      ),
                     ),
                     filled: true,
                     fillColor: theme.colorScheme.surfaceContainerHighest
@@ -111,8 +112,9 @@ class ChatInputField extends StatelessWidget {
                     size: 24,
                     color: isEnabled
                         ? theme.colorScheme.onPrimary
-                        : theme.colorScheme.onSurfaceVariant
-                            .withValues(alpha: 0.5),
+                        : theme.colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.5,
+                          ),
                   ),
                 ),
               ),

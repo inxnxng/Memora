@@ -31,7 +31,9 @@ class SettingsScreen extends StatelessWidget {
               title: 'Notion 연동 관리',
               subtitle: 'API 키 및 데이터베이스 설정',
               onTap: () {
-                context.push('${AppRoutes.settings}/${AppRoutes.notionSettings}');
+                context.push(
+                  '${AppRoutes.settings}/${AppRoutes.notionSettings}',
+                );
               },
             ),
           ),
@@ -52,7 +54,8 @@ class SettingsScreen extends StatelessWidget {
                   subtitle: '퀴즈 생성에 사용할 모델 선택',
                   onTap: () {
                     context.push(
-                        '${AppRoutes.settings}/${AppRoutes.aiModelSettings}');
+                      '${AppRoutes.settings}/${AppRoutes.aiModelSettings}',
+                    );
                   },
                 ),
                 Divider(height: 1, color: colorScheme.outlineVariant),
@@ -63,7 +66,8 @@ class SettingsScreen extends StatelessWidget {
                   subtitle: 'API 키 등록 및 관리',
                   onTap: () {
                     context.push(
-                        '${AppRoutes.settings}/${AppRoutes.openaiSettings}');
+                      '${AppRoutes.settings}/${AppRoutes.openaiSettings}',
+                    );
                   },
                 ),
                 Divider(height: 1, color: colorScheme.outlineVariant),
@@ -74,7 +78,8 @@ class SettingsScreen extends StatelessWidget {
                   subtitle: 'API 키 등록 및 관리',
                   onTap: () {
                     context.push(
-                        '${AppRoutes.settings}/${AppRoutes.geminiSettings}');
+                      '${AppRoutes.settings}/${AppRoutes.geminiSettings}',
+                    );
                   },
                 ),
               ],
@@ -132,10 +137,10 @@ class SettingsScreen extends StatelessWidget {
       child: Text(
         label,
         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.5,
-            ),
+          color: Theme.of(context).colorScheme.primary,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0.5,
+        ),
       ),
     );
   }
@@ -156,11 +161,7 @@ class SettingsScreen extends StatelessWidget {
           color: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(
-          icon,
-          size: 24,
-          color: theme.colorScheme.primary,
-        ),
+        child: Icon(icon, size: 24, color: theme.colorScheme.primary),
       ),
       title: Text(
         title,

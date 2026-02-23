@@ -8,11 +8,7 @@ class RankingCard extends StatelessWidget {
   final int? userRank;
   final int rankingScore;
 
-  const RankingCard({
-    super.key,
-    this.userRank,
-    this.rankingScore = 0,
-  });
+  const RankingCard({super.key, this.userRank, this.rankingScore = 0});
 
   @override
   Widget build(BuildContext context) {
@@ -36,11 +32,7 @@ class RankingCard extends StatelessWidget {
                   color: tier.color(context).withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  tier.icon,
-                  size: 28,
-                  color: tier.color(context),
-                ),
+                child: Icon(tier.icon, size: 28, color: tier.color(context)),
               ),
               const SizedBox(width: 16),
               Expanded(

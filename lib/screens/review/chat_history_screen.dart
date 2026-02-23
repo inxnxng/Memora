@@ -88,15 +88,15 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
           _toggleSelectionMode();
         }
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('삭제되었습니다')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('삭제되었습니다')));
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('삭제 중 오류가 발생했습니다: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('삭제 중 오류가 발생했습니다: $e')));
         }
       }
     }
@@ -109,9 +109,7 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('전체 삭제'),
-        content: const Text(
-          '모든 채팅 기록을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.',
-        ),
+        content: const Text('모든 채팅 기록을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -135,15 +133,15 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
         _isSelectionMode = false;
         _loadChatSessions();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('모든 기록이 삭제되었습니다')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('모든 기록이 삭제되었습니다')));
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('삭제 중 오류가 발생했습니다: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('삭제 중 오류가 발생했습니다: $e')));
         }
       }
     }
@@ -205,10 +203,7 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                       color: theme.colorScheme.error,
                     ),
                     const SizedBox(height: 16),
-                    Text(
-                      '불러오기에 실패했습니다',
-                      style: theme.textTheme.titleMedium,
-                    ),
+                    Text('불러오기에 실패했습니다', style: theme.textTheme.titleMedium),
                     const SizedBox(height: 8),
                     Text(
                       '${snapshot.error}',
@@ -266,14 +261,18 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
               itemBuilder: (context, index) {
                 final session = sessions[index];
                 final isSelected = _selectedChatIds.contains(session.chatId);
-                final dateStr =
-                    DateFormat('M/d (E) HH:mm', 'ko').format(session.lastMessageTimestamp);
+                final dateStr = DateFormat(
+                  'M/d (E) HH:mm',
+                  'ko',
+                ).format(session.lastMessageTimestamp);
 
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: Material(
                     color: isSelected
-                        ? theme.colorScheme.primaryContainer.withValues(alpha: 0.4)
+                        ? theme.colorScheme.primaryContainer.withValues(
+                            alpha: 0.4,
+                          )
                         : theme.colorScheme.surfaceContainerLow,
                     borderRadius: BorderRadius.circular(16),
                     child: InkWell(
@@ -316,9 +315,8 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                                 children: [
                                   Text(
                                     session.pageTitle,
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.w600),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -333,9 +331,10 @@ class _ChatHistoryScreenState extends State<ChatHistoryScreen> {
                                       const SizedBox(width: 4),
                                       Text(
                                         dateStr,
-                                        style: theme.textTheme.bodySmall?.copyWith(
-                                          color: theme.colorScheme.outline,
-                                        ),
+                                        style: theme.textTheme.bodySmall
+                                            ?.copyWith(
+                                              color: theme.colorScheme.outline,
+                                            ),
                                       ),
                                     ],
                                   ),

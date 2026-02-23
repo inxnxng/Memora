@@ -51,8 +51,14 @@ class NotionRepository {
     return _remoteDataSource.getPageContent(apiToken, pageId);
   }
 
-  Future<Map<String, dynamic>> searchDatabases({String? query}) async {
-    final apiToken = await _getApiToken();
+  /// [overrideApiToken]이 있으면 저장소 대신 해당 토큰 사용 (방금 저장한 토큰 즉시 반영용).
+  Future<Map<String, dynamic>> searchDatabases({
+    String? query,
+    String? overrideApiToken,
+  }) async {
+    final apiToken = overrideApiToken != null && overrideApiToken.isNotEmpty
+        ? overrideApiToken
+        : await _getApiToken();
     return _remoteDataSource.searchDatabases(apiToken, query: query);
   }
 

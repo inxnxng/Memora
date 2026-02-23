@@ -57,9 +57,9 @@ class _OpenaiSettingsScreenState extends State<OpenaiSettingsScreen> {
     final token = _openaiApiKeyController.text.trim();
 
     if (token.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('OpenAI API 키를 입력해주세요.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('OpenAI API 키를 입력해주세요.')));
       return;
     }
 
@@ -70,8 +70,10 @@ class _OpenaiSettingsScreenState extends State<OpenaiSettingsScreen> {
 
       if (!mounted) return;
       if (isValid) {
-        await Provider.of<UserProvider>(context, listen: false)
-            .syncAllApiKeysToFirestore();
+        await Provider.of<UserProvider>(
+          context,
+          listen: false,
+        ).syncAllApiKeysToFirestore();
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('OpenAI API 키 저장 및 인증이 완료되었습니다.')),
@@ -92,7 +94,8 @@ class _OpenaiSettingsScreenState extends State<OpenaiSettingsScreen> {
   }
 
   void _showInvalidKeyDialog({String? message, String? token}) {
-    final offerSaveAnyway = (message == null && token != null && token.isNotEmpty);
+    final offerSaveAnyway =
+        (message == null && token != null && token.isNotEmpty);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -113,21 +116,24 @@ class _OpenaiSettingsScreenState extends State<OpenaiSettingsScreen> {
                 setState(() => _isSaving = true);
                 try {
                   await _openaiService.saveApiKeyWithoutValidation(token);
-                  await Provider.of<UserProvider>(context, listen: false)
-                      .syncAllApiKeysToFirestore();
+                  await Provider.of<UserProvider>(
+                    context,
+                    listen: false,
+                  ).syncAllApiKeysToFirestore();
                   if (!mounted) return;
                   await _loadKeys(isInitialLoad: false);
                   if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                        content: Text('OpenAI API 키가 저장되었습니다. (검증되지 않음)')),
+                      content: Text('OpenAI API 키가 저장되었습니다. (검증되지 않음)'),
+                    ),
                   );
                   _openaiApiKeyController.clear();
                 } catch (e) {
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('저장 실패: $e')),
-                    );
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text('저장 실패: $e')));
                   }
                 } finally {
                   if (mounted) setState(() => _isSaving = false);
@@ -217,7 +223,8 @@ class _OpenaiSettingsScreenState extends State<OpenaiSettingsScreen> {
                 ),
                 _buildStep(
                   icon: Icons.copy,
-                  text: "생성된 API 키를 복사해 아래 입력란에 붙여넣으세요. (한 번만 표시되니 안전한 곳에 보관하세요.)",
+                  text:
+                      "생성된 API 키를 복사해 아래 입력란에 붙여넣으세요. (한 번만 표시되니 안전한 곳에 보관하세요.)",
                 ),
               ],
             ),

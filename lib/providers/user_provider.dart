@@ -48,9 +48,9 @@ class UserProvider with ChangeNotifier {
     required UserRepository userRepository,
     required RankingRepository rankingRepository,
     required LocalStorageService localStorageService,
-  })  : _userRepository = userRepository,
-        _rankingRepository = rankingRepository,
-        _localStorageService = localStorageService {
+  }) : _userRepository = userRepository,
+       _rankingRepository = rankingRepository,
+       _localStorageService = localStorageService {
     _listenToAuthChanges();
   }
 
@@ -130,9 +130,7 @@ class UserProvider with ChangeNotifier {
 
       // 기존 유저: Firestore에 rankingScore가 없으면 로컬 세션 합계로 동기화
       final data = firestoreData;
-      if (data != null &&
-          data['rankingScore'] == null &&
-          _userId != null) {
+      if (data != null && data['rankingScore'] == null && _userId != null) {
         final sessionMap = await _userRepository.loadSessionMap(_userId!);
         final total = sessionMap.values.fold<int>(0, (a, b) => a + b);
         final streak = data['streakCount'] as int? ?? 0;

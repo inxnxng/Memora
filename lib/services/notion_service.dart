@@ -77,8 +77,15 @@ class NotionService {
 
   // --- Database Operations ---
 
-  Future<Map<String, dynamic>> searchDatabases({String? query}) {
-    return notionRepository.searchDatabases(query: query);
+  /// [overrideApiToken]이 있으면 저장소 대신 사용 (방금 저장한 토큰으로 즉시 검색할 때 사용).
+  Future<Map<String, dynamic>> searchDatabases({
+    String? query,
+    String? overrideApiToken,
+  }) {
+    return notionRepository.searchDatabases(
+      query: query,
+      overrideApiToken: overrideApiToken,
+    );
   }
 
   Future<Map<String, dynamic>> getPagesFromDB(

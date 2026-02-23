@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:memora/models/notion_database.dart';
 import 'package:memora/models/notion_page.dart';
@@ -182,13 +183,24 @@ class NotionProvider with ChangeNotifier {
     Future.microtask(() => notifyListeners());
 
     try {
-      final rawDatabases = await _notionService.searchDatabases(query: query);
+      // 방금 저장한 토큰이 있으면 우선 사용(저장소 지연 방지).
+      final rawDatabases = await _notionService.searchDatabases(
+        query: query,
+        overrideApiToken: _apiToken,
+      );
       _availableDatabases = (rawDatabases['results'] as List)
           .map((db) => NotionDatabase.fromMap(db as Map<String, dynamic>))
           .toList();
       _notionConnectionError = null;
-    } catch (e) {
-      _notionConnectionError = '데이터베이스 검색 오류: API 토큰을 확인해주세요.';
+    } catch (e, st) {
+      debugPrint('searchNotionDatabases error: $e');
+      debugPrint('$st');
+      final msg = e.toString();
+      _notionConnectionError = msg.contains('401')
+          ? '데이터베이스 검색 오류: API 토큰을 확인해주세요.'
+          : msg.contains('403')
+          ? '데이터베이스 검색 오류: 연동에 페이지/데이터베이스 접근 권한을 부여해 주세요.'
+          : _safeSearchErrorMessage(msg);
       _availableDatabases = [];
     }
 
@@ -271,6 +283,20 @@ class NotionProvider with ChangeNotifier {
   Future<String> getPageContent(String pageId) async {
     if (!isConnected) throw Exception('Notion is not connected.');
     return await _notionService.getPageContent(pageId);
+  }
+
+  /// UI에 표시할 때 특수문자/긴 JSON으로 인한 렌더 오류를 막기 위해 짧고 안전한 문구만 반환.
+  static String _safeSearchErrorMessage(String raw) {
+    if (raw.contains('401')) return '데이터베이스 검색 오류: API 토큰을 확인해주세요.';
+    if (raw.contains('403'))
+      return '데이터베이스 검색 오류: 연동에 페이지/데이터베이스 접근 권한을 부여해 주세요.';
+    if (raw.contains('Invalid argument') || raw.contains('"object":')) {
+      return '데이터베이스 검색 오류: 응답 처리 중 오류가 발생했습니다. 다시 시도해 주세요.';
+    }
+    // 긴 메시지·제어문자 제거 후 최대 120자만 표시
+    final safe = raw.replaceAll(RegExp(r'[\x00-\x1f\x7f]'), '').trim();
+    final prefix = safe.length > 120 ? '${safe.substring(0, 120)}…' : safe;
+    return '데이터베이스 검색 오류: $prefix';
   }
 
   void _handleConnectionResult(Map<String, String?> result) {

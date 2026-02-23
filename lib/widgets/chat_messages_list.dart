@@ -45,7 +45,8 @@ class ChatMessagesList extends StatelessWidget {
         final isUser = message.sender == MessageSender.user;
         final isSystem = message.sender == MessageSender.system;
         // 사용자가 최근 보낸 메시지보다 더 최신인 AI 메시지에만 타이핑 효과 적용
-        final useTypingEffect = message.sender == MessageSender.ai &&
+        final useTypingEffect =
+            message.sender == MessageSender.ai &&
             newestAiIndex == index &&
             (latestUserTs == null || message.timestamp.isAfter(latestUserTs));
 
@@ -53,14 +54,12 @@ class ChatMessagesList extends StatelessWidget {
           key: ValueKey(message.id),
           onLongPress: () {
             Clipboard.setData(ClipboardData(text: message.content));
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('메시지가 복사되었습니다')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('메시지가 복사되었습니다')));
           },
           child: Align(
-            alignment: isUser
-                ? Alignment.centerRight
-                : Alignment.centerLeft,
+            alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 maxWidth: MediaQuery.of(context).size.width * 0.82,
@@ -75,8 +74,8 @@ class ChatMessagesList extends StatelessWidget {
                   color: isUser
                       ? theme.colorScheme.primaryContainer
                       : isSystem
-                          ? theme.colorScheme.surfaceContainerHighest
-                          : theme.colorScheme.surfaceContainerLow,
+                      ? theme.colorScheme.surfaceContainerHighest
+                      : theme.colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.only(
                     topLeft: const Radius.circular(16),
                     topRight: const Radius.circular(16),
@@ -137,8 +136,9 @@ class ChatMessagesList extends StatelessWidget {
                     Text(
                       DateFormat('HH:mm').format(message.timestamp),
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant
-                            .withValues(alpha: 0.8),
+                        color: theme.colorScheme.onSurfaceVariant.withValues(
+                          alpha: 0.8,
+                        ),
                         fontSize: 11,
                       ),
                     ),

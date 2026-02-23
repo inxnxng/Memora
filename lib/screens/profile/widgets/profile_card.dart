@@ -22,20 +22,31 @@ class ProfileCard extends StatelessWidget {
             CircleAvatar(
               radius: 44,
               backgroundColor: theme.colorScheme.primaryContainer,
-              backgroundImage: userProvider.photoURL != null && userProvider.photoURL!.isNotEmpty
+              backgroundImage:
+                  userProvider.photoURL != null &&
+                      userProvider.photoURL!.isNotEmpty
                   ? NetworkImage(userProvider.photoURL!)
                   : null,
-              child: userProvider.photoURL == null || userProvider.photoURL!.isEmpty
-                  ? Icon(Icons.person, size: 40, color: theme.colorScheme.onPrimaryContainer)
+              child:
+                  userProvider.photoURL == null ||
+                      userProvider.photoURL!.isEmpty
+                  ? Icon(
+                      Icons.person,
+                      size: 40,
+                      color: theme.colorScheme.onPrimaryContainer,
+                    )
                   : null,
             ),
             const SizedBox(height: 16),
             Text(
               userProvider.displayName ?? AppStrings.noName,
-              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
               textAlign: TextAlign.center,
             ),
-            if (userProvider.email != null && userProvider.email!.isNotEmpty) ...[
+            if (userProvider.email != null &&
+                userProvider.email!.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(
                 userProvider.email!,
@@ -75,7 +86,12 @@ class ProfileCard extends StatelessWidget {
     );
   }
 
-  Widget _buildProfileStat(BuildContext context, String value, String label, IconData icon) {
+  Widget _buildProfileStat(
+    BuildContext context,
+    String value,
+    String label,
+    IconData icon,
+  ) {
     final theme = Theme.of(context);
     return Column(
       children: [
@@ -83,7 +99,9 @@ class ProfileCard extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           value,
-          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
         Text(
           label,

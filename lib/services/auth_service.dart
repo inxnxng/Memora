@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart' show debugPrint, kIsWeb, defaultTargetPlatform, TargetPlatform;
+import 'package:flutter/foundation.dart'
+    show debugPrint, kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:memora/exceptions/auth_exception.dart';
 import 'package:memora/firebase_options.dart';
 import 'package:memora/repositories/user/user_repository.dart';
+
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -14,14 +16,15 @@ class AuthService {
   final UserRepository _userRepository;
 
   AuthService({required UserRepository userRepository})
-      : _userRepository = userRepository;
+    : _userRepository = userRepository;
 
   /// Google Sign-In 7.x: initialize with client ID (iOS/macOS also need GIDClientID in Info.plist).
   static Future<void> _ensureGoogleSignInInitialized() async {
     if (kIsWeb) return;
     final GoogleSignIn signIn = GoogleSignIn.instance;
     if (!signIn.supportsAuthenticate()) return;
-    final String? clientId = (defaultTargetPlatform == TargetPlatform.iOS ||
+    final String? clientId =
+        (defaultTargetPlatform == TargetPlatform.iOS ||
             defaultTargetPlatform == TargetPlatform.macOS)
         ? DefaultFirebaseOptions.ios.iosClientId
         : DefaultFirebaseOptions.android.androidClientId;
@@ -55,10 +58,9 @@ class AuthService {
         userCredential = await _auth.signInWithPopup(googleProvider);
       } else {
         await _ensureGoogleSignInInitialized();
-        final GoogleSignInAccount googleUser =
-            await _googleSignIn.authenticate();
-        final GoogleSignInAuthentication googleAuth =
-            googleUser.authentication;
+        final GoogleSignInAccount googleUser = await _googleSignIn
+            .authenticate();
+        final GoogleSignInAuthentication googleAuth = googleUser.authentication;
         final AuthCredential credential = GoogleAuthProvider.credential(
           idToken: googleAuth.idToken,
         );

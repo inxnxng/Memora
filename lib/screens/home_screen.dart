@@ -169,7 +169,7 @@ class HomeScreen extends StatelessWidget {
                 notionProvider.notionConnectionError ??
                     (notionProvider.isConnected
                         ? (notionProvider.databaseTitle ??
-                            AppStrings.notionConnected)
+                              AppStrings.notionConnected)
                         : AppStrings.notionConnectionNeeded),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,

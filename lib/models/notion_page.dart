@@ -13,16 +13,17 @@ class NotionPage {
 
   factory NotionPage.fromMap(Map<String, dynamic> map) {
     final properties = map['properties'] as Map<String, dynamic>;
-    
+
     // Find the 'title' property dynamically, as its name can vary.
     final titlePropertyKey = properties.keys.firstWhere(
       (k) => properties[k]['type'] == 'title',
-      orElse: () => '', 
+      orElse: () => '',
     );
 
     String title = 'Untitled';
     if (titlePropertyKey.isNotEmpty) {
-      final titleProperty = properties[titlePropertyKey]?['title'] as List<dynamic>?;
+      final titleProperty =
+          properties[titlePropertyKey]?['title'] as List<dynamic>?;
       if (titleProperty != null && titleProperty.isNotEmpty) {
         title = titleProperty[0]['plain_text'] as String;
       }

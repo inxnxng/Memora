@@ -20,7 +20,8 @@ class EncryptionService {
     String globalSecret;
     try {
       globalSecret =
-          dotenv.env['ENCRYPTION_SECRET'] ?? 'fallback_memora_secret_key_32chars';
+          dotenv.env['ENCRYPTION_SECRET'] ??
+          'fallback_memora_secret_key_32chars';
     } catch (e) {
       // If dotenv is not initialized (e.g., .env file is missing), use a fallback.
       globalSecret = 'fallback_memora_secret_key_32chars';

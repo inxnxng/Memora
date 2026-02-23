@@ -17,6 +17,7 @@ class NotionPageViewerScreen extends StatefulWidget {
   final String pageTitle;
   final String databaseName;
   final String? url;
+
   /// 학습 현황에서 들어온 경우 true. 스크롤 없이 완료 상태로 표시
   final bool alreadyCompleted;
 
@@ -64,7 +65,8 @@ class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
 
   void _onScroll() {
     if (!_scrollController.hasClients) return;
-    final atBottom = _scrollController.position.pixels >=
+    final atBottom =
+        _scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 8;
     if (atBottom && mounted) {
       setState(() {
@@ -96,9 +98,9 @@ class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
 
   void _completeStudy(BuildContext context) {
     if (_hasAutoCompleted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('이미 학습 완료로 기록되었습니다.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('이미 학습 완료로 기록되었습니다.')));
       return;
     }
     final taskProvider = Provider.of<TaskProvider>(context, listen: false);
@@ -186,8 +188,8 @@ class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
                   Text(
                     widget.pageTitle,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   MarkdownWidget(
@@ -221,9 +223,9 @@ class _NotionPageViewerScreenState extends State<NotionPageViewerScreen> {
             if (_pageContent.isNotEmpty)
               ElevatedButton.icon(
                 icon: const Icon(Icons.quiz_sharp),
-                label: Text(_hasScrolledToBottom
-                    ? '복습하기'
-                    : '내용 끝까지 스크롤 후 복습하기'),
+                label: Text(
+                  _hasScrolledToBottom ? '복습하기' : '내용 끝까지 스크롤 후 복습하기',
+                ),
                 onPressed: _hasScrolledToBottom
                     ? () {
                         final page = NotionPage(

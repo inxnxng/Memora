@@ -69,10 +69,7 @@ class _EditProfileCardState extends State<EditProfileCard> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  level.description,
-                  style: const TextStyle(fontSize: 15),
-                ),
+                Text(level.description, style: const TextStyle(fontSize: 15)),
                 const SizedBox(height: 16),
                 Text(
                   '기준',

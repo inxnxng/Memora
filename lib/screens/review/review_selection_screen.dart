@@ -78,10 +78,8 @@ class _ReviewSelectionScreenState extends State<ReviewSelectionScreen> {
     final filteredPages = searchQuery.isEmpty
         ? notionProvider.pages
         : notionProvider.pages
-            .where(
-              (p) => p.title.toLowerCase().contains(searchQuery),
-            )
-            .toList();
+              .where((p) => p.title.toLowerCase().contains(searchQuery))
+              .toList();
     final totalPages = (filteredPages.length / _pageSize).ceil().clamp(1, 999);
     final start = (_currentPage * _pageSize).clamp(0, filteredPages.length);
     final end = (start + _pageSize).clamp(0, filteredPages.length);
@@ -101,11 +99,12 @@ class _ReviewSelectionScreenState extends State<ReviewSelectionScreen> {
                   context.push("${AppRoutes.review}/${AppRoutes.chatHistory}"),
               borderRadius: BorderRadius.circular(12),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
-                  border: Border.all(
-                    color: theme.colorScheme.outlineVariant,
-                  ),
+                  border: Border.all(color: theme.colorScheme.outlineVariant),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -258,8 +257,7 @@ class _ReviewSelectionScreenState extends State<ReviewSelectionScreen> {
               horizontal: 16,
               vertical: 10,
             ),
-            onTap: () =>
-                _navigateToPageViewer(context, pageId, title, url),
+            onTap: () => _navigateToPageViewer(context, pageId, title, url),
             leading: Icon(
               isCompleted ? Icons.article_rounded : Icons.article_outlined,
               size: 26,

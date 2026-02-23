@@ -11,12 +11,12 @@ void main() async {
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
-    debugPrint("Warning: .env file not found or failed to load. Using fallbacks.");
+    debugPrint(
+      "Warning: .env file not found or failed to load. Using fallbacks.",
+    );
   }
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   await initializeDateFormatting('ko', null);
 

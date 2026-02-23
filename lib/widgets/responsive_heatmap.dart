@@ -6,6 +6,7 @@ class ResponsiveHeatmap extends StatelessWidget {
   final DateTime? startDate;
   final DateTime? endDate;
   final Color heatmapColor;
+
   /// Border radius of each cell. Use 0 for square cells.
   final double borderRadius;
 
@@ -43,8 +44,7 @@ class ResponsiveHeatmap extends StatelessWidget {
             : viewWidth;
         // Use a fraction of viewport height so heatmap never overflows the screen
         final double maxHeatmapHeight = viewHeight * 0.4;
-        final int totalDays =
-            endDate!.difference(startDate!).inDays + 1;
+        final int totalDays = endDate!.difference(startDate!).inDays + 1;
         final int weeks = (totalDays / _daysPerRow).ceil().clamp(1, 52);
 
         // Tile size from width: 7 days per row
@@ -54,10 +54,11 @@ class ResponsiveHeatmap extends StatelessWidget {
         double tileSizeFromHeight =
             (maxHeatmapHeight - _verticalPadding) / weeks - _cellMargin;
 
-        double tileSize = (tileSizeFromWidth < tileSizeFromHeight
-                ? tileSizeFromWidth
-                : tileSizeFromHeight)
-            .clamp(10.0, 28.0);
+        double tileSize =
+            (tileSizeFromWidth < tileSizeFromHeight
+                    ? tileSizeFromWidth
+                    : tileSizeFromHeight)
+                .clamp(10.0, 28.0);
 
         // 좌측 요일 라벨(Sun, Mon 등) 너비 추정 후 클리핑으로 숨김
         const double weekLabelWidth = 32.0;

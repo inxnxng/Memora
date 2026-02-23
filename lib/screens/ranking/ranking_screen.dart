@@ -29,8 +29,7 @@ class _RankingScreenState extends State<RankingScreen> {
   void _shareRanking(int? rank, int score, String tierName) {
     String message;
     if (rank != null && rank > 0) {
-      message =
-          'Memora 랭킹에서 $tierName $score pt로 $rank위! 함께 도전해요 🔥';
+      message = 'Memora 랭킹에서 $tierName $score pt로 $rank위! 함께 도전해요 🔥';
     } else {
       message = 'Memora에서 꾸준히 학습 중이에요. 나도 도전할래요?';
     }
@@ -101,8 +100,8 @@ class _RankingScreenState extends State<RankingScreen> {
                   Text(
                     AppStrings.studyMoreToRank,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -111,8 +110,9 @@ class _RankingScreenState extends State<RankingScreen> {
           }
 
           final rankings = snapshot.data!;
-          final myRankIndex =
-              rankings.indexWhere((user) => user['id'] == myUserId);
+          final myRankIndex = rankings.indexWhere(
+            (user) => user['id'] == myUserId,
+          );
           myRank = myRankIndex != -1 ? myRankIndex + 1 : null;
           _displayedRank = myRank;
 
@@ -133,36 +133,33 @@ class _RankingScreenState extends State<RankingScreen> {
                     children: [
                       Text(
                         '전체 순위',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
                 ),
               ),
               SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final user = rankings[index];
-                    final rank = index + 1;
-                    final isMe = user['id'] == myUserId;
-                    final score = (user['rankingScore'] as num?)?.toInt() ?? 0;
-                    final tier = tierFromScore(score);
-                    final displayName =
-                        user['displayName'] ?? AppStrings.noName;
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final user = rankings[index];
+                  final rank = index + 1;
+                  final isMe = user['id'] == myUserId;
+                  final score = (user['rankingScore'] as num?)?.toInt() ?? 0;
+                  final tier = tierFromScore(score);
+                  final displayName = user['displayName'] ?? AppStrings.noName;
 
-                    return _RankingListItem(
-                      rank: rank,
-                      displayName: isMe ? (user['displayName'] ?? '나') : _maskDisplayName(displayName),
-                      score: score,
-                      tier: tier,
-                      streak: (user['streakCount'] as num?)?.toInt() ?? 0,
-                      isMe: isMe,
-                    );
-                  },
-                  childCount: rankings.length,
-                ),
+                  return _RankingListItem(
+                    rank: rank,
+                    displayName: isMe
+                        ? (user['displayName'] ?? '나')
+                        : _maskDisplayName(displayName),
+                    score: score,
+                    tier: tier,
+                    streak: (user['streakCount'] as num?)?.toInt() ?? 0,
+                    isMe: isMe,
+                  );
+                }, childCount: rankings.length),
               ),
               const SliverToBoxAdapter(child: SizedBox(height: 80)),
             ],
@@ -195,151 +192,145 @@ class _RankingScreenState extends State<RankingScreen> {
       padding: const EdgeInsets.all(16),
       child: Card(
         elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         color: theme.colorScheme.surfaceContainerHigh,
         child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: tier.color(context).withValues(alpha: 0.25),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: tier.color(context).withValues(alpha: 0.6),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              tier.icon,
-                              size: 18,
-                              color: tier.color(context),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              tier.displayName,
-                              style: theme.textTheme.labelLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: tier.color(context),
-                              ),
-                            ),
-                          ],
-                        ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: tier.color(context).withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: tier.color(context).withValues(alpha: 0.6),
+                        width: 1,
                       ),
-                      const Spacer(),
-                      if (rank != null && rank > 0)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '$rank',
-                              style: theme.textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.primary,
-                              ),
-                            ),
-                            Text(
-                              '위',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                color: theme.colorScheme.primary,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        )
-                      else
-                        Text(
-                          AppStrings.noRank,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Text(
-                        '$score',
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: -0.5,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        AppStrings.points,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Icon(
-                        Icons.local_fire_department,
-                        size: 20,
-                        color: theme.colorScheme.error,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '$streak${AppStrings.streakDays}',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (toNext != null && toNext > 0) ...[
-                    const SizedBox(height: 16),
-                    Row(
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: LinearProgressIndicator(
-                              value: progress,
-                              minHeight: 8,
-                              backgroundColor: theme
-                                  .colorScheme.surfaceContainerHighest
-                                  .withValues(alpha: 0.5),
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                tier.color(context),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
+                        Icon(tier.icon, size: 18, color: tier.color(context)),
+                        const SizedBox(width: 6),
                         Text(
-                          '${AppStrings.nextTier} $toNext${AppStrings.points}',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
+                          tier.displayName,
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: tier.color(context),
                           ),
                         ),
                       ],
                     ),
-                  ],
+                  ),
+                  const Spacer(),
+                  if (rank != null && rank > 0)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '$rank',
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                        Text(
+                          '위',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    Text(
+                      AppStrings.noRank,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
                 ],
               ),
+              const SizedBox(height: 20),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    '$score',
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    AppStrings.points,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Icon(
+                    Icons.local_fire_department,
+                    size: 20,
+                    color: theme.colorScheme.error,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$streak${AppStrings.streakDays}',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+              if (toNext != null && toNext > 0) ...[
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 8,
+                          backgroundColor: theme
+                              .colorScheme
+                              .surfaceContainerHighest
+                              .withValues(alpha: 0.5),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            tier.color(context),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      '${AppStrings.nextTier} $toNext${AppStrings.points}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
-
 
 class _RankingListItem extends StatelessWidget {
   final int rank;
@@ -363,10 +354,10 @@ class _RankingListItem extends StatelessWidget {
     final theme = Theme.of(context);
     final rankColor = rank <= 3
         ? (rank == 1
-            ? const Color(0xFFFFD700)
-            : rank == 2
-                ? const Color(0xFFC0C0C0)
-                : const Color(0xFFCD7F32))
+              ? const Color(0xFFFFD700)
+              : rank == 2
+              ? const Color(0xFFC0C0C0)
+              : const Color(0xFFCD7F32))
         : theme.colorScheme.onSurfaceVariant;
 
     return Container(
@@ -397,11 +388,7 @@ class _RankingListItem extends StatelessWidget {
         ),
         title: Row(
           children: [
-            Icon(
-              tier.icon,
-              size: 16,
-              color: tier.color(context),
-            ),
+            Icon(tier.icon, size: 16, color: tier.color(context)),
             const SizedBox(width: 8),
             Expanded(
               child: Text(

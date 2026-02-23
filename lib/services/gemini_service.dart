@@ -26,7 +26,9 @@ class GeminiService {
     if (!hasValue) {
       debugPrint('[GeminiService] 키가 없거나 비어 있음');
     } else if (isValid != true) {
-      debugPrint('[GeminiService] 유효 상태가 true가 아님 (저장값: $isValid). 설정에서 키를 다시 저장하면 true로 설정됩니다.');
+      debugPrint(
+        '[GeminiService] 유효 상태가 true가 아님 (저장값: $isValid). 설정에서 키를 다시 저장하면 true로 설정됩니다.',
+      );
     }
     return result;
   }

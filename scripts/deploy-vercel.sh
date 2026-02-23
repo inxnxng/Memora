@@ -1,22 +1,36 @@
 #!/usr/bin/env bash
-# Flutter 웹 빌드 후, 정적 파일 + api 프록시를 한 루트에 모아 Vercel로 배포합니다.
 set -e
 
-echo "Building Flutter web..."
+echo "Building Flutter web (locally)..."
 flutter clean
 flutter pub get
 flutter build web --release --pwa-strategy=offline-first
 
 echo "Preparing deploy folder..."
 DEPLOY_DIR=".deploy"
-rm -rf "$DEPLOY_DIR"
+
+if [ -d "$DEPLOY_DIR" ]; then
+    echo "Removing existing deploy folder..."
+    rm -rf "$DEPLOY_DIR"
+fi
+
 mkdir -p "$DEPLOY_DIR"
 cp -r build/web/* "$DEPLOY_DIR"
 mkdir -p "$DEPLOY_DIR/api"
 cp api/notion-proxy.js "$DEPLOY_DIR/api"
 cp vercel.deploy.json "$DEPLOY_DIR/vercel.json"
 
-echo "Deploying to Vercel..."
+# .vercel 폴더가 있으면 배포 폴더에 복사하여 프로젝트 링크 유지
+if [ -d ".vercel" ]; then
+    cp -r .vercel "$DEPLOY_DIR/"
+fi
+
+echo ""
+echo "Deploying to Vercel (no build on Vercel - pre-built only)..."
+echo "※ 빌드 오류가 나면: Vercel 대시보드 → 프로젝트 → Settings → General"
+echo "   - Build Command / Install Command 를 비우고 저장한 뒤 다시 배포하세요."
+echo ""
 vercel --prod "$DEPLOY_DIR"
 
-echo "Done. You can remove .deploy if you want: rm -rf .deploy"
+echo "Done. Remove deploy folder..."
+rm -rf "$DEPLOY_DIR"

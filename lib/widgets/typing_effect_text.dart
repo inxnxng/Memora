@@ -50,18 +50,15 @@ class _TypingEffectTextState extends State<TypingEffectText> {
 
   void _scheduleNext() {
     _timer?.cancel();
-    _timer = Timer(
-      Duration(milliseconds: widget.millisecondsPerCharacter),
-      () {
-        if (!mounted) return;
-        setState(() {
-          if (_visibleLength < widget.text.length) {
-            _visibleLength++;
-            _scheduleNext();
-          }
-        });
-      },
-    );
+    _timer = Timer(Duration(milliseconds: widget.millisecondsPerCharacter), () {
+      if (!mounted) return;
+      setState(() {
+        if (_visibleLength < widget.text.length) {
+          _visibleLength++;
+          _scheduleNext();
+        }
+      });
+    });
   }
 
   @override
@@ -87,8 +84,11 @@ class _TypingEffectTextState extends State<TypingEffectText> {
               text: '▌',
               style: (widget.style ?? DefaultTextStyle.of(context).style)
                   .copyWith(
-                color: (widget.style?.color ?? DefaultTextStyle.of(context).style.color)?.withValues(alpha: 0.7),
-              ),
+                    color:
+                        (widget.style?.color ??
+                                DefaultTextStyle.of(context).style.color)
+                            ?.withValues(alpha: 0.7),
+                  ),
             ),
         ],
       ),

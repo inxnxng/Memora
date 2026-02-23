@@ -36,7 +36,10 @@ class UserFirestoreRepository {
     await docRef.update({key: FieldValue.delete()});
   }
 
-  Future<void> saveEncryptedApiKeys(String uid, Map<String, String> encryptedKeys) async {
+  Future<void> saveEncryptedApiKeys(
+    String uid,
+    Map<String, String> encryptedKeys,
+  ) async {
     await _firestore.collection('users').doc(uid).set({
       'encryptedApiKeys': encryptedKeys,
       'apiKeysUpdatedAt': FieldValue.serverTimestamp(),

@@ -19,8 +19,7 @@ class NotionRemoteDataSource {
   static const String _notionApiVersion = '2022-06-28';
 
   /// 웹 빌드일 때만 사용. 같은 오리진의 Notion 프록시 URL (CORS 회피).
-  static String? get _proxyBaseUrl =>
-      kIsWeb ? Uri.base.origin : null;
+  static String? get _proxyBaseUrl => kIsWeb ? Uri.base.origin : null;
 
   NotionRemoteDataSource();
 
@@ -54,7 +53,9 @@ class NotionRemoteDataSource {
 
   Future<Map<String, dynamic>> _handleResponse(http.Response response) async {
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      return json.decode(utf8.decode(response.bodyBytes));
+      // body 사용 시 bodyBytes→utf8.encode 경로를 타지 않아, 특수문자로 인한 예외 방지.
+      final body = response.body;
+      return json.decode(body) as Map<String, dynamic>;
     } else if (response.statusCode == 404) {
       throw NotionApiException(
         'Notion resource not found: ${response.body}',
@@ -137,7 +138,9 @@ class NotionRemoteDataSource {
         method: 'GET',
       );
     } else {
-      final url = Uri.parse('https://api.notion.com/v1/blocks/$pageId/children');
+      final url = Uri.parse(
+        'https://api.notion.com/v1/blocks/$pageId/children',
+      );
       response = await http
           .get(
             url,
@@ -150,7 +153,7 @@ class NotionRemoteDataSource {
     }
 
     if (response.statusCode == 200) {
-      final data = json.decode(utf8.decode(response.bodyBytes));
+      final data = json.decode(response.body) as Map<String, dynamic>;
       final blocks = data['results'] as List;
       final contentBuffer = StringBuffer();
 
@@ -318,7 +321,8 @@ class NotionRemoteDataSource {
 
     if (response.statusCode == 200) {
       final results =
-          json.decode(utf8.decode(response.bodyBytes))['results'] as List;
+          (json.decode(response.body) as Map<String, dynamic>)['results']
+              as List;
       return results.map((page) {
         final properties = page['properties'];
         final question =

@@ -1,13 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// 랭킹 점수에 따른 티어. 게이미피케이션용.
-enum RankingTier {
-  bronze,
-  silver,
-  gold,
-  platinum,
-  diamond,
-}
+enum RankingTier { bronze, silver, gold, platinum, diamond }
 
 extension RankingTierExtension on RankingTier {
   /// 티어 최소 점수 (이 점수 이상이면 해당 티어)
